@@ -1,0 +1,143 @@
+#!/usr/bin/env bash
+# The only kind bring-up (AD-17), used locally and by _kind-deploy.yml.
+#
+#   scripts/kind-up.sh
+#
+# Builds the two images for the native arch if missing, creates the kind
+# cluster, starts cloud-provider-kind, loads the images, installs `platform`
+# (--wait) and then `ticketscope`, and waits for api to be Ready. Prints
+# timestamps and the Gateway address. Idempotent: re-running upgrades in place.
+#
+# Env overrides:
+#   TAG            image tag (default: git SHA of HEAD, AD-16)
+#   FORCE_BUILD=1  rebuild images even if the tag exists locally
+#   CLUSTER_NAME   kind cluster name (default: ticketscope)
+#
+# When $GITHUB_ENV is set, exports TICKETSCOPE_GATEWAY_URL,
+# TICKETSCOPE_GATEWAY_HOST and TICKETSCOPE_KIND_UP_TO_READY_SECONDS to later steps.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
+CLUSTER_NAME="${CLUSTER_NAME:-ticketscope}"
+# Kubernetes 1.36 everywhere (AD-16); the digest is the one kind v0.33 publishes.
+KIND_NODE_IMAGE="kindest/node:v1.36.4@sha256:099e049362a1526b2db71494e1947aae99bd16290d7c895f2b7ea312e3cbfaed"
+CPK_IMAGE="registry.k8s.io/cloud-provider-kind/cloud-controller-manager:v0.12.0"
+CPK_CONTAINER="${CLUSTER_NAME}-cloud-provider-kind"
+TAG="${TAG:-$(git rev-parse HEAD)}"
+APP_IMAGE="ticketscope-app:${TAG}"
+PG_IMAGE="ticketscope-postgres:${TAG}"
+PLATFORM_NS=platform
+APP_NS=ticketscope
+GATEWAY_NAME=ticketscope
+KCTX="kind-${CLUSTER_NAME}"
+
+START_EPOCH=$(date +%s)
+log() { printf '[%s +%4ss] %s\n' "$(date -u +%H:%M:%S)" "$(($(date +%s) - START_EPOCH))" "$*"; }
+k() { kubectl --context "$KCTX" "$@"; }
+
+for tool in docker kind kubectl helm git; do
+  command -v "$tool" >/dev/null || { echo "kind-up: $tool is required" >&2; exit 1; }
+done
+
+log "kind-up start (tag ${TAG})"
+
+# 1. Images, native arch only.
+build() {
+  local image=$1 dockerfile=$2
+  if [[ "${FORCE_BUILD:-0}" != 1 ]] && docker image inspect "$image" >/dev/null 2>&1; then
+    log "image $image present"
+  else
+    log "building $image"
+    docker build -f "$dockerfile" -t "$image" .
+  fi
+}
+build "$APP_IMAGE" images/app.Dockerfile
+build "$PG_IMAGE" images/postgres.Dockerfile
+
+# 2. Cluster.
+if kind get clusters 2>/dev/null | grep -qx "$CLUSTER_NAME"; then
+  log "kind cluster $CLUSTER_NAME exists"
+else
+  log "creating kind cluster $CLUSTER_NAME"
+  kind create cluster --name "$CLUSTER_NAME" --image "$KIND_NODE_IMAGE" --wait 180s
+fi
+
+# 3. cloud-provider-kind on the host's docker, on the kind network: gives the
+#    Envoy Service its LoadBalancer IP. Its own Gateway and Ingress are off;
+#    Envoy Gateway in the platform release implements the GatewayClass.
+if [[ "$(docker inspect -f '{{.State.Running}}' "$CPK_CONTAINER" 2>/dev/null || true)" != true ]]; then
+  docker rm -f "$CPK_CONTAINER" >/dev/null 2>&1 || true
+  log "starting cloud-provider-kind"
+  docker run -d --name "$CPK_CONTAINER" --network kind \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    "$CPK_IMAGE" --gateway-channel=disabled --enable-default-ingress=false >/dev/null
+else
+  log "cloud-provider-kind running"
+fi
+
+# 4. Images into the node.
+log "loading images into kind"
+kind load docker-image --name "$CLUSTER_NAME" "$APP_IMAGE" "$PG_IMAGE"
+
+# 5. platform, waited.
+log "installing platform"
+if [[ -f deploy/charts/platform/Chart.lock ]]; then
+  helm dependency build deploy/charts/platform
+else
+  helm dependency update deploy/charts/platform
+fi
+helm --kube-context "$KCTX" upgrade --install platform deploy/charts/platform \
+  --namespace "$PLATFORM_NS" --create-namespace \
+  -f deploy/charts/platform/values-kind.yaml \
+  --wait --timeout 10m
+log "waiting for Gateway $GATEWAY_NAME to be Programmed"
+k -n "$PLATFORM_NS" wait "gateway/${GATEWAY_NAME}" --for=condition=Programmed --timeout=5m
+
+# 6. ticketscope. No --wait: Helm's wait would hold the hooks on api readiness,
+#    and api readiness needs load. migrate polls for the database itself.
+log "installing ticketscope (hooks: migrate, then load)"
+helm --kube-context "$KCTX" upgrade --install ticketscope deploy/charts/ticketscope \
+  --namespace "$APP_NS" --create-namespace \
+  -f deploy/charts/ticketscope/values-kind.yaml \
+  --set-string "image.app.tag=${TAG}" \
+  --set-string "image.postgres.tag=${TAG}" \
+  --timeout 25m
+log "waiting for api to be Ready"
+k -n "$APP_NS" rollout status deploy/ticketscope-api --timeout=5m
+READY_EPOCH=$(date +%s)
+log "api Ready: $((READY_EPOCH - START_EPOCH))s from kind-up start"
+
+# 7. Gateway address. On Linux the LoadBalancer IP is reachable from the host.
+#    On macOS kind nodes are not, so port-forward the Envoy Service instead.
+HOSTNAME_VALUE=$(sed -n 's/^hostname: *//p' deploy/charts/ticketscope/values-kind.yaml | tr -d '"')
+if [[ "$(uname -s)" == Darwin ]]; then
+  ENVOY_SVC=$(k -n "$PLATFORM_NS" get svc -o name \
+    -l "gateway.envoyproxy.io/owning-gateway-name=${GATEWAY_NAME},gateway.envoyproxy.io/owning-gateway-namespace=${PLATFORM_NS}")
+  if [[ -z "$ENVOY_SVC" ]]; then
+    echo "kind-up: no Envoy Service found for Gateway ${PLATFORM_NS}/${GATEWAY_NAME}; cannot port-forward" >&2
+    exit 1
+  fi
+  pkill -f "port-forward.*${ENVOY_SVC#service/}" 2>/dev/null || true
+  nohup kubectl --context "$KCTX" -n "$PLATFORM_NS" port-forward "$ENVOY_SVC" 18080:80 \
+    >/tmp/ticketscope-gateway-port-forward.log 2>&1 &
+  disown
+  sleep 2
+  GATEWAY_URL="http://127.0.0.1:18080"
+else
+  GATEWAY_IP=$(k -n "$PLATFORM_NS" get "gateway/${GATEWAY_NAME}" -o jsonpath='{.status.addresses[0].value}')
+  GATEWAY_URL="http://${GATEWAY_IP}"
+fi
+
+log "Gateway: ${GATEWAY_URL} (Host: ${HOSTNAME_VALUE})"
+echo "TICKETSCOPE_GATEWAY_URL=${GATEWAY_URL}"
+echo "TICKETSCOPE_GATEWAY_HOST=${HOSTNAME_VALUE}"
+if [[ -n "${GITHUB_ENV:-}" ]]; then
+  {
+    echo "TICKETSCOPE_GATEWAY_URL=${GATEWAY_URL}"
+    echo "TICKETSCOPE_GATEWAY_HOST=${HOSTNAME_VALUE}"
+    echo "TICKETSCOPE_KIND_UP_TO_READY_SECONDS=$((READY_EPOCH - START_EPOCH))"
+  } >>"$GITHUB_ENV"
+fi
+log "kind-up done"

@@ -1,0 +1,83 @@
+[importlinter]
+root_package = ticketscope
+include_external_packages = True
+
+# AD-1: the layer table in the architecture spine is binding.
+
+[importlinter:contract:core]
+name = core imports only stdlib and pydantic
+type = forbidden
+source_modules =
+    ticketscope.core
+forbidden_modules =
+    ticketscope.contract
+    ticketscope.adapters
+    ticketscope.http
+    ticketscope.jobs
+    ticketscope.settings
+    fastapi
+    psycopg
+    pydantic_settings
+    uvicorn
+
+[importlinter:contract:contract]
+name = contract imports only pydantic
+type = forbidden
+source_modules =
+    ticketscope.contract
+forbidden_modules =
+    ticketscope.core
+    ticketscope.adapters
+    ticketscope.http
+    ticketscope.jobs
+    ticketscope.settings
+    fastapi
+    psycopg
+    pydantic_settings
+    uvicorn
+
+[importlinter:contract:adapters]
+name = driven adapters import only core
+type = forbidden
+source_modules =
+    ticketscope.adapters
+forbidden_modules =
+    ticketscope.contract
+    ticketscope.http
+    ticketscope.jobs
+    fastapi
+    uvicorn
+
+[importlinter:contract:http]
+name = http imports core and contract, never adapters (composition root excepted) or jobs
+type = forbidden
+source_modules =
+    ticketscope.http
+forbidden_modules =
+    ticketscope.adapters
+    ticketscope.jobs
+    psycopg
+ignore_imports =
+    ticketscope.http.app -> ticketscope.adapters.postgres
+
+[importlinter:contract:jobs]
+name = jobs import core, contract and driven adapters, never http
+type = forbidden
+source_modules =
+    ticketscope.jobs
+forbidden_modules =
+    ticketscope.http
+    fastapi
+    uvicorn
+
+[importlinter:contract:settings]
+name = settings is cross-cutting and imports no ticketscope layer
+type = forbidden
+source_modules =
+    ticketscope.settings
+forbidden_modules =
+    ticketscope.contract
+    ticketscope.core
+    ticketscope.adapters
+    ticketscope.http
+    ticketscope.jobs

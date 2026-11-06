@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ticketscope-api
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ticketscope.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+spec:
+  replicas: {{ .Values.api.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: api
+  template:
+    metadata:
+      labels:
+        {{- include "ticketscope.labels" . | nindent 8 }}
+        app.kubernetes.io/component: api
+    spec:
+      containers:
+        - name: api
+          image: {{ include "ticketscope.appImage" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["ticketscope-api"]
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            # api reads as ticketscope_ro (AD-7).
+            - name: TICKETSCOPE_DB_HOST
+              value: {{ include "ticketscope.dbCluster" . }}-rw
+            - name: TICKETSCOPE_DB_NAME
+              value: app
+            - name: TICKETSCOPE_DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ticketscope.roSecret" . }}
+                  key: username
+            - name: TICKETSCOPE_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ticketscope.roSecret" . }}
+                  key: password
+            - name: TICKETSCOPE_DEFAULT_MODE
+              value: {{ .Values.retrieval.defaultMode | quote }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 10
+          readinessProbe:
+            # Fails with 503 until load has written corpus_meta.
+            httpGet:
+              path: /readyz
+              port: http
+            periodSeconds: 5
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.api.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ticketscope-api
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ticketscope.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+spec:
+  selector:
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: api
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ticketscope-api
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ticketscope.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+spec:
+  parentRefs:
+    - name: {{ .Values.gateway.name }}
+      namespace: {{ .Values.gateway.namespace }}
+  {{- with .Values.hostname }}
+  hostnames:
+    - {{ . | quote }}
+  {{- end }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /v1
+      backendRefs:
+        - name: ticketscope-api
+          port: 80

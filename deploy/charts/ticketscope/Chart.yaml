@@ -1,0 +1,8 @@
+apiVersion: v2
+name: ticketscope
+description: >-
+  ticketscope app release (AD-13): the CNPG Cluster, the migrate and load hook
+  Jobs, the api Deployment and its HTTPRoute.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

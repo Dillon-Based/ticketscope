@@ -66,11 +66,18 @@ jobs:
           kubectl get pods,svc,jobs -A -o wide || true
           kubectl get gateway,httproute -A -o yaml || true
           kubectl -n ticketscope get clusters.postgresql.cnpg.io -o yaml || true
-          kubectl -n ticketscope describe pods || true
-          for job in ticketscope-migrate ticketscope-load; do
-            echo "::group::logs $job"; kubectl -n ticketscope logs "job/$job" --all-containers || true; echo "::endgroup::"
+          # Every pod in the two releases' namespaces: events, then current and
+          # previous logs of each container, so a crash loop shows its cause.
+          for ns in platform ticketscope; do
+            for pod in $(kubectl -n "$ns" get pods -o name 2>/dev/null); do
+              echo "::group::$ns $pod"
+              kubectl -n "$ns" describe "$pod" | sed -n '/^Containers:/,$p' || true
+              kubectl -n "$ns" logs "$pod" --all-containers --tail=200 || true
+              echo "--- previous ---"
+              kubectl -n "$ns" logs "$pod" --all-containers --previous --tail=200 || true
+              echo "::endgroup::"
+            done
           done
-          echo "::group::logs api"; kubectl -n ticketscope logs deploy/ticketscope-api --all-containers || true; echo "::endgroup::"
           docker logs ticketscope-cloud-provider-kind 2>&1 | tail -100 || true
 
       - name: Runner-fit summary

@@ -112,6 +112,11 @@ log "waiting for api to be Ready"
 k -n "$APP_NS" rollout status deploy/ticketscope-api --timeout=5m
 READY_EPOCH=$(date +%s)
 log "api Ready: $((READY_EPOCH - START_EPOCH))s from kind-up start"
+# api is Ready once the primary serves; the replica may still be joining.
+# Bring-up is done when the Cluster reports every instance ready (AD-18: 2).
+log "waiting for Cluster ticketscope-db to be Ready"
+k -n "$APP_NS" wait clusters.postgresql.cnpg.io/ticketscope-db --for=condition=Ready --timeout=10m
+log "Cluster Ready: $(($(date +%s) - START_EPOCH))s from kind-up start"
 
 # 7. Gateway address. On Linux the LoadBalancer IP is reachable from the host.
 #    On macOS kind nodes are not, so port-forward the Envoy Service instead.

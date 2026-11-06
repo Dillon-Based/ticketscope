@@ -22,7 +22,7 @@ The repo, and the thinnest path through every layer this epic touches: a keyword
   - `ticketscope.contract` holds the `/v1` search models.
   - `core` holds the Retriever port, the mode registry with the keyword mode, and the in-memory CorpusStore fake.
   - The Postgres adapter ranks with pg_textsearch BM25 and negates its scores, so a higher score is better.
-  - `api` serves `POST /v1/search` and connects as `ticketscope_ro`. `migrate` and `load` connect as the app owner.
+  - `api` serves `POST /v1/search` and connects as `ticketscope_ro`. `migrate` and `load` connect as the app owner. A test shows a write through `ticketscope_ro` is refused.
 - **Database.**
   - The Postgres image is the CNPG standard PG18 image plus pg_textsearch, preloaded through `shared_preload_libraries`. pgvector is included.
   - Migration 0001 creates both extensions, the issue table with kind and outcome columns, the `corpus_meta` table, and the `ticketscope_ro` default grants.
@@ -59,6 +59,7 @@ A deliberate change that makes `core` import an adapter fails import-linter.
 
 - parent — _bmad-output/initiative-ticketscope/tickets/epic-search-baseline/epic-search-baseline.md, sections Requirements (R3, R5, R7), Constraints (Snapshot format, Toolchain, Public repo), Notes (tracer decisions, Assumption)
 - architecture spine — _bmad-output/initiative-ticketscope/architecture-ticketscope/architecture-ticketscope.md, AD-1, AD-2, AD-4, AD-6, AD-7, AD-9, AD-13, AD-14, AD-16, AD-17, AD-19, AD-20, AD-21, AD-22, AD-25; Structural Seed (repo layout)
+- test design — _bmad-output/initiative-ticketscope/tickets/epic-search-baseline/test-design-epic-1.md, rows owned by story 1 (the P0 bring-up)
 
 ## Notes
 

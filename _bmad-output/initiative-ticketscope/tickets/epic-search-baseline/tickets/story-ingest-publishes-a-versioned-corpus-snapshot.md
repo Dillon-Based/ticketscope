@@ -36,6 +36,7 @@ The ingest job turns closed Kubernetes issues into a frozen, versioned corpus sn
   - Before publishing, `snapshot.yml` times a load of the snapshot into the in-repo Postgres image on the runner, through story 1's load path.
   - The window is tuned so this load finishes within 10 minutes. That leaves the rest of the 30-minute spin-up (initiative R10) to Terraform, EKS and Helm.
 - **Long runs.** A run that hits a rate limit or the Actions job time limit resumes from where it stopped instead of starting over.
+- **Tests.** PR tests run against recorded GitHub API responses, never the live API. The recordings include a rate-limit response and an issue with 100 or more comments. They show that ingest issues only `GET` requests.
 
 ## Requirements
 
@@ -53,6 +54,7 @@ A second dispatch publishes `YYYY.MM.N+1` and leaves the first asset unchanged.
 - parent — _bmad-output/initiative-ticketscope/tickets/epic-search-baseline/epic-search-baseline.md, sections Requirements (R1), Constraints (Corpus scope, Corpus terms, Public repo, Snapshot format, Outcome terms), Boundaries (touch points: GitHub issues API, GitHub Releases)
 - initiative — _bmad-output/initiative-ticketscope/initiative-ticketscope.md, section Requirements (R10)
 - architecture spine — _bmad-output/initiative-ticketscope/architecture-ticketscope/architecture-ticketscope.md, AD-6, AD-8, AD-12, AD-17, AD-21; Consistency Conventions (Identifiers, Dates & formats, Provenance, Secrets)
+- test design — _bmad-output/initiative-ticketscope/tickets/epic-search-baseline/test-design-epic-1.md, rows owned by story 3
 
 ## Notes
 

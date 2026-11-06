@@ -4,7 +4,7 @@ title: "Keyword search over Kubernetes issues, deployed on kind"
 parent: initiative-ticketscope
 covers: [R1, R2, R3, R5, R8, R11]
 sources: []
-companions: []
+companions: [_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/test-design-epic-1.md]
 after: []
 refined: true
 risk: high
@@ -83,6 +83,7 @@ A triage engineer pastes a vague or log-heavy ticket into the page on the kind-d
 
 - parent — _bmad-output/initiative-ticketscope/initiative-ticketscope.md, section Requirements (R1, R2, R3, R5, R8, R11)
 - architecture spine — _bmad-output/initiative-ticketscope/architecture-ticketscope/architecture-ticketscope.md, AD-1–AD-4, AD-6–AD-11, AD-13, AD-14, AD-16–AD-22
+- test design — _bmad-output/initiative-ticketscope/tickets/epic-search-baseline/test-design-epic-1.md, Test Coverage Plan (the Owner column names the story that writes each test), Mitigation Plans (R-004)
 
 ## Notes
 
@@ -96,4 +97,5 @@ A triage engineer pastes a vague or log-heavy ticket into the page on the kind-d
 - Decision: The outcome terms and the example-query owner are settled as Sofia's picks (see Constraints) (user, 2026-11-06).
 - Decision: The refactor sweep (10) and a closing integrated check on kind (11) are kept (user, 2026-11-06).
 - Decision: Story 1.5 reviewed. The derivation version joins the reload check, a reload swaps the corpus in one transaction, and the example queries move from these Notes to a committed golden-query file (user, 2026-11-06).
+- Decision: The redone test design is adopted as a companion. Each story writes the tests the design assigns it, and its one open risk, R-004 (keyword ranking can pass on irrelevant results), is mitigated by story 5's golden-query file and story 11's expected-issue checks. If no vague query's expected issue ranks in the top-k under keyword, story 5 records it as a known keyword miss, and story 11 reports that check without gating it until epic-hybrid-retrieval (user, 2026-11-06).
 - Decision: The epic builds unattended through the loop; stories 1, 3 and 5 carry `plan_checkpoint`, and no story carries `done_checkpoint` (user, 2026-11-06).

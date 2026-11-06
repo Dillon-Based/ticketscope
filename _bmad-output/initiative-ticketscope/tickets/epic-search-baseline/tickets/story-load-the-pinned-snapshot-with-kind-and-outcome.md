@@ -30,6 +30,9 @@ The load job puts the real corpus into Postgres with each issue's kind and outco
 - **Report.** The job log reports the issue count, the share of each kind and of each outcome, and the load time. The load time is checked against story 3's 10-minute budget.
 - **Example queries.**
   - The builder picks one vague and one log-heavy query from the real snapshot. Each is committed in a golden-query file with the issue it should return.
+  - Each entry records the query text, its kind, how it was chosen, its source issue, and its expected issue. The file records the snapshot version and the `k` it is checked at.
+  - The expected issue must exist in the pinned snapshot and differ from the source issue, so the check can't pass by matching the query's own text. A unit test checks both.
+  - If no vague query's expected issue ranks in the top-k under keyword, the file marks it a known keyword miss. Story 11 then reports that check without gating it.
   - The person approves them at this story's plan review.
   - Story 7's page check, story 10's sweep check and story 11's integrated check use them.
 
@@ -50,6 +53,7 @@ A unit test shows a wrong checksum is refused and the old corpus stays in place.
 - story 3 — _bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-ingest-publishes-a-versioned-corpus-snapshot.md, Description (Publishing, Load-time budget)
 - story 1 — _bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-tracer-keyword-search-answers-through-the-gateway-on-kind.md, Description (Snapshot)
 - architecture spine — _bmad-output/initiative-ticketscope/architecture-ticketscope/architecture-ticketscope.md, AD-6, AD-7, AD-8, AD-12, AD-21, AD-22, AD-25
+- test design — _bmad-output/initiative-ticketscope/tickets/epic-search-baseline/test-design-epic-1.md, rows owned by story 5; Mitigation Plans (R-004)
 
 ## Notes
 

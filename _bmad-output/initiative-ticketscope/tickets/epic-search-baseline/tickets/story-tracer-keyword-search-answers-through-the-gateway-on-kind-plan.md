@@ -118,6 +118,8 @@ Greenfield: no code exists. Follow the spine's Structural Seed layout.
   - api Ready 142s after kind-up start, and the Cluster with both instances Ready at 160s.
   - Peak memory 2,655 of 15,983 MiB; 80G of disk free.
   - The whole `kind-deploy` job took 2m59s.
+- **Chart.lock** was committed by the user (`f72c4a0`). `helm dependency build` needs the non-OCI CNPG repo registered first, so `ci.yml` and `kind-up.sh` now run `helm repo add cnpg … --force-update` before it (`6519aa5`).
+- **Person's step done (2026-11-06).** `scripts/kind-up.sh` ran on the author's Mac (colima, 4 CPU / 8 GiB, arm64 images), and `uv run pytest -m kind tests/smoke` passed 4/4 through the port-forwarded Gateway. Local bring-up matches CI.
 
 ## Plan Change Log
 

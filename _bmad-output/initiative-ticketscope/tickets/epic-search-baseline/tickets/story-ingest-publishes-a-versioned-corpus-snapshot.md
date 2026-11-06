@@ -24,7 +24,11 @@ The ingest job turns closed Kubernetes issues into a frozen, versioned corpus sn
   - `jobs.ingest` is the only component that calls the GitHub API.
   - It takes closed `kubernetes/kubernetes` issues, not PRs, closed in about the last three years, most recently closed first, capped at 20,000.
   - Each issue carries every field AD-6 names: labels, comments (`author_association`, `body`, `created_at`), and timeline events. Timeline events include `marked_as_duplicate` and cross-referenced or closing PRs, each with its merged state.
-  - It applies any conditions that story 2 sets.
+  - It applies the corpus terms settled by story 2 (epic Constraints, Corpus terms):
+    - Each record carries its github.com issue URL.
+    - No author login is stored anywhere; comments keep `author_association` only.
+    - Email addresses and token- or key-shaped secrets (GitHub tokens, cloud access keys, private-key blocks and the like) in issue and comment bodies are replaced with fixed markers before writing.
+    - Issues on a committed exclusion list are left out.
 - **What it writes.**
   - Compressed JSONL, one issue per line, that validates against story 1's schema.
   - A SHA-256 checksum published beside it.
@@ -32,11 +36,13 @@ The ingest job turns closed Kubernetes issues into a frozen, versioned corpus sn
 - **Publishing.**
   - `snapshot.yml`, on dispatch, publishes the snapshot as a Release asset with version `YYYY.MM.N`. N is the next free number for that month.
   - A published snapshot is never overwritten. A new run makes a new version, so eval baselines stay tied to one corpus (AD-12).
+  - The only exception is a takedown: the issue is added to the exclusion list, a new version is published, and a person deletes the earlier Release assets that hold it. The README documents this path.
+  - The Release notes, and a short section in the README, say the issue text belongs to its authors, comes from `kubernetes/kubernetes`, and is masked as above.
 - **Load-time budget.**
   - Before publishing, `snapshot.yml` times a load of the snapshot into the in-repo Postgres image on the runner, through story 1's load path.
   - The window is tuned so this load finishes within 10 minutes. That leaves the rest of the 30-minute spin-up (initiative R10) to Terraform, EKS and Helm.
 - **Long runs.** A run that hits a rate limit or the Actions job time limit resumes from where it stopped instead of starting over.
-- **Tests.** PR tests run against recorded GitHub API responses, never the live API. The recordings include a rate-limit response and an issue with 100 or more comments. They show that ingest issues only `GET` requests.
+- **Tests.** PR tests run against recorded GitHub API responses, never the live API. The recordings include a rate-limit response and an issue with 100 or more comments. They show that ingest issues only `GET` requests. The recordings also hold a planted email address, planted token- and key-shaped strings, and an issue on the exclusion list.
 
 ## Requirements
 
@@ -48,6 +54,8 @@ Verify: A dispatched `snapshot.yml` run publishes a `YYYY.MM.N` Release asset an
 - a measured load time within 10 minutes.
 
 A second dispatch publishes `YYYY.MM.N+1` and leaves the first asset unchanged.
+
+Corpus terms: every record carries its github.com issue URL; no author login appears anywhere in the asset; the Release notes and README carry the attribution and takedown text. In PR tests on recorded responses, the planted email and secrets come out masked and the excluded issue is absent.
 
 ## References
 
@@ -61,6 +69,6 @@ A second dispatch publishes `YYYY.MM.N+1` and leaves the first asset unchanged.
 - Decision: The corpus load gets 10 minutes of the 30-minute spin-up, timed in `snapshot.yml` on the runner before publishing (user, 2026-11-06).
 - Decision: Ingest uses a read-only token stored as a repo secret by a person, and resumes after a rate limit or job timeout (user, 2026-11-06).
 - Decision: Published snapshots are never overwritten; each run gets the next `YYYY.MM.N` and a SHA-256 checksum (user, 2026-11-06).
-- If story 2 says the text may not be republished, this story stops before publishing and the epic is replanned.
+- Decision: Corpus terms from story 2: yes with attribution, no author logins, masking, and a takedown path; a takedown may delete earlier Release assets, the one exception to never-overwritten (user, 2026-11-06).
 - The outcome rules need these fields from each issue: labels, `state_reason`, closing PRs with merged state, `marked_as_duplicate` events, and comment `author_association` with `created_at` set against the issue's `closed_at`.
 - Check beyond the criteria (high risk): on a sample of 20 issues from the snapshot, compare each field against the issue on github.com. Cover at least one duplicate, one closed by a merged PR, and one with 100 or more comments, so paging is proven.

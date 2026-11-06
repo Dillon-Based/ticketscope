@@ -89,11 +89,11 @@ A hiring manager for AI-platform, platform or DevOps roles can verify all three 
 - Decision: Cutting epic-eval-gate drops only R7's blocking merge check. The eval job, baseline and README table (R6) survive, because epic-hybrid-retrieval chooses its model by the eval and epic-reviewer-package publishes the table (user, 2026-11-06).
 - Decision: If epic-eks-environment is cut, epic-reviewer-package records the CloudNativePG restore and failure drills on kind (user, 2026-11-06).
 - Decision: How it ended is answered at epic-search-baseline's refinement by one precedence rule in core: duplicate, then fixed (merged linked PR), then not_planned, then stale, then answered, then unknown. The repo is public on GitHub, so Release assets are public (user, 2026-11-06).
+- Decision: Corpus terms are settled by epic-search-baseline's spike: issue text may be republished as a public Release asset and demo index with attribution, no author logins, masking of emails and secrets, and a takedown path. Supersedes the corpus-terms open question (user, 2026-11-06).
 - Assumption: The cluster counts as production for every epic: kind in CI until the EKS epic lands, and EKS after that.
 - Assumption: Success Criteria 5 (the interview test on CloudNativePG storage, backups and failure) is evidenced by a recorded restore drill and failure drill (R3), run on EKS, or on kind if epic-eks-environment is cut.
 - Open question: Ground truth volume. Do `triage/duplicate` labels and "duplicate of #N" comments give a large enough labelled set, especially for short tickets? (brief Open Questions)
 - Open question: Corpus fit. Should the eval set favour support-style issues over developer bug reports? (brief Open Questions)
-- Open question: Corpus terms. What do GitHub's terms allow when issue text is stored and republished as a public GitHub Release asset and demo index? epic-search-baseline settles it before the first snapshot is published. (brief Open Questions)
 - Open question: MCP auth. Which external hosted OAuth authorisation server should be used, and does it work with Claude Desktop's remote-connector flow and Client ID Metadata Documents? The spine rules out running one on the cluster. (brief Open Questions)
 - Open question: AWS account. Do the new-account credits cover EKS, or must the account move to the paid plan? (brief Open Questions; addendum AWS cost)
 - Open question: Embedding model. Which small CPU model should be used? The spine settles that a scored eval chooses it, behind one embedder interface. (brief Open Questions)

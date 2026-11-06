@@ -1,6 +1,7 @@
 # epic-search-baseline stories, in build order. `id` is permanent, never reused.
 # Lanes (stories touching the same code wait on each other):
-#   data:     2 corpus terms -> 3 ingest -> 5 load; 4 derive -> 3 ingest, 4 -> 5
+#   data:     2 corpus terms -> 3 ingest -> 5 load; 4 derive -> 3 ingest, 4 -> 5;
+#             12 Jira corpus spike -> 5 (a switch replans 1-5 and epic-eval-gate)
 #   api:      6 /v1 completion -> 7 page -> 9 trace
 #   platform: 8 backups -> 9 trace; 5 load -> 9 trace (jobs telemetry)
 # Shared setup is owned by story 1 (the tracer); every later story builds on it.
@@ -41,6 +42,17 @@ risk = "high"
 plan_checkpoint = true
 
 [[entry]]
+id = 12
+type = "spike"
+title = "Choose the Jira corpus"
+description = "Can The Public Jira Dataset v7 (Zenodo 15719919, CC BY 4.0, a MongoDB dump of 16 public Jira instances, 2.7M issues) replace Kubernetes issues as the corpus, and if so which subset of about 20-50k issues? The first Kubernetes snapshot (run 42261907819, 5,907 issues) has 21 duplicates and none with a target, too little ground truth for epic-eval-gate. Measures per instance and project: in-subset duplicate pairs by kind, resolution-to-outcome coverage, issue-type mix and fit, text hygiene, timed load, terms. Story 5 and epic-eval-gate wait on the answer; a switch replans the data lane. See the spike file."
+verify = "A findings note beside the spike compares instances and leading projects on the decision rule, names a subset with its duplicate pairs by kind and a load time within 600 s, and the epic's Notes hold a dated Decision line by the author: switch, stay, or switch with conditions."
+covers = ["R1"]
+after = []
+hitl = true # a person downloads the dataset, reads the sampled issues and decides
+risk = "high"
+
+[[entry]]
 id = 4
 type = "story"
 title = "Derive kind and outcome in core"
@@ -58,7 +70,7 @@ title = "Load the pinned snapshot with kind and outcome"
 description = "jobs.load, the only writer, downloads the snapshot version pinned in values, with its checksum pinned beside it, refuses an asset whose checksum differs, stores each issue with kind and outcome from story 4, and writes the corpus_meta row with the pinned snapshot version (AD-21). The preprocessing version includes core's derivation version, so a kind-threshold or outcome-rule change reloads; an unchanged snapshot, model and preprocessing version is a no-op. A reload swaps the corpus in one transaction, so api never sees a partial corpus. It sets the kind threshold from story 3's snapshot, showing 20 sampled issues from each side in the PR, and logs the share of each kind and each outcome and the load time against the 10-minute budget. It commits a golden-query file with one vague and one log-heavy query from the real snapshot and the issue each should return, approved at the plan review. It replaces story 1's stored fixture kinds with computed ones, and a unit test shows the computed kind equals each fixture issue's expected kind. CI on kind loads the pinned real snapshot by changing story 1's pin; unit tests keep the fixture."
 verify = "On kind in CI the load hook loads the pinned snapshot; a SQL check finds no issue without a kind or an outcome, the job log reports each kind's and each outcome's share and a load time within 10 minutes, a helm upgrade with the same pin logs a no-op, and a changed derivation version reloads; a unit test shows a wrong checksum is refused and the old corpus stays."
 covers = ["R2"]
-after = [3, 4]
+after = [3, 4, 12]
 hitl = false
 risk = "medium"
 plan_checkpoint = true
@@ -114,7 +126,7 @@ title = "Refactor sweep"
 description = "Cleanup only, scoped at its start from plans and review findings the epic deferred. Scope pushed out of another story becomes a new story, not part of this one."
 verify = "ci.yml and _kind-deploy pass on the sweep PR with no change to /v1 responses for the queries in story 5's golden-query file."
 covers = []
-after = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+after = [1, 2, 3, 4, 5, 6, 7, 8, 9, 12]
 hitl = false
 risk = "low"
 

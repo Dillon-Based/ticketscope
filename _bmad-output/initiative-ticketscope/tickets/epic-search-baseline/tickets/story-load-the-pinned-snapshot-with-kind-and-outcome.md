@@ -4,7 +4,7 @@ type: story
 title: "Load the pinned snapshot with kind and outcome"
 parent: epic-search-baseline
 covers: [R2]
-after: [3, 4]
+after: [3, 4, 12]
 hitl: false
 risk: medium
 ---

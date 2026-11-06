@@ -510,6 +510,6 @@ ticketscope/
 
 ### Open questions
 
-- **Corpus terms.** May GitHub issue text be stored and republished as a public Release asset and demo index? Owner: epic 1. Revisit before `snapshot.yml` first publishes.
+- **Corpus terms.** Settled 2026-11-06 in epic 1: yes, with attribution, no author logins, masking of emails and secrets, and a takedown path (epic-search-baseline Constraints). No AD changes.
 - **AWS account plan and credits.** Owner: epic 5. Revisit before the first `env-up`.
 - **Ground truth volume, corpus fit, and the embedding-model choice.** These stay on the initiative ticket. They don't change any AD.

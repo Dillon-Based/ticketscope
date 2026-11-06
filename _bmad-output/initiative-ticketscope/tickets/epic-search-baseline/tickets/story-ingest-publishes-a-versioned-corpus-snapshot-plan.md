@@ -3,7 +3,7 @@ title: 'Ingest publishes a versioned corpus snapshot'
 type: 'feature'
 ticket: '3'
 created: '2026-11-06'
-status: 'built'
+status: done
 baseline_revision: '3791664a4eb2f6f9996b9860b294bb862c1c1f2a'
 route: 'full'
 route_source: 'auto'

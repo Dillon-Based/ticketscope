@@ -3,7 +3,7 @@ title: 'Spike 1.12: Choose the Jira corpus'
 type: 'chore'
 ticket: '12'
 created: '2026-11-06'
-status: 'built'
+status: done
 baseline_revision: 'b5cc98405a346144ee88181ec23bc6e2b0fa3a3c'
 route: 'full'
 route_source: 'auto'

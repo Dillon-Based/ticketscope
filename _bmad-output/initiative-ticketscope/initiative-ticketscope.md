@@ -15,7 +15,7 @@ risk: high
 
 ## Description
 
-ticketscope is a hybrid keyword-and-embedding search service over public Kubernetes GitHub issues. It answers a triage engineer's first question about a ticket: *has anyone seen this before, and what did we do about it?* It is reachable from one web page and from a remote MCP server that Claude Desktop calls as a tool. It is a personal portfolio project, due 2026-12-31. What it has to prove is that the author can do three things: build and measure a RAG retrieval system in CI, expose it to agents through an authenticated and traced remote MCP server, and run it on EKS rebuilt from zero with Terraform. The brief and its addendum are the sources.
+ticketscope is a hybrid keyword-and-embedding search service over public Mojang bug-tracker issues, from The Public Jira Dataset v7. It answers a triage engineer's first question about a ticket: *has anyone seen this before, and what did we do about it?* It is reachable from one web page and from a remote MCP server that Claude Desktop calls as a tool. It is a personal portfolio project, due 2026-12-31. What it has to prove is that the author can do three things: build and measure a RAG retrieval system in CI, expose it to agents through an authenticated and traced remote MCP server, and run it on EKS rebuilt from zero with Terraform. The brief and its addendum are the sources.
 
 ## Outcome
 
@@ -23,7 +23,7 @@ A hiring manager for AI-platform, platform or DevOps roles can verify all three 
 
 ## Requirements
 
-- R1 (brief Solution: Corpus; Scope In: ingest job): An ingest job loads public Kubernetes GitHub issues, both short and vague and long and log-heavy, each with how it ended. It is met when the index holds both kinds, with an outcome recorded for every issue.
+- R1 (brief Solution: Corpus; Scope In: ingest job; spike 1.12): An ingest job loads public Mojang bug-tracker issues from The Public Jira Dataset v7, both short and vague and long and log-heavy, each with how it ended. It is met when the index holds both kinds, with an outcome recorded for every issue.
 - R2 (brief Solution: Retrieval is the product; Scope In: hybrid retrieval API): Given ticket text, a retrieval API returns the most similar past issues and how each ended, using keyword (BM25), dense or hybrid retrieval. It is met when a vague query and a log-heavy query each return ranked issues with outcomes in every mode.
 - R3 (brief Solution: Vector store; Success Criteria 5): Issues and embeddings are stored in Postgres + pgvector, which CloudNativePG runs on the cluster with persistent volumes and backups. It is met when a backup has been restored and an instance failure has been survived, and both are recorded.
 - R4 (brief Solution; Success Criteria 2; Scope In: remote MCP server with auth): A remote MCP server exposes `search_similar_issues`. It is met when Claude Desktop connects to the live server, authenticates, calls the tool and answers from its results.
@@ -63,7 +63,7 @@ A hiring manager for AI-platform, platform or DevOps roles can verify all three 
 - Out: server-side LLM answers, DTU's real data or any tracker integration, handover work, always-on hosting, multi-tenancy, autoscaling experiments, model fine-tuning, and any UI beyond one page (brief Scope Out).
 - Out: S3 Vectors or any second vector store (addendum Vector stores lists it only as a possible comparison).
 - Out: an eval of tool-call behaviour, and a youscope-style non-ML recommender baseline; keyword BM25 is the baseline (addendum MCP state, youscope reference; spine Deferred).
-- Touch point: GitHub issues API — the source of the corpus, read only; owner: epic-search-baseline
+- Touch point: The Public Jira Dataset v7 on Zenodo — the source of the corpus, read only; owner: epic-search-baseline
 - Touch point: GitHub Releases — hosts the versioned corpus snapshot and precomputed embeddings; owner: epic-search-baseline
 - Touch point: Claude Desktop — the MCP client, configured only; owner: epic-mcp-server
 - Touch point: a tunnel service — exposes the kind cluster to Claude Desktop before EKS exists; owner: epic-mcp-server
@@ -90,10 +90,11 @@ A hiring manager for AI-platform, platform or DevOps roles can verify all three 
 - Decision: If epic-eks-environment is cut, epic-reviewer-package records the CloudNativePG restore and failure drills on kind (user, 2026-11-06).
 - Decision: How it ended is answered at epic-search-baseline's refinement by one precedence rule in core: duplicate, then fixed (merged linked PR), then not_planned, then stale, then answered, then unknown. The repo is public on GitHub, so Release assets are public (user, 2026-11-06).
 - Decision: Corpus terms are settled by epic-search-baseline's spike: issue text may be republished as a public Release asset and demo index with attribution, no author logins, masking of emails and secrets, and a takedown path. Supersedes the corpus-terms open question (user, 2026-11-06).
+- Decision: Corpus switched by spike 1.12 from Kubernetes GitHub issues to Mojang bug-tracker issues (MCL, REALMS, MCD) in The Public Jira Dataset v7 (Zenodo 15719919, CC BY 4.0). The Kubernetes snapshot had 21 duplicates and none with a target. The Mojang subset has 10,466 in-subset duplicate pairs, and the author accepted Mojang's terms. R1, the overview and the corpus touch point now name this source; the brief still says Kubernetes and is superseded here (user, 2026-11-06).
+- Decision: Ground truth volume answered by spike 1.12: 10,466 in-subset duplicate pairs (10,162 short, 304 log-heavy), 9 of 10 sampled pairs judged real duplicates. Supersedes the open question (user, 2026-11-06).
+- Decision: Corpus fit answered by spike 1.12: the corpus is support-style player reports, 18 of 20 sampled issues judged support-like. Supersedes the open question (user, 2026-11-06).
 - Assumption: The cluster counts as production for every epic: kind in CI until the EKS epic lands, and EKS after that.
 - Assumption: Success Criteria 5 (the interview test on CloudNativePG storage, backups and failure) is evidenced by a recorded restore drill and failure drill (R3), run on EKS, or on kind if epic-eks-environment is cut.
-- Open question: Ground truth volume. Do `triage/duplicate` labels and "duplicate of #N" comments give a large enough labelled set, especially for short tickets? (brief Open Questions)
-- Open question: Corpus fit. Should the eval set favour support-style issues over developer bug reports? (brief Open Questions)
 - Open question: MCP auth. Which external hosted OAuth authorisation server should be used, and does it work with Claude Desktop's remote-connector flow and Client ID Metadata Documents? The spine rules out running one on the cluster. (brief Open Questions)
 - Open question: AWS account. Do the new-account credits cover EKS, or must the account move to the paid plan? (brief Open Questions; addendum AWS cost)
 - Open question: Embedding model. Which small CPU model should be used? The spine settles that a scored eval chooses it, behind one embedder interface. (brief Open Questions)

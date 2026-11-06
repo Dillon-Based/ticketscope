@@ -14,7 +14,13 @@ risk: high
 
 ## Description
 
-Labelled duplicate pairs are extracted from the corpus that epic 1 stored. An eval job scores every retrieval mode the API offers by Recall@k, MRR and p95 latency, split short versus log-heavy. It runs on every PR in its own workflow, blocks regressions, and generates the README results table from CI output. Epic 3's modes are scored by it, and epic 8 publishes its table.
+Labelled duplicate pairs are derived from epic 1's corpus snapshot and committed per snapshot version.
+
+- **Scoring.** An eval job scores every mode in the core retriever registry, through the real Postgres adapter and as the read-only role. It reports Recall@k, MRR and p95 latency, split short versus log-heavy.
+- **Gate.** It runs on every PR in its own workflow. Recall@k or MRR regressions against a committed baseline block the merge; p95 is reported, not gated.
+- **README table.** The results table is generated from CI output.
+
+Epic 3's modes are scored by it, and epic 8 publishes its table.
 
 ## Outcome
 
@@ -22,21 +28,25 @@ A reviewer sees retrieval scores that CI produced on labelled data, and a regres
 
 ## Done when
 
-- A labelled set of duplicate pairs exists, with its size reported separately for short and log-heavy tickets (R6).
-- The eval job scores keyword retrieval by Recall@k, MRR and p95 latency, split by ticket kind, and picks up any new mode with no change to the job (R6).
-- The eval runs on every PR, and a PR that lowers a score fails the required check (R7).
+- Labelled duplicate pairs are committed as `eval/pairs/<snapshot>.jsonl`, with the set's size reported separately for short and log-heavy tickets (R6).
+- The eval job scores keyword retrieval by Recall@k, MRR and p95 latency, split by ticket kind. It picks up any mode registered in the core registry with no change to the job, and excludes each pair's query issue from its own results (R6).
+- The eval runs on every PR. A PR that lowers Recall@k or MRR below `eval/baseline.json` fails the required check, unless that PR updates the baseline in the same diff (R7).
 - The README results table is generated from CI output and committed as-is (R7).
 - Delivered on the cluster, with an integrated check passing in CI.
 
 ## Boundaries
 
 - Adding dense and hybrid modes belongs to epic-hybrid-retrieval; this epic only scores them.
-- There is no target score: the gate blocks regressions, not misses (brief Success Criteria 1).
+- There is no target score: the gate blocks regressions, not misses (brief Success Criteria 1). p95 latency is reported, never gated.
+- This is the last epic on the brief's cut list. A cut drops only the required merge check (R7); the eval job, the baseline and the README table (R6) are still built.
 
 ## References
 
 - parent — _bmad-output/initiative-ticketscope/initiative-ticketscope.md, section Requirements (R6, R7)
+- architecture spine — _bmad-output/initiative-ticketscope/architecture-ticketscope/architecture-ticketscope.md, AD-1, AD-2, AD-4, AD-6, AD-7, AD-8, AD-12, AD-17, AD-19, AD-22
 
 ## Notes
 
-- Waits on epic-search-baseline because: it needs the ingested corpus with labels and comments, the retrieval API's mode parameter, and the CI workflow layout.
+- Waits on epic-search-baseline because: it needs the corpus snapshot with labels, comments and timeline events, the core retriever registry, and the CI workflow layout.
+- Decision: Adopted the architecture spine. Pairs come from the snapshot, eval calls the core registry rather than the API's mode parameter, and p95 is reported but not gated (user, 2026-11-05).
+- Decision: A cut of this epic drops only the blocking check; R6's eval job and table survive for epics 3 and 8 (user, 2026-11-06).

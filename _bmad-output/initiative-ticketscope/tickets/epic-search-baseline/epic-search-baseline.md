@@ -54,7 +54,7 @@ A triage engineer pastes a vague or log-heavy ticket into the page on the kind-d
   - A maintainer comment has an `author_association` of OWNER, MEMBER or COLLABORATOR.
   - The `/v1` outcome `source` by branch: duplicate → `label`; fixed → `linked_pr`; answered → `closing_comment`; not_planned, stale and unknown → `null`.
 - **Example queries:** one vague and one log-heavy query, picked by the load story from the real snapshot and recorded in Notes; the page, sweep and integrated-check stories use them.
-- **Corpus scope:** closed `kubernetes/kubernetes` issues only, no PRs, about the last three years, capped at 20,000. The ingest story tunes the window to fit the 30-minute load budget (initiative R10).
+- **Corpus scope:** closed `kubernetes/kubernetes` issues only, no PRs, about the last three years, capped at 20,000. The ingest story tunes the window so the load finishes within 10 minutes, its share of the 30-minute spin-up (initiative R10). Published snapshots are never overwritten.
 - **Corpus terms:** a human-in-the-loop spike story settles them before any snapshot is published. Ingest's publish step waits on it.
 - **Public repo:** the repo is public on GitHub, so Release assets are public.
 - **Kind rule:** a deterministic core function over the issue body that counts fenced blocks and log-like lines. The load story sets the threshold and reports the split. Changing it requires a reload and a baseline update (spine AD-8).

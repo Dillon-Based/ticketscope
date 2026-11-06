@@ -16,5 +16,9 @@ envoy-gateway:
 
 cnpg:
   enabled: true
+  # The operator finds its own Deployment by app.kubernetes.io/name=cloudnative-pg.
+  # The chart derives that label from .Chart.Name, which the `cnpg` alias would
+  # replace, so pin it back.
+  nameOverride: cloudnative-pg
   crds:
     create: true

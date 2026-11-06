@@ -1,0 +1,271 @@
+{
+ "note": "Hand-written GitHub REST responses for the ingest tests. Logins are planted (planted-*) so the no-login check means something; secrets are fake.",
+ "now": 1793923200,
+ "responses": [
+  {
+   "request": "/repos/kubernetes/kubernetes/issues?direction=desc&per_page=100&since=2023-11-07T00%3A00%3A00Z&sort=updated&state=closed",
+   "status": 200,
+   "headers": {
+    "link": "<https://api.github.com/repositories/20580498/issues?direction=desc&page=2&per_page=100&since=2023-11-07T00%3A00%3A00Z&sort=updated&state=closed>; rel=\"next\", <https://api.github.com/repositories/20580498/issues?direction=desc&page=2&per_page=100&since=2023-11-07T00%3A00%3A00Z&sort=updated&state=closed>; rel=\"last\"",
+    "x-ratelimit-remaining": "4999"
+   },
+   "body": [
+    {
+     "url": "https://api.github.com/repos/kubernetes/kubernetes/issues/130001",
+     "html_url": "https://github.com/kubernetes/kubernetes/issues/130001",
+     "number": 130001,
+     "title": "Kubelet drops status for @planted-author-a's pods",
+     "body": "Seen by @planted-author-a on 1.35.\n\nContact jane.doe@example.com for the cluster dump.\nThe CI token ghp_A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8 leaked in the job log.\ncc @kubernetes/sig-node-bugs",
+     "user": {
+      "login": "planted-author-a",
+      "id": 101,
+      "type": "User",
+      "html_url": "https://github.com/planted-author-a"
+     },
+     "labels": [
+      {
+       "id": 1,
+       "name": "kind/bug",
+       "color": "ededed"
+      },
+      {
+       "id": 2,
+       "name": "sig/node",
+       "color": "ededed"
+      },
+      {
+       "id": 3,
+       "name": "triage/duplicate",
+       "color": "ededed"
+      }
+     ],
+     "state": "closed",
+     "state_reason": "duplicate",
+     "assignee": null,
+     "assignees": [],
+     "comments": 0,
+     "created_at": "2026-01-05T08:00:00Z",
+     "updated_at": "2026-10-01T10:00:00Z",
+     "closed_at": "2026-10-01T10:00:00Z",
+     "closed_by": {
+      "login": "planted-closer",
+      "id": 9001,
+      "type": "User",
+      "html_url": "https://github.com/planted-closer"
+     },
+     "author_association": "NONE"
+    },
+    {
+     "url": "https://api.github.com/repos/kubernetes/kubernetes/issues/130002",
+     "html_url": "https://github.com/kubernetes/kubernetes/pull/130002",
+     "number": 130002,
+     "title": "Fix kubelet status",
+     "body": "Fixes #130001",
+     "user": {
+      "login": "planted-pr-author",
+      "id": 108,
+      "type": "User",
+      "html_url": "https://github.com/planted-pr-author"
+     },
+     "labels": [],
+     "state": "closed",
+     "state_reason": null,
+     "created_at": "2026-09-20T08:00:00Z",
+     "updated_at": "2026-10-02T08:00:00Z",
+     "closed_at": "2026-10-01T09:00:00Z",
+     "pull_request": {
+      "url": "https://api.github.com/repos/kubernetes/kubernetes/pulls/130002",
+      "merged_at": "2026-10-01T09:00:00Z"
+     }
+    },
+    {
+     "url": "https://api.github.com/repos/kubernetes/kubernetes/issues/130007",
+     "html_url": "https://github.com/kubernetes/kubernetes/issues/130007",
+     "number": 130007,
+     "title": "kubectl wait hangs on a deleted pod",
+     "body": null,
+     "user": {
+      "login": "planted-author-d",
+      "id": 104,
+      "type": "User",
+      "html_url": "https://github.com/planted-author-d"
+     },
+     "labels": [
+      {
+       "id": 1,
+       "name": "kind/bug",
+       "color": "ededed"
+      },
+      {
+       "id": 2,
+       "name": "sig/cli",
+       "color": "ededed"
+      }
+     ],
+     "state": "closed",
+     "state_reason": "not_planned",
+     "assignee": null,
+     "assignees": [],
+     "comments": 0,
+     "created_at": "2026-01-05T08:00:00Z",
+     "updated_at": "2026-10-01T10:00:00Z",
+     "closed_at": "2026-10-01T10:00:00Z",
+     "closed_by": {
+      "login": "planted-closer",
+      "id": 9001,
+      "type": "User",
+      "html_url": "https://github.com/planted-closer"
+     },
+     "author_association": "NONE"
+    },
+    {
+     "url": "https://api.github.com/repos/kubernetes/kubernetes/issues/130003",
+     "html_url": "https://github.com/kubernetes/kubernetes/issues/130003",
+     "number": 130003,
+     "title": "Scheduler flakes under preemption storm",
+     "body": "Long thread; see comments.",
+     "user": {
+      "login": "planted-author-b",
+      "id": 102,
+      "type": "User",
+      "html_url": "https://github.com/planted-author-b"
+     },
+     "labels": [
+      {
+       "id": 1,
+       "name": "kind/flake",
+       "color": "ededed"
+      },
+      {
+       "id": 2,
+       "name": "sig/scheduling",
+       "color": "ededed"
+      }
+     ],
+     "state": "closed",
+     "state_reason": "completed",
+     "assignee": null,
+     "assignees": [],
+     "comments": 0,
+     "created_at": "2026-01-05T08:00:00Z",
+     "updated_at": "2026-09-15T12:00:00Z",
+     "closed_at": "2026-09-15T12:00:00Z",
+     "closed_by": {
+      "login": "planted-closer",
+      "id": 9001,
+      "type": "User",
+      "html_url": "https://github.com/planted-closer"
+     },
+     "author_association": "NONE"
+    },
+    {
+     "url": "https://api.github.com/repos/kubernetes/kubernetes/issues/130004",
+     "html_url": "https://github.com/kubernetes/kubernetes/issues/130004",
+     "number": 130004,
+     "title": "Taken-down issue",
+     "body": "This issue is on the exclusion list.",
+     "user": {
+      "login": "planted-excluded-author",
+      "id": 105,
+      "type": "User",
+      "html_url": "https://github.com/planted-excluded-author"
+     },
+     "labels": [],
+     "state": "closed",
+     "state_reason": "completed",
+     "assignee": null,
+     "assignees": [],
+     "comments": 0,
+     "created_at": "2026-01-05T08:00:00Z",
+     "updated_at": "2026-09-01T12:00:00Z",
+     "closed_at": "2026-09-01T12:00:00Z",
+     "closed_by": {
+      "login": "planted-closer",
+      "id": 9001,
+      "type": "User",
+      "html_url": "https://github.com/planted-closer"
+     },
+     "author_association": "NONE"
+    }
+   ]
+  },
+  {
+   "request": "/repositories/20580498/issues?direction=desc&page=2&per_page=100&since=2023-11-07T00%3A00%3A00Z&sort=updated&state=closed",
+   "status": 200,
+   "headers": {
+    "x-ratelimit-remaining": "4998"
+   },
+   "body": [
+    {
+     "url": "https://api.github.com/repos/kubernetes/kubernetes/issues/130005",
+     "html_url": "https://github.com/kubernetes/kubernetes/issues/130005",
+     "number": 130005,
+     "title": "CrashLoopBackOff after upgrade",
+     "body": "Pods crash on start.\n\n```\nI1104 10:00:01.123456 1 kubelet.go:123] starting\nE1104 10:00:02.123456 1 kubelet.go:456] failed to sync pod\npanic: runtime error\ngoroutine 1 [running]:\n```\n\nAlso:\n```\n2026-11-04T10:00:03Z level=error msg=boom\n```\nContact ops+k8s@corp.example.org, cc @planted-author-c",
+     "user": {
+      "login": "planted-author-c",
+      "id": 103,
+      "type": "User",
+      "html_url": "https://github.com/planted-author-c"
+     },
+     "labels": [
+      {
+       "id": 1,
+       "name": "kind/bug",
+       "color": "ededed"
+      },
+      {
+       "id": 2,
+       "name": "kind/support",
+       "color": "ededed"
+      }
+     ],
+     "state": "closed",
+     "state_reason": "completed",
+     "assignee": null,
+     "assignees": [],
+     "comments": 0,
+     "created_at": "2026-01-05T08:00:00Z",
+     "updated_at": "2026-08-01T12:00:00Z",
+     "closed_at": "2026-08-01T12:00:00Z",
+     "closed_by": {
+      "login": "planted-closer",
+      "id": 9001,
+      "type": "User",
+      "html_url": "https://github.com/planted-closer"
+     },
+     "author_association": "NONE"
+    },
+    {
+     "url": "https://api.github.com/repos/kubernetes/kubernetes/issues/130006",
+     "html_url": "https://github.com/kubernetes/kubernetes/issues/130006",
+     "number": 130006,
+     "title": "Closed before the window",
+     "body": "Old.",
+     "user": {
+      "login": "planted-old-author",
+      "id": 106,
+      "type": "User",
+      "html_url": "https://github.com/planted-old-author"
+     },
+     "labels": [],
+     "state": "closed",
+     "state_reason": "completed",
+     "assignee": null,
+     "assignees": [],
+     "comments": 0,
+     "created_at": "2022-12-01T00:00:00Z",
+     "updated_at": "2026-07-01T00:00:00Z",
+     "closed_at": "2023-01-01T12:00:00Z",
+     "closed_by": {
+      "login": "planted-closer",
+      "id": 9001,
+      "type": "User",
+      "html_url": "https://github.com/planted-closer"
+     },
+     "author_association": "NONE"
+    }
+   ]
+  }
+ ]
+}

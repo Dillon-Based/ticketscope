@@ -5,6 +5,7 @@ description = "Similar-issue search over Kubernetes issues, a personal project d
 requires-python = ">=3.14,<3.15"
 dependencies = [
     "fastapi~=0.162.0",
+    "httpx2~=2.16.0",
     "pydantic~=2.14.3",
     "pydantic-settings~=2.16",
     "psycopg[binary]~=3.3.8",
@@ -15,10 +16,10 @@ dependencies = [
 ticketscope-api = "ticketscope.http.app:main"
 ticketscope-migrate = "ticketscope.jobs.migrate.main:main"
 ticketscope-load = "ticketscope.jobs.load.main:main"
+ticketscope-ingest = "ticketscope.jobs.ingest.main:main"
 
 [dependency-groups]
 dev = [
-    "httpx2~=2.16.0",
     "import-linter~=2.15.0",
     "jsonschema~=4.26",
     "pyright~=1.1.414",

@@ -62,6 +62,8 @@ A deliberate change that makes `core` import an adapter fails import-linter.
 
 ## Notes
 
+- Person's step, part done: the public repo exists at https://github.com/Dillon-Based/ticketscope with Actions enabled (2026-11-06). Still to do: connect the local repo to it, and run `scripts/kind-up.sh` locally once during the build.
+
 - Decision: The fixture carries each issue's expected kind, and story 1's load stores it until story 5 loads the computed kind. This keeps the tracer free of story 4 (user, 2026-11-06).
 - Decision: Multi-arch builds run in `ci.yml` only when image files change; `_kind-deploy` builds for the runner's architecture, so PR deploys stay fast (user, 2026-11-06).
 - Check beyond the criteria (high risk): the `_kind-deploy` job summary records the runner's peak memory and free disk, and the wall-clock time from kind-up to `api` Ready. These numbers back the runner-fit assumption and give the later stories their headroom.

@@ -43,6 +43,8 @@ jobs:
           version: ${{ env.HELM_VERSION }}
       - name: helm lint
         run: |
+          # `dependency build` resolves non-OCI repos only through `helm repo add`.
+          helm repo add cnpg https://cloudnative-pg.github.io/charts --force-update
           if [[ -f deploy/charts/platform/Chart.lock ]]; then
             helm dependency build deploy/charts/platform
           else

@@ -109,6 +109,15 @@ Greenfield: no code exists. Follow the spine's Structural Seed layout.
 - **Pyright** runs strict on `src` and standard on `tests`, because the TestClient types are only partly known.
 - **ruff** excludes the vendored `_bmad`, `.agents`, `.claude` and `.codex` trees.
 - **httpx2.** The smoke test uses `httpx2`, the spine's client, and Starlette's TestClient uses it too.
+- **CI fixes from the first kind runs (PR #4):**
+  - The CNPG operator finds its own Deployment by `app.kubernetes.io/name=cloudnative-pg`, and the `cnpg` dependency alias changed that label. The platform values now set `cnpg.nameOverride: cloudnative-pg`.
+  - CNPG reads the Postgres major version from the image tag (regex `^(\d\.?)+`), so the Postgres image is tagged `18-<git SHA>`. The app image keeps the bare SHA.
+  - The api goes Ready once the primary serves, before the replica joins. `kind-up.sh` therefore waits for the Cluster's `Ready` condition after api is Ready.
+  - Gateway CRD ordering needed no extra step, as expected.
+- **Runner fit (run 42229242702):**
+  - api Ready 142s after kind-up start, and the Cluster with both instances Ready at 160s.
+  - Peak memory 2,655 of 15,983 MiB; 80G of disk free.
+  - The whole `kind-deploy` job took 2m59s.
 
 ## Plan Change Log
 

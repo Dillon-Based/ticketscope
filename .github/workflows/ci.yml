@@ -1,0 +1,99 @@
+# PR CI (AD-17): lint, types, import-linter, unit tests, chart lint, the kind
+# deploy with its smoke check, and multi-arch image builds when images change.
+name: ci
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  HELM_VERSION: v4.3.1
+
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+      - run: uv sync --locked
+      - name: ruff
+        run: uv run ruff check . && uv run ruff format --check .
+      - name: pyright
+        run: uv run pyright
+      - name: import-linter
+        run: uv run lint-imports
+      - name: pytest
+        run: uv run pytest
+
+  charts:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: azure/setup-helm@v5
+        with:
+          version: ${{ env.HELM_VERSION }}
+      - name: helm lint
+        run: |
+          # `dependency build` resolves non-OCI repos only through `helm repo add`.
+          helm repo add cnpg https://cloudnative-pg.github.io/charts --force-update
+          if [[ -f deploy/charts/platform/Chart.lock ]]; then
+            helm dependency build deploy/charts/platform
+          else
+            echo "::warning::deploy/charts/platform/Chart.lock is missing; commit it"
+            helm dependency update deploy/charts/platform
+          fi
+          helm lint deploy/charts/platform -f deploy/charts/platform/values-kind.yaml
+          helm lint deploy/charts/ticketscope -f deploy/charts/ticketscope/values-kind.yaml \
+            --set-string image.app.tag=lint --set-string image.postgres.tag=18-lint
+
+  changes:
+    runs-on: ubuntu-24.04
+    outputs:
+      images: ${{ steps.filter.outputs.images }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dorny/paths-filter@v4
+        id: filter
+        with:
+          filters: |
+            images:
+              - 'images/**'
+
+  images:
+    # AD-16: both images for both arches, on native runners (no QEMU).
+    needs: changes
+    if: needs.changes.outputs.images == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            platform: linux/amd64
+          - runner: ubuntu-24.04-arm
+            platform: linux/arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build app image (${{ matrix.platform }})
+        run: >-
+          docker build --platform ${{ matrix.platform }}
+          -f images/app.Dockerfile -t ticketscope-app:${{ github.sha }} .
+      - name: Build postgres image (${{ matrix.platform }})
+        run: >-
+          docker build --platform ${{ matrix.platform }}
+          -f images/postgres.Dockerfile -t ticketscope-postgres:18-${{ github.sha }} .
+
+  kind-deploy:
+    uses: ./.github/workflows/_kind-deploy.yml
+    with:
+      check: uv run pytest -m kind tests/smoke

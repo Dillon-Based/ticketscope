@@ -1,0 +1,63 @@
+{{- /*
+The ticketscope_ro password: generated once, then kept across upgrades (AD-7).
+*/ -}}
+{{- $secretName := include "ticketscope.roSecret" . -}}
+{{- $existing := lookup "v1" "Secret" .Release.Namespace $secretName -}}
+{{- $password := "" -}}
+{{- if and $existing $existing.data (hasKey $existing.data "password") -}}
+{{- $password = index $existing.data "password" | b64dec -}}
+{{- else -}}
+{{- $password = randAlphaNum 32 -}}
+{{- end -}}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $secretName }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ticketscope.labels" . | nindent 4 }}
+    cnpg.io/reload: "true"
+type: kubernetes.io/basic-auth
+stringData:
+  username: ticketscope_ro
+  password: {{ $password | quote }}
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ include "ticketscope.dbCluster" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ticketscope.labels" . | nindent 4 }}
+spec:
+  instances: {{ .Values.database.instances }}
+  imageName: {{ include "ticketscope.postgresImage" . }}
+  imagePullPolicy: {{ .Values.image.pullPolicy }}
+  postgresql:
+    shared_preload_libraries:
+      - pg_textsearch
+  bootstrap:
+    initdb:
+      database: app
+      owner: app
+      # Neither vector nor pg_textsearch is a trusted extension, so the app owner
+      # cannot create them; create them here as superuser. Migration 0001 keeps
+      # CREATE EXTENSION IF NOT EXISTS.
+      postInitApplicationSQL:
+        - CREATE EXTENSION IF NOT EXISTS vector
+        - CREATE EXTENSION IF NOT EXISTS pg_textsearch
+  managed:
+    roles:
+      - name: ticketscope_ro
+        ensure: present
+        login: true
+        comment: read-only role for api and eval (AD-7)
+        passwordSecret:
+          name: {{ $secretName }}
+  storage:
+    size: {{ .Values.database.storage.size }}
+    {{- with .Values.database.storage.storageClass }}
+    storageClass: {{ . }}
+    {{- end }}
+  resources:
+    {{- toYaml .Values.database.resources | nindent 4 }}

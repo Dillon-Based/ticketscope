@@ -1,0 +1,24 @@
+# Defaults for the platform release. Environment facts live in values-<env>.yaml.
+
+gateway:
+  # The one Gateway (AD-14). Routes from the ticketscope release attach to it.
+  name: ticketscope
+  # Public hostname; set per environment.
+  hostname: ""
+  className: envoy
+  # The GatewayClass this release creates, when createClass is true.
+  createClass: true
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+  port: 80
+
+envoy-gateway:
+  enabled: true
+
+cnpg:
+  enabled: true
+  # The operator finds its own Deployment by app.kubernetes.io/name=cloudnative-pg.
+  # The chart derives that label from .Chart.Name, which the `cnpg` alias would
+  # replace, so pin it back.
+  nameOverride: cloudnative-pg
+  crds:
+    create: true

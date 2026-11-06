@@ -1,0 +1,105 @@
+# Reusable: build images (runner arch) -> scripts/kind-up.sh -> run the caller's check.
+# The cluster dies with this job, so the caller passes its check as a command (AD-17).
+name: _kind-deploy
+
+on:
+  workflow_call:
+    inputs:
+      check:
+        description: Shell command run after kind-up.sh, against the live cluster.
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  KIND_VERSION: v0.33.0
+  KUBECTL_VERSION: v1.36.4
+  HELM_VERSION: v4.3.1
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Start runner-fit sampler
+        run: |
+          # Used memory (MemTotal - MemAvailable, MiB) every 2s, for the summary.
+          nohup bash -c 'while true; do
+            awk "/^MemTotal:/{t=\$2} /^MemAvailable:/{a=\$2} END{print int((t-a)/1024)}" /proc/meminfo
+            sleep 2
+          done' > /tmp/mem-used-mib.log 2>/dev/null &
+
+      - uses: astral-sh/setup-uv@v10.3.3
+      - run: uv sync --locked
+
+      - uses: azure/setup-helm@v5
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: Install kind and kubectl
+        run: |
+          arch=$(uname -m); case "$arch" in x86_64) arch=amd64;; aarch64) arch=arm64;; esac
+          mkdir -p "$HOME/.local/bin"
+          curl -fsSLo "$HOME/.local/bin/kind" "https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-linux-${arch}"
+          curl -fsSLo "$HOME/.local/bin/kubectl" "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${arch}/kubectl"
+          chmod +x "$HOME/.local/bin/kind" "$HOME/.local/bin/kubectl"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: kind-up
+        run: scripts/kind-up.sh
+        env:
+          TAG: ${{ github.sha }}
+
+      - name: Check
+        env:
+          CHECK: ${{ inputs.check }}
+        run: bash -c "$CHECK"
+
+      - name: Diagnostics
+        if: failure()
+        run: |
+          kubectl get nodes -o wide || true
+          kubectl get pods,svc,jobs -A -o wide || true
+          kubectl get gateway,httproute -A -o yaml || true
+          kubectl -n ticketscope get clusters.postgresql.cnpg.io -o yaml || true
+          # Every pod in the two releases' namespaces: events, then current and
+          # previous logs of each container, so a crash loop shows its cause.
+          for ns in platform ticketscope; do
+            for pod in $(kubectl -n "$ns" get pods -o name 2>/dev/null); do
+              echo "::group::$ns $pod"
+              kubectl -n "$ns" describe "$pod" | sed -n '/^Containers:/,$p' || true
+              kubectl -n "$ns" logs "$pod" --all-containers --tail=200 || true
+              echo "--- previous ---"
+              kubectl -n "$ns" logs "$pod" --all-containers --previous --tail=200 || true
+              echo "::endgroup::"
+            done
+          done
+          docker logs ticketscope-cloud-provider-kind 2>&1 | tail -100 || true
+
+      - name: Runner-fit summary
+        if: always()
+        run: |
+          peak=$(sort -n /tmp/mem-used-mib.log 2>/dev/null | tail -1)
+          total=$(awk '/^MemTotal:/{print int($2/1024)}' /proc/meminfo)
+          disk=$(df -h --output=avail / | tail -1 | tr -d ' ')
+          if [[ -n "${TICKETSCOPE_KIND_UP_TO_READY_SECONDS:-}" ]]; then
+            wall="${TICKETSCOPE_KIND_UP_TO_READY_SECONDS}s"
+          else
+            wall="n/a (api never became Ready)"
+          fi
+          {
+            echo "### Runner fit (kind)"
+            echo
+            echo "| Measure | Value |"
+            echo "| --- | --- |"
+            echo "| Peak memory used | ${peak:-n/a} MiB of ${total} MiB |"
+            echo "| Free disk on / | ${disk} |"
+            echo "| Wall clock, kind-up start to api Ready | ${wall} |"
+            echo
+            echo "Wall clock is measured by scripts/kind-up.sh and includes its image builds."
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat "$GITHUB_STEP_SUMMARY"

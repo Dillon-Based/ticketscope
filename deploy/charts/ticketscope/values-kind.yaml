@@ -1,0 +1,6 @@
+# kind: environment facts only (AD-25): hostname and storage class.
+hostname: ticketscope.kind.internal
+
+database:
+  storage:
+    storageClass: standard

@@ -1,0 +1,53 @@
+[project]
+name = "ticketscope"
+version = "0.1.0"
+description = "Similar-issue search over Kubernetes issues, a personal project deployed and operated on Kubernetes."
+requires-python = ">=3.14,<3.15"
+dependencies = [
+    "fastapi~=0.162.0",
+    "pydantic~=2.14.3",
+    "pydantic-settings~=2.16",
+    "psycopg[binary]~=3.3.8",
+    "uvicorn~=0.54.0",
+]
+
+[project.scripts]
+ticketscope-api = "ticketscope.http.app:main"
+ticketscope-migrate = "ticketscope.jobs.migrate.main:main"
+ticketscope-load = "ticketscope.jobs.load.main:main"
+
+[dependency-groups]
+dev = [
+    "httpx2~=2.16.0",
+    "import-linter~=2.15.0",
+    "jsonschema~=4.26",
+    "pyright~=1.1.414",
+    "pytest~=9.2",
+    "ruff~=0.17.4",
+]
+
+[build-system]
+requires = ["uv_build>=0.13,<0.14"]
+build-backend = "uv_build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+# Vendored tooling (BMad, agent skills) is not ours to lint or format.
+extend-exclude = ["_bmad", "_bmad-output", ".agents", ".claude", ".codex"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "RUF"]
+
+[tool.pyright]
+include = ["src", "tests"]
+pythonVersion = "3.14"
+typeCheckingMode = "standard"
+strict = ["src"]
+venvPath = "."
+venv = ".venv"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-m 'not kind'"
+markers = ["kind: needs the kind cluster and its Gateway; run with -m kind"]

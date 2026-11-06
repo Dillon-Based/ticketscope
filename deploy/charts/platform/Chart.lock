@@ -1,0 +1,9 @@
+dependencies:
+- name: gateway-helm
+  repository: oci://docker.io/envoyproxy
+  version: v1.9.3
+- name: cloudnative-pg
+  repository: https://cloudnative-pg.github.io/charts
+  version: 0.29.1
+digest: sha256:d0c2f055868684fb30db1c8a0a208bab5656e4be68cc9e84aad12bc3e06560fb
+generated: "2026-11-06T09:10:07.277096-05:00"

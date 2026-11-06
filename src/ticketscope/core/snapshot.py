@@ -1,9 +1,9 @@
 """One issue of a corpus snapshot (AD-6).
 
-A snapshot is compressed JSONL: one issue per line. `SnapshotIssue` mirrors
-`snapshot/schema-v1.json` (GitHub). `SnapshotIssueV2` is the Mojang Jira shape that
-schema v2 mirrors; it carries no reporter or author identity, only each comment's
-`from_reporter` flag.
+A snapshot is compressed JSONL: one issue per line. `SnapshotIssue` is the old v1
+(GitHub) shape, kept for synthetic tests only. `SnapshotIssueV2` is the Mojang Jira shape
+that `snapshot/schema-v2.json` is generated from; it carries no reporter or author
+identity, only each comment's `from_reporter` flag.
 """
 
 from datetime import datetime

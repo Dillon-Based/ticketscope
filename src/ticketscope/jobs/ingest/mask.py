@@ -1,9 +1,9 @@
-"""Masking under the corpus terms (spike 2): secrets, emails and @handle mentions.
+"""Masking under the corpus terms (spikes 2 and 12): secrets, emails and mentions.
 
 Also drops NUL characters, which Postgres text cannot store.
 
-Applied to the title, the body and every comment body before a record is checkpointed
-or written. Order matters: secrets first (a PEM block may hold anything), then emails,
+Applied to the title, the body and every comment body before a record is written.
+Order matters: secrets first (a PEM block may hold anything), then emails,
 then mentions, so `user@example.com` is masked as an email and never as a mention.
 """
 
@@ -12,6 +12,7 @@ import re
 EMAIL_MARKER = "[email masked]"
 SECRET_MARKER = "[secret masked]"
 USER_MARKER = "@[user]"
+JIRA_USER_MARKER = "[~user]"
 
 _PEM_BLOCK = re.compile(
     r"-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----"
@@ -33,6 +34,8 @@ _SECRETS = re.compile(
 _EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}\b")
 # `@handle`, not `@org/team`, not an email, not `path/@x` or `a.@x`.
 _MENTION = re.compile(r"(?<![\w/.@])@([A-Za-z0-9](?:[A-Za-z0-9-]{0,38}))(?![\w/-])")
+# Jira user mentions: `[~username]` and `[~accountid:5b10ac8d82e05b22cc7d4ef5]`.
+_JIRA_MENTION = re.compile(r"\[~(?:accountid:)?[^\]\n]+\]")
 
 
 def mask(text: str) -> str:
@@ -48,5 +51,9 @@ def mask(text: str) -> str:
     return _MENTION.sub(USER_MARKER, text)
 
 
-def mask_optional(text: str | None) -> str | None:
-    return None if text is None else mask(text)
+def mask_jira(text: str) -> str:
+    """Every Jira `[~user]` / `[~accountid:…]` mention becomes `[~user]`, then `mask`.
+
+    Mentions go first, so one holding an email still becomes exactly `[~user]`.
+    """
+    return mask(_JIRA_MENTION.sub(JIRA_USER_MARKER, text))

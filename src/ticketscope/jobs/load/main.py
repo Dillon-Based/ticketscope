@@ -1,8 +1,8 @@
 """load: the only writer of corpus tables (AD-7). Loads the pinned snapshot (AD-6).
 
-Reads `<snapshot_dir>/<version>.jsonl.gz` and the expected-kinds sidecar
-`<snapshot_dir>/<version>-kinds.json`, then replaces the issues and the single
-`corpus_meta` row in one transaction.
+Reads `<snapshot_dir>/<version>.jsonl.gz` (schema v2; any other line is refused) and the
+expected-kinds sidecar `<snapshot_dir>/<version>-kinds.json`, then replaces the issues and
+the single `corpus_meta` row in one transaction.
 
 Until story 5, each issue's kind comes from the sidecar and every outcome is
 `unknown`.
@@ -18,20 +18,20 @@ from typing import cast, get_args
 
 from ticketscope.adapters.postgres import IssueRow, replace_corpus, wait_for_database
 from ticketscope.core.model import Kind
-from ticketscope.core.snapshot import SnapshotIssue
+from ticketscope.core.snapshot import SnapshotIssueV2
 from ticketscope.settings import Settings
 
 log = logging.getLogger("ticketscope.load")
 
 
-def read_snapshot(path: Path) -> Iterator[SnapshotIssue]:
-    """Yield the issues of a gzipped JSONL snapshot, validating each line."""
+def read_snapshot(path: Path) -> Iterator[SnapshotIssueV2]:
+    """Yield the issues of a gzipped JSONL snapshot, validating each line as schema v2."""
     with gzip.open(path, "rt", encoding="utf-8") as lines:
         for lineno, line in enumerate(lines, start=1):
             if not line.strip():
                 continue
             try:
-                yield SnapshotIssue.model_validate_json(line)
+                yield SnapshotIssueV2.model_validate_json(line)
             except ValueError as exc:
                 raise ValueError(f"{path}:{lineno}: invalid snapshot issue: {exc}") from exc
 
@@ -50,11 +50,11 @@ def read_kinds(path: Path) -> dict[int, Kind]:
     return kinds
 
 
-def search_text(issue: SnapshotIssue) -> str:
+def search_text(issue: SnapshotIssueV2) -> str:
     return f"{issue.title}\n\n{issue.body or ''}"
 
 
-def build_rows(issues: Iterable[SnapshotIssue], kinds: dict[int, Kind]) -> Iterator[IssueRow]:
+def build_rows(issues: Iterable[SnapshotIssueV2], kinds: dict[int, Kind]) -> Iterator[IssueRow]:
     for issue in issues:
         kind = kinds.get(issue.number)
         if kind is None:
@@ -65,9 +65,9 @@ def build_rows(issues: Iterable[SnapshotIssue], kinds: dict[int, Kind]) -> Itera
             body=issue.body,
             url=issue.url,
             state=issue.state,
-            state_reason=issue.state_reason,
+            state_reason=None,
             created_at=issue.created_at,
-            closed_at=issue.closed_at,
+            closed_at=issue.resolved_at,
             kind=kind,
             outcome_status="unknown",
             outcome_summary=None,

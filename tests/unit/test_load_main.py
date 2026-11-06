@@ -1,5 +1,8 @@
-"""`load`'s exit status: non-zero when the write fails, zero with every issue written."""
+"""`load`'s exit status: non-zero when the write fails or a line is not schema v2, zero
+with every issue written."""
 
+import gzip
+import json
 from collections.abc import Iterable
 from pathlib import Path
 
@@ -41,3 +44,32 @@ def test_load_exits_zero_with_every_fixture_issue(monkeypatch: pytest.MonkeyPatc
     assert load.main() == 0
     assert versions == ["fixture"]
     assert len({row.number for row in written}) == len(written) == 8
+
+
+def test_load_exits_non_zero_on_a_v1_snapshot(
+    snapshot_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    v1 = {
+        "number": 900001,
+        "url": "https://github.com/kubernetes/kubernetes/issues/900001",
+        "title": "v1",
+        "body": None,
+        "state": "closed",
+        "state_reason": "completed",
+        "created_at": "2025-01-01T00:00:00Z",
+        "closed_at": "2025-01-02T00:00:00Z",
+        "labels": [],
+        "comments": [],
+        "timeline": [],
+    }
+    with gzip.open(snapshot_dir / "fixture.jsonl.gz", "wt", encoding="utf-8") as f:
+        f.write(json.dumps(v1) + "\n")
+    written: list[IssueRow] = []
+
+    def fake_replace(conninfo: str, version: str, rows: Iterable[IssueRow]) -> int:
+        written.extend(rows)
+        return len(written)
+
+    monkeypatch.setattr(load, "replace_corpus", fake_replace)
+    assert load.main() == 1
+    assert written == []

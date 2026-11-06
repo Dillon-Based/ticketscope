@@ -36,9 +36,6 @@ class Settings(BaseSettings):
     snapshot_version: str = "fixture"
     snapshot_dir: Path = Path("snapshots")
 
-    # ingest: a read-only GitHub token; `snapshot.yml` maps the INGEST_GITHUB_TOKEN secret here.
-    ingest_github_token: SecretStr = SecretStr("")
-
     def conninfo(self) -> str:
         """A libpq keyword/value connection string."""
         parts = {

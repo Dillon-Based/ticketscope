@@ -13,6 +13,8 @@ inputDocuments:
   - _bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/tickets.toml
   - _bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-tracer-keyword-search-answers-through-the-gateway-on-kind.md
   - _bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-ingest-publishes-a-versioned-corpus-snapshot.md
+  - _bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/spike-choose-the-jira-corpus-findings/outcome-mapping.md
+  - _bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/spike-choose-the-jira-corpus-findings/terms.md
   - _bmad-output/initiative-ticketscope/architecture-ticketscope/architecture-ticketscope.md
   - _bmad-output/initiative-ticketscope/initiative-ticketscope.md
   - _bmad-output/initiative-ticketscope/brief-ticketscope/brief-ticketscope.md
@@ -36,7 +38,7 @@ Epic slug: `epic-search-baseline`. Epic requirements R1–R7 (initiative R1, R2,
 
 ## Executive Summary
 
-**Scope:** full test design for Epic 1, against the refined epic (`refined: true`), the adopted architecture spine and the 11 planned entries in `tickets/tickets.toml`.
+**Scope:** full test design for Epic 1, against the refined epic (`refined: true`), the adopted architecture spine and the 11 planned entries in `tickets/tickets.toml`. Rows for stories 13 and 14, added by the spike 12 replan, were added in an edit on 2026-11-06.
 
 No application code exists yet. Every scenario below is planned, and none has run. Most scenarios are the stories' own `verify` lines broken into atomic tests; this plan assigns their levels and priorities and adds the relevance checks the stories do not yet carry.
 
@@ -50,9 +52,9 @@ No application code exists yet. Every scenario below is planned, and none has ru
 **Coverage Summary:**
 
 - P0 scenarios: 3 (~6–12 hours)
-- P1 scenarios: 40 (~24–40 hours)
-- P2/P3 scenarios: 15 (~6–12 hours)
-- **Total effort**: ~36–64 hours (~1–2 weeks)
+- P1 scenarios: 71 (~43–71 hours)
+- P2/P3 scenarios: 17 (~7–13 hours)
+- **Total effort**: ~56–97 hours (~1.5–2.5 weeks)
 
 ---
 
@@ -99,8 +101,8 @@ No low-priority risks are open.
 | Risk ID | Settled by | Regression coverage |
 | ------- | ---------- | ------------------- |
 | R-001 | The spine is adopted: `/v1` contract (AD-4), span contract (AD-10), two releases (AD-13), CI layout (AD-17), Retriever port and registry (AD-19), one wire contract module (AD-20), values ownership (AD-25). | P1 `/v1` contract tests (story 6), P1 span-attribute tests (story 9), P1 import-linter check (story 1). |
-| R-002 | The epic's Constraints fix the outcome precedence and outcome terms, and story 4 computes them in core (AD-8). | P1 outcome unit tests, one per branch plus ties (story 4); P1 load check that no issue lacks an outcome (story 5). |
-| R-003 | Story 2's spike settles the corpus terms, and story 3's publish waits on it. If the answer is no, story 3 stops and the epic is replanned. | P1 ingest check that story 2's conditions are applied to the snapshot (story 3). |
+| R-002 | The epic's Constraints fix the outcome precedence and outcome terms, and story 4 computes them in core (AD-8). | P1 outcome unit tests, one per branch plus ties (story 4); P1 Jira outcome unit tests, one per resolution class plus the answered rule (story 14); P1 load check that no issue lacks an outcome (story 5). |
+| R-003 | Story 2's spike settles the corpus terms, and story 3's publish waits on it. If the answer is no, story 3 stops and the epic is replanned. | P1 ingest check that story 2's conditions are applied to the snapshot (story 3). P1 Jira ingest checks that spike 12's conditions are applied: no identities, masking, exclusion and attribution (story 13). |
 
 ### Tracked Assumption (not scored)
 
@@ -181,13 +183,19 @@ Risk score is supporting evidence and is not a required condition.
 | Load the pinned snapshot (R2) | Integration | - | 5 | Story 5 | (1) An asset whose checksum differs from the pinned checksum is refused. (2) A SQL check finds no issue without a kind or an outcome. (3) The job log reports each kind's and each outcome's share. (4) A second load with the same pin is a no-op. (5) `corpus_meta` holds the pinned snapshot version, and `api` returns it as `corpus_version`. |
 | Load fits its spin-up share (R1, initiative R10) | Integration | - | 1 | Story 3 | `snapshot.yml` times a load of the candidate snapshot into the in-repo Postgres image on the runner. The time must be within 10 minutes before the snapshot is published. |
 | Ingest writes a valid snapshot (R1; regression for closed R-003) | Integration | - | 4 | Story 3 | Against recorded GitHub API responses: (1) the output validates against the committed JSON Schema. (2) After a simulated rate-limit response, ingest resumes where it stopped. (3) An issue with 100 or more comments is fetched in full. (4) Story 2's conditions, such as excluded fields or attribution, are applied. Story 3's 20-issue sample against github.com stays a manual check. |
+| Jira outcome derivation in core (R2; regression for closed R-002) | Unit | - | 12 | Story 14 | On synthetic Jira-shaped issues, per spike 12's `outcome-mapping.md`. One case per class with its `source`: (1) `Duplicate` → duplicate, `label`, with `ref` pointing at the duplicate target. (2) `Fixed` → fixed, `null`. (3) `Won't Fix` → not_planned, `null`. (4) `Timed out` → stale, `null`. (5) `Answered` → answered, `closing_comment`. (6) No resolution → unknown, `null`. (7) An unmapped resolution such as `Triaged` → unknown. (8) A resolution is matched case-insensitively after trimming, so ` fixed ` → fixed. The answered rule: (9) a Question type issue resolved `Done` with the non-reporter-comment flag set → answered, `closing_comment`. (10) The same issue with the flag unset → fixed. (11) A Support type issue resolved `Duplicate` with the flag set stays duplicate. (12) Core's derivation version differs from story 4's, so a load reloads. Story 4's GitHub outcome tests keep running beside these. |
+| Jira kind rule in core (R2) | Unit | - | 3 | Story 14 | (1) A body whose `{code}` and `{noformat}` blocks put it just below the threshold is `short`. (2) Just above is `log_heavy`. (3) A `{code:java}` toggle with parameters counts the same as `{code}`. How an unclosed toggle counts: UNKNOWN; the sources do not say. |
+| Ingest writes a valid Jira snapshot (R1) | Integration | - | 8 | Story 13 | Against a recorded slice of The Public Jira Dataset v7: (1) the output validates against the committed JSON Schema v2. (2) Schema v2 mirrors core's snapshot model as story 14 extends it: a v2 record parses into the model, and the two name the same fields. (3) A repeated issue key is kept once, and the first document wins. (4) Only resolved MCL, REALMS and MCD issues and the unresolved issues their duplicates point to are written; an unresolved issue no duplicate points to, and a resolved issue from another project, are absent. (5) Each record carries its Jira id, its readable key, its `bugs.mojang.com` URL built from the key, and the duplicate link to its target. The non-reporter-comment flag: (6) set when someone other than the reporter commented at or before the resolution time; (7) unset when only the reporter commented; (8) unset when the only non-reporter comment came after the resolution time. The person-run publish itself stays story 13's manual verify. |
+| The Jira snapshot carries no identities and applies spike 12's terms (R1; regression for closed R-003) | Integration | - | 5 | Story 13 | Against the recorded slice: (1) no reporter, assignee, creator or comment-author id from the slice appears anywhere in the output. (2) Planted emails and secrets are masked. (3) `[~user]` and `[~accountid:…]` mentions are masked. (4) An issue on the exclusion list is absent. (5) The generated Release notes and the README carry spike 12's attribution line from `terms.md`. |
+| The fixture and load move to schema v2 (R1) | Integration | - | 2 | Story 13 | (1) The synthetic fixture validates against schema v2 and still records each issue's expected kind outside the schema. (2) `jobs.load` reads the v2 fixture through story 1's load path and stores every issue. Story 1's P0 bring-up then re-runs on the v2 fixture. |
+| The Jira snapshot load fits its spin-up share (R1, initiative R10) | Integration | - | 1 | Story 13 | Before the person-run publish, ingest times a load of the candidate snapshot into the in-repo Postgres image, and the time must be within 10 minutes. It runs on the person's machine, not the runner (epic Decision, story 13 runs locally); spike 12 measured 3.9 s for the subset. |
 | The search page shows both example queries (R4) | E2E | - | 2 | Story 7 | Through the Gateway on kind: the vague and the log-heavy example query each render a ranked list where every row shows title, link, kind and outcome. |
 | One search request yields one trace in Tempo (R6) | E2E | - | 1 | Story 9 | One `POST /v1/search` produces a trace that the Tempo API returns with the `ticketscope-api` SERVER span, the `retrieval keyword` INTERNAL span and the `db query` CLIENT span in the AD-10 tree. |
 | Span attributes follow AD-10 (R6; regression for closed R-001) | API | - | 3 | Story 9 | In-memory span exporter: (1) `service.name` is exactly `ticketscope-api`. (2) The retrieval span carries `gen_ai.operation.name=retrieval`, `gen_ai.data_source.id=ticketscope-k8s-issues`, `ticketscope.retrieval.mode`, `.k`, `ticketscope.corpus.version` and `ticketscope.result.count`. (3) The query text is absent unless the opt-in value is set. |
 | Backup to SeaweedFS completes (R5) | E2E | - | 1 | Story 8 | In `_kind-deploy`, an on-demand CNPG Backup reaches phase `completed`, and its objects are listed in the SeaweedFS bucket. |
 | Layer rules are enforced (Done when; regression for closed R-001) | Unit | - | 1 | Story 1 | A deliberate change that makes `core` import an adapter fails import-linter. |
 
-**Total P1**: 40 tests, ~24–40 hours
+**Total P1**: 71 tests, ~43–71 hours
 
 ### P2 (Medium)
 
@@ -202,9 +210,10 @@ is supporting evidence and is not a required condition.
 | Log-heavy input is accepted by BM25 (R3) | API | - | 2 | Story 6 | (1) A query containing full-text operator characters (`&`, `\|`, `!`, `:`, `(`) returns 200 with ranked results. (2) A multi-KB pasted log returns 200. |
 | Database roles and source access are read-only where stated (AD-7, story 3) | Integration | - | 2 | Stories 1, 3 | (1) A write through `ticketscope_ro` is refused. (2) Against recorded responses, ingest issues only `GET` requests. |
 | Published snapshots are never overwritten (R1) | Unit | - | 1 | Story 3 | The next version is the next free `YYYY.MM.N`; an existing version is never chosen. Story 3's second-dispatch check stays its manual verify. |
+| The Jira Release notes report the subset and its counts (R1) | Unit | - | 2 | Story 13 | On the recorded slice: (1) the in-subset duplicate pairs by kind equal a hand count, and a duplicate whose target is outside the subset is not counted. (2) The generated Release notes state the subset, the issue count, the in-subset duplicate pairs by kind, the kind split and the measured load time. |
 | Logs carry trace context (R6) | Unit | - | 1 | Story 9 | A log line emitted inside a span is JSON with `trace_id` and `span_id`. |
 
-**Total P2**: 14 tests, ~6–11 hours
+**Total P2**: 16 tests, ~6–13 hours
 
 ### P3 (Low)
 
@@ -228,6 +237,7 @@ Defer only work with material infrastructure or duration cost. P0 through P3 are
 execution timing; this section decides when tests run and the coverage plan above decides what they are.
 
 - **Pull request:** `ci.yml` runs ruff, pyright, import-linter and every Unit, Integration and API test on the in-memory fake or a Postgres container. `_kind-deploy` then runs the P0 bring-up first, so a broken deploy fails fast, followed by the load checks on the pinned real snapshot, the R-004 golden-query checks, the page, trace and backup scenarios. Playwright is not needed: the page is server-rendered with no JS framework, so page checks are HTTP requests. The duration of `_kind-deploy` is UNKNOWN until story 1 records it.
+- **Person-run (story 13):** the Jira ingest's timed load runs on the person's machine before the publish. Story 13's Unit and Integration tests on the recorded slice run in `ci.yml` on every PR.
 - **On dispatch:** `snapshot.yml` runs the ingest checks against the live API and the 10-minute load timing before it publishes.
 - **Nightly:** none planned. Every scenario fits the PR or dispatch runs.
 - **Weekly:** none planned.
@@ -243,10 +253,10 @@ Do not re-list the individual tests here. They are already in the coverage plan.
 | Priority | Count | Hours/Test | Total Hours | Notes |
 | -------- | ----- | ---------- | ----------- | ----- |
 | P0 | 3 | 2.0–4.0 | ~6–12 | kind, CNPG and Gateway bring-up in CI is the main cost |
-| P1 | 40 | 0.6–1.0 | ~24–40 | Most are story verify lines; the golden-query file adds the curation work |
-| P2 | 14 | 0.4–0.8 | ~6–11 | Simple scenarios |
+| P1 | 71 | 0.6–1.0 | ~43–71 | Most are story verify lines; the golden-query file adds the curation work |
+| P2 | 16 | 0.4–0.8 | ~6–13 | Simple scenarios |
 | P3 | 1 | 0.25–0.5 | ~0.5 | Manual |
-| **Total** | **58** | **-** | **~36–64** | **~1–2 weeks** |
+| **Total** | **91** | **-** | **~56–97** | **~1.5–2.5 weeks** |
 
 ### Prerequisites
 
@@ -256,6 +266,7 @@ Do not re-list the individual tests here. They are already in the coverage plan.
 - The pinned real snapshot and its checksum (stories 3, 5).
 - The golden-query file with each query's source issue and twin issue (story 5).
 - Recorded GitHub API responses, including a rate-limit response and an issue with 100 or more comments (story 3).
+- A recorded slice of The Public Jira Dataset v7 with a repeated issue key, a duplicate pointing outside the subset, planted emails, secrets and mentions, an excluded issue, and Question/Support issues with comments before and after resolution (story 13).
 
 **Tooling:**
 

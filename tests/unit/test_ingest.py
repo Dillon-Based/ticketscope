@@ -6,6 +6,7 @@ No live GitHub calls: every request goes to `Replay`, which fails on anything un
 import gzip
 import hashlib
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +19,7 @@ from ticketscope.core.derive import derive_outcome
 from ticketscope.core.snapshot import SnapshotIssue
 from ticketscope.jobs.ingest import main as ingest
 from ticketscope.jobs.ingest.mask import EMAIL_MARKER, SECRET_MARKER, USER_MARKER
+from ticketscope.jobs.ingest.select import enrich, select_issues
 from ticketscope.jobs.load.main import read_kinds, read_snapshot
 
 VERSION = "2026.11.1"
@@ -408,3 +410,33 @@ def test_exclusions_added_after_selection_are_counted(tmp_path: Path) -> None:
     assert 130005 not in _issues(tmp_path)
     report = json.loads((tmp_path / "out" / "report.json").read_text())
     assert (report["count"], report["excluded"], report["gone"]) == (3, 2, 0)
+
+
+def test_nul_characters_never_reach_a_record() -> None:
+    # The first real snapshot failed its timed load: Postgres text cannot hold NUL.
+    listed: dict[str, Any] = {
+        "number": 1,
+        "title": "crash\x00",
+        "body": "log line\x00 here",
+        "state": "closed",
+        "state_reason": "completed",
+        "created_at": "2026-01-01T00:00:00Z",
+        "closed_at": "2026-01-02T00:00:00Z",
+        "labels": [],
+    }
+    [base], _ = select_issues(
+        [listed],
+        repo="kubernetes/kubernetes",
+        window_start=datetime(2025, 1, 1, tzinfo=UTC),
+        cap=10,
+        exclusions=frozenset(),
+    )
+    comment: dict[str, Any] = {
+        "event": "commented",
+        "created_at": "2026-01-01T12:00:00Z",
+        "author_association": "MEMBER",
+        "body": "\x00same\x00",
+    }
+    issue = enrich(base, [comment])
+    assert (issue.title, issue.body, issue.comments[0].body) == ("crash", "log line here", "same")
+    assert "\\u0000" not in issue.model_dump_json()

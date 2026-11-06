@@ -75,3 +75,19 @@ def test_mask_is_idempotent() -> None:
 def test_plain_text_is_unchanged() -> None:
     text = "kubectl get pods -A\n```\nE1104 10:00:00 kubelet.go:1] boom\n```"
     assert mask(text) == text
+
+
+def test_nul_characters_are_dropped() -> None:
+    # Postgres text cannot hold NUL; the first real snapshot failed its timed load on one.
+    assert mask("panic\x00: boom\x00") == "panic: boom"
+
+
+def test_nul_cannot_hide_a_secret() -> None:
+    token = "ghp_" + "a" * 18 + "\x00" + "a" * 18
+    assert mask(f"token {token}") == f"token {SECRET_MARKER}"
+
+
+def test_other_control_characters_are_kept() -> None:
+    # ANSI colour codes in pasted logs are real log text, and Postgres stores them.
+    text = "\x1b[31mERROR\x1b[0m failed\x07"
+    assert mask(text) == text

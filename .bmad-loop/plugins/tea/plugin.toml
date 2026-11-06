@@ -1,0 +1,112 @@
+# Project-local Test Architect (TEA) plugin for bmad-loop, for BMAD v7.
+#
+# Overrides bmad-loop's builtin `tea` plugin (a project plugin of the same name
+# wins). The builtin targets the pre-v7 TEA and does not work here: it invokes
+# `bmad-testarch-*` skills (v7 ships `bmad-tea-*`), its readiness gate wants
+# `_bmad/tea/config.yaml` (v7 config lives in `_bmad/config.toml`), and its
+# blocking gates read root-level reports v7 no longer writes, so they never
+# find a verdict and pass every commit.
+#
+# What this plugin does instead:
+#
+#   per ticket   post_dev_phase  bmad-tea-automate (expand mode)       [role=dev]
+#                writes and runs tests for what the ticket built, so the
+#                epic's trace has tests to map.
+#
+#   per epic     the release gate, in TEA's order — bmad-tea-test-review,
+#                bmad-tea-nfr, bmad-tea-trace — scoped to the finished epic.
+#
+# Why the epic gate rides the retrospective: in ticket-tree mode bmad-loop emits
+# no epic-boundary plugin stage, and workflows inject only at per-unit stages.
+# The one session the loop launches at an epic boundary is the auto
+# retrospective, which passes through `pre_session` with a rewritable prompt.
+# The plugin prepends the gate there, has the session commit the gate reports,
+# and makes the trace decision bound the retro's acceptance verdict:
+#
+#   FAIL      -> verdict `rejected`: bmad-loop holds every later pick until the
+#                epic is closed with bmad-agent-po (fix-up tickets reopen it).
+#   CONCERNS  -> at most `accepted-with-open-items`, concerns as action items.
+#   PASS / WAIVED -> no constraint.
+#
+# Requirements:
+#   * [gates] retrospective = "auto" in .bmad-loop/policy.toml (validated).
+#   * bmad-retrospective in the retro adapter's project skill tree
+#     (.claude/skills/bmad-retrospective for claude), or the loop skips the
+#     retro as `skill-missing`.
+#   * A grant, since this is a project plugin with Python:
+#       bmad-loop plugins enable tea
+#       # .bmad-loop/policy.toml
+#       [plugins]
+#       enabled = ["tea"]
+
+[plugin]
+name = "tea"
+version = "2.0.0"
+api_version = 1
+description = "BMAD v7 Test Architect: automate tests per ticket; test review, NFR and trace as the release gate at each epic's retrospective."
+author = "ticketscope"
+seed_globs = [
+  "_bmad/**",
+  ".claude/skills/bmad-tea*",
+  ".claude/skills/bmod-tea",
+  ".claude/skills/bmad-retrospective",
+]
+
+[python]
+module = "tea_plugin.py"
+class = "TeaPlugin"
+
+# ----------------------------------------------------------------- settings
+
+[[settings]]
+key = "require_tea"
+type = "bool"
+default = true
+label = "Require TEA installed"
+help = "Fail fast at startup unless TEA is configured (_bmad/tea/ and modules.tea.test_artifacts in _bmad/config.toml)."
+
+[[settings]]
+key = "automate_enabled"
+type = "bool"
+default = true
+label = "Per ticket: automate (expand mode)"
+help = "post_dev_phase: write and run tests for the code each ticket built, healing test defects (bmad-tea-automate)."
+
+[[settings]]
+key = "epic_review_enabled"
+type = "bool"
+default = true
+label = "Per epic: test review"
+help = "Run bmad-tea-test-review for the finished epic before its retrospective."
+
+[[settings]]
+key = "epic_nfr_enabled"
+type = "bool"
+default = true
+label = "Per epic: NFR audit"
+help = "Run bmad-tea-nfr for the finished epic before its retrospective."
+
+[[settings]]
+key = "epic_trace_enabled"
+type = "bool"
+default = true
+label = "Per epic: trace gate"
+help = "Run bmad-tea-trace for the finished epic before its retrospective; its gate decision is the release gate."
+
+[[settings]]
+key = "trace_bounds_verdict"
+type = "bool"
+default = true
+label = "Trace gate bounds the retro verdict"
+help = "true = trace FAIL makes the retrospective reject the epic (holding the loop) and CONCERNS caps it at accepted-with-open-items. false = the gate reports are evidence only."
+
+# ---------------------------------------------------------------- workflows
+#
+# {story_key} is the ticket ref bmad-loop dispatched (e.g. `1.3`); TEA resolves
+# it through tickets.py. A sweep bundle has no ticket ref, hence the fallback.
+
+[workflows.automate]
+stage = "post_dev_phase"
+role = "dev"
+prompt = "Run the skill `bmad-tea-automate` in expand mode, autonomously, for the v7 ticket `{story_key}` (pass `{story_key}` as the story reference). Write tests for the code this ticket built, run them, and heal test defects. Report product defects; do not change production code. Never change the ticket's status. If `{story_key}` does not resolve to a ticket, cover the changes in the working tree instead."
+blocking = false

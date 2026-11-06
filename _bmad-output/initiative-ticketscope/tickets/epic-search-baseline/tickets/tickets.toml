@@ -1,0 +1,130 @@
+# epic-search-baseline stories, in build order. `id` is permanent, never reused.
+# Lanes (stories touching the same code wait on each other):
+#   data:     2 corpus terms -> 3 ingest -> 5 load; 4 derive -> 3 ingest, 4 -> 5
+#   api:      6 /v1 completion -> 7 page -> 9 trace
+#   platform: 8 backups -> 9 trace; 5 load -> 9 trace (jobs telemetry)
+# Shared setup is owned by story 1 (the tracer); every later story builds on it.
+
+[[entry]]
+id = 1
+type = "story"
+title = "Tracer: keyword search answers through the Gateway on kind"
+description = "Lays the repo and the thinnest path through every layer. The uv repo follows the spine's layout. ci.yml runs ruff, pyright, pytest and import-linter with the AD-1 layer contracts. ticketscope.contract holds the /v1 search models. core holds the Retriever port, REGISTRY with the keyword mode, and the in-memory CorpusStore fake. The Postgres adapter ranks with pg_textsearch BM25 and negates its scores. The Postgres image is CNPG standard PG18 with pgvector plus pg_textsearch, preloaded through shared_preload_libraries (AD-9). Migration 0001 creates both extensions, the issue table with kind and outcome columns, the corpus_meta table, and the ticketscope_ro default grants. The snapshot JSON Schema v1, carrying every AD-6 field, is committed with a small synthetic fixture snapshot, no real issue text, holding short and log-heavy issues. The fixture ships in the app image under snapshot version 'fixture', pinned in values, so story 5 swaps in a real version by changing the pin. load loads the pinned snapshot and writes the corpus_meta row, which api reads for corpus_version. Both images are multi-arch and tagged with the git SHA (AD-16); scripts/kind-up.sh and _kind-deploy.yml are in place. The platform release holds Gateway API CRDs, Envoy Gateway with cloud-provider-kind and the CNPG operator. The ticketscope release holds a two-instance Cluster, the migrate and load hooks in AD-22 order, api and its HTTPRoute; values.yaml holds defaults and values-kind.yaml only environment facts (AD-25). Outcomes read 'unknown' until story 5 loads derived values. Proves a GitHub-hosted runner fits kind (epic Assumption). Later stories build on everything here."
+verify = "On a PR, CI passes ci.yml, and _kind-deploy brings up both releases on kind; POST /v1/search with mode keyword through the Gateway returns ranked fixture issues in the /v1 shape, and a deliberate core-imports-adapter change fails import-linter."
+covers = ["R3", "R5", "R7"]
+after = []
+hitl = true # a person creates the public GitHub repo, enables Actions, and runs kind-up.sh locally once
+risk = "high"
+plan_checkpoint = true
+
+[[entry]]
+id = 2
+type = "spike"
+title = "Settle the corpus terms"
+description = "A person decides whether closed kubernetes/kubernetes issue text may be stored and republished as a public GitHub Release asset and demo index, and on what conditions (attribution, excluded fields, author handles). The answer is recorded as a dated Decision line in the epic's Notes; story 3's publish waits on it. Spine open question 'Corpus terms'."
+verify = "The epic's Notes hold a dated Decision line that says yes, yes with named conditions, or no, and story 3's entry reflects any conditions."
+covers = ["R1"]
+after = []
+hitl = true
+risk = "high"
+
+[[entry]]
+id = 3
+type = "story"
+title = "Ingest publishes a versioned corpus snapshot"
+description = "jobs.ingest, the only GitHub API caller, fetches closed kubernetes/kubernetes issues (no PRs) from about the last three years, capped at 20,000, with labels, comments (author_association, body, created_at) and timeline events including marked_as_duplicate and cross-referenced or closing PRs with each PR's merged state. It writes compressed JSONL that validates against story 1's schema, applying any conditions from story 2, and reports the kind split using story 4's function. snapshot.yml, on dispatch, publishes it as a YYYY.MM.N GitHub Release asset. The window is tuned so a kind load through story 1's load path finishes inside the 30-minute budget (initiative R10); that load is timed locally and its time recorded in the Release notes. Story 5 loads this snapshot, and epic-eval-gate derives its pairs from it."
+verify = "A dispatched snapshot.yml run publishes a YYYY.MM.N Release asset that validates against the committed schema and holds both short and log-heavy issues, and its Release notes state the window, the issue count and a measured kind load time under 30 minutes."
+covers = ["R1"]
+after = [1, 2, 4]
+hitl = true # a person dispatches the first publish and supplies a GitHub token if the default one is rate-limited
+risk = "high"
+plan_checkpoint = true
+
+[[entry]]
+id = 4
+type = "story"
+title = "Derive kind and outcome in core"
+description = "Two pure core functions over a snapshot issue (AD-8). Outcome applies the epic's precedence: duplicate, fixed, not_planned, stale, answered, unknown, with summary, source and ref per the /v1 outcome shape and the epic's outcome rules. Kind counts fenced blocks and log-like lines against a threshold parameter that story 5 sets from real data. Unit tests cover every precedence branch and both kinds on synthetic issues. Story 3 reports the kind split with it; story 5 calls both at load."
+verify = "pytest shows one passing case per outcome branch, including precedence ties such as a duplicate that was also closed by a PR, and kind cases on either side of the threshold."
+covers = ["R2"]
+after = [1]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 5
+type = "story"
+title = "Load the pinned snapshot with kind and outcome"
+description = "jobs.load, the only writer, downloads the snapshot version pinned in values, stores each issue with kind and outcome from story 4, and writes the corpus_meta row with the pinned snapshot version (AD-21). It is idempotent against that row: an unchanged snapshot, model and preprocessing version is a no-op. It sets the kind threshold from story 3's snapshot and logs the share of each kind and each outcome. It picks the vague and log-heavy example queries from the real snapshot and records them in the epic's Notes. CI on kind loads the pinned real snapshot by changing story 1's pin; unit tests keep the fixture."
+verify = "On kind in CI the load hook loads the pinned snapshot; a SQL check finds no issue without a kind or an outcome, the job log reports each kind's and each outcome's share, and a helm upgrade with the same pin logs a no-op."
+covers = ["R2"]
+after = [3, 4]
+hitl = false
+risk = "medium"
+plan_checkpoint = true
+
+[[entry]]
+id = 6
+type = "story"
+title = "Complete the /v1 contract"
+description = "Adds the rest of AD-4 to story 1's path: GET /v1/issues/{number} with body and outcome, k bounds 1..50, 422 for an unknown mode, RFC 9457 problem+json errors, and exclude and available(store) on the Retriever port (AD-19), which epic-eval-gate uses to skip modes and drop the query issue. Contract models allow unknown fields (AD-20). Epic-mcp-server calls GET /v1/issues. Story 7 builds on this http module next."
+verify = "Contract tests against the in-memory fake and one run on kind show GET /v1/issues/{number} returns issue and outcome, k=0 and an unknown mode return problem+json 422, and an excluded issue never appears in results."
+covers = ["R3"]
+after = [1]
+hitl = false
+risk = "low"
+
+[[entry]]
+id = 7
+type = "story"
+title = "Search page shows ranked issues with how each ended"
+description = "One server-rendered page from api at / with no JS framework (epic decision) takes ticket text, calls core keyword retrieval, and lists ranked issues with title, link, kind and outcome status and summary, with empty and error states. It runs on the in-memory fake locally and through the Gateway on kind. It follows story 6 in the http module; story 9 instruments it."
+verify = "Through the Gateway on kind, submitting the vague example query and the log-heavy example query each renders a ranked list where every row shows an outcome."
+covers = ["R4"]
+after = [6]
+hitl = false
+risk = "low"
+
+[[entry]]
+id = 8
+type = "story"
+title = "Postgres backs up to SeaweedFS on kind"
+description = "The platform release adds SeaweedFS (kind only) and the Barman Cloud Plugin. The Cluster gets an ObjectStore whose endpoint comes from values-kind.yaml, with credentials in a chart-generated Secret (AD-18, AD-25). Epic-eks-environment later points the same values at S3. Story 9 extends the platform release after this."
+verify = "In _kind-deploy on a PR, an on-demand CNPG Backup reaches phase completed and its objects are listed in the SeaweedFS bucket."
+covers = ["R5"]
+after = [1]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 9
+type = "story"
+title = "One search request yields one trace in Tempo"
+description = "The platform release adds the OTel Collector, Tempo and Grafana with a Tempo datasource (AD-11), after story 8's platform changes. ticketscope.telemetry sets service names, the semconv opt-in and OTLP export for api and the jobs (AD-10). api, as left by stories 6 and 7, emits the SERVER span, the INTERNAL retrieval span with the ticketscope.* attributes, and the psycopg CLIENT span. Logs are JSON lines with trace_id and span_id. Epics mcp-server, hybrid-retrieval and grafana-dashboard extend this."
+verify = "In _kind-deploy on a PR, one POST /v1/search produces a trace that the Tempo API returns with ticketscope-api SERVER, retrieval keyword and db query spans in the AD-10 tree. Manual step: Grafana Explore shows the same trace via port-forward."
+covers = ["R6"]
+after = [5, 7, 8]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 10
+type = "story"
+title = "Refactor sweep"
+description = "Cleanup only, scoped at its start from plans and review findings the epic deferred. Scope pushed out of another story becomes a new story, not part of this one."
+verify = "ci.yml and _kind-deploy pass on the sweep PR with no change to /v1 responses for the example queries."
+covers = []
+after = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+hitl = false
+risk = "low"
+
+[[entry]]
+id = 11
+type = "story"
+title = "Integrated check on kind"
+description = "One CI job on kind, run on every PR through _kind-deploy, checks the epic's Done when together on the pinned real snapshot: the loaded snapshot matches the committed schema and left no issue without a kind or an outcome (stories 3, 5); the vague and log-heavy example queries return ranked issues with outcomes through /v1 and the page (6, 7); one trace reaches Tempo (9); and a backup completes (8)."
+verify = "The integrated-check job passes on a PR and fails when any one of its five checks is broken on purpose."
+covers = ["R1", "R2", "R3", "R4", "R5", "R6", "R7"]
+after = [10]
+hitl = false
+risk = "medium"

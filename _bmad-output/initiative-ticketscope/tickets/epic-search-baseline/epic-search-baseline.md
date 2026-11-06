@@ -49,6 +49,11 @@ A triage engineer pastes a vague or log-heavy ticket into the page on the kind-d
   6. unknown
 
   Changing the precedence requires a reload and a baseline update (spine AD-8, AD-12).
+- **Outcome terms:**
+  - A support issue carries the `kind/support` label.
+  - A maintainer comment has an `author_association` of OWNER, MEMBER or COLLABORATOR.
+  - The `/v1` outcome `source` by branch: duplicate → `label`; fixed → `linked_pr`; answered → `closing_comment`; not_planned, stale and unknown → `null`.
+- **Example queries:** one vague and one log-heavy query, picked by the load story from the real snapshot and recorded in Notes; the page, sweep and integrated-check stories use them.
 - **Corpus scope:** closed `kubernetes/kubernetes` issues only, no PRs, about the last three years, capped at 20,000. The ingest story tunes the window to fit the 30-minute load budget (initiative R10).
 - **Corpus terms:** a human-in-the-loop spike story settles them before any snapshot is published. Ingest's publish step waits on it.
 - **Public repo:** the repo is public on GitHub, so Release assets are public.
@@ -84,3 +89,9 @@ A triage engineer pastes a vague or log-heavy ticket into the page on the kind-d
 - Decision: Refined. The outcome precedence rule and the corpus scope are settled now; corpus terms go to a human-in-the-loop spike before ingest publishes; the repo is public (user, 2026-11-06).
 - Decision: The kind-rule shape, the snapshot format and the toolchain are settled at refinement as Sofia's picks, unopposed. The page is left to its story: one server-rendered page from `api`, with no JS framework (user, 2026-11-06).
 - Assumption: A GitHub-hosted runner fits kind with the platform release, two Postgres instances and SeaweedFS. The tracer story proves it first.
+- Decision: Stories planned (11 entries). The tracer bullet is story 1, "Tracer: keyword search answers through the Gateway on kind", kept whole with the repo and CI setup inside it rather than split out, because it proves the riskiest path (user, 2026-11-06).
+- Decision: Sequencing. The corpus-terms spike (2) comes second as the least certain part. Three lanes run after the tracer: data 2 → 4 → 3 → 5, API 6 → 7, platform 8; they meet at the trace story (9). Stories sharing code wait on each other through `after` (user, 2026-11-06).
+- Decision: The tracer uses a synthetic fixture snapshot with no real issue text until the corpus terms are settled (user, 2026-11-06).
+- Decision: The outcome terms and the example-query owner are settled as Sofia's picks (see Constraints) (user, 2026-11-06).
+- Decision: The refactor sweep (10) and a closing integrated check on kind (11) are kept (user, 2026-11-06).
+- Decision: The epic builds unattended through the loop; stories 1, 3 and 5 carry `plan_checkpoint`, and no story carries `done_checkpoint` (user, 2026-11-06).

@@ -113,7 +113,7 @@ class TeaPlugin(Plugin):
 
     # -------------------------------------------------------- epic gate
 
-    def on_pre_session(self, ctx: "HookContext") -> None:
+    def on_pre_session(self, ctx: HookContext) -> None:
         key = ctx.story_key or ""
         if ctx.role != "retro" or not key.endswith(RETRO_SUFFIX):
             return
@@ -129,16 +129,14 @@ class TeaPlugin(Plugin):
             "TEA's configured test_artifacts folder"
         )
         epic_file = None
-        out, initiative = self._expand(cfg.get("core.output_folder"), root), cfg.get(
-            "core.active_initiative"
-        )
+        out = self._expand(cfg.get("core.output_folder"), root)
+        initiative = cfg.get("core.active_initiative")
         if out:
             pattern = f"{initiative or 'initiative-*'}/tickets/{slug}/{slug}.md"
             found = sorted(Path(out).glob(pattern))
             if len(found) == 1:  # ambiguous across initiatives: let TEA resolve the slug
-                epic_file = (
-                    str(found[0].relative_to(root)) if found[0].is_relative_to(root) else str(found[0])
-                )
+                path = found[0]
+                epic_file = str(path.relative_to(root) if path.is_relative_to(root) else path)
         prefix = epic_gate_prompt(
             slug,
             epic_file,
@@ -176,11 +174,20 @@ class TeaPlugin(Plugin):
         cmd = ["uv", "run", str(script), "--project-root", str(root)]
         for key in keys:
             cmd += ["--key", key]
+        # One exception type per clause: ruff format (project target 3.14) would
+        # rewrite a tuple clause to PEP 758 syntax, which bmad-loop's 3.13 can't parse.
         try:
             proc = subprocess.run(
                 cmd, cwd=root, capture_output=True, text=True, timeout=SUBPROCESS_TIMEOUT_S
             )
-            data = json.loads(proc.stdout) if proc.returncode == 0 else {}
-        except (OSError, subprocess.TimeoutExpired, ValueError):
+        except OSError:
+            return {}
+        except subprocess.TimeoutExpired:
+            return {}
+        if proc.returncode != 0:
+            return {}
+        try:
+            data = json.loads(proc.stdout)
+        except ValueError:
             return {}
         return data if isinstance(data, dict) else {}

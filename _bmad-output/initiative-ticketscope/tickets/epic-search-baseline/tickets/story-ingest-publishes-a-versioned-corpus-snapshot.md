@@ -17,7 +17,7 @@ The ingest job turns closed Kubernetes issues into a frozen, versioned corpus sn
 
 **Person's steps (hitl):**
 
-- A person creates a read-only GitHub token and stores it as a repo secret for `snapshot.yml`. The default Actions token allows too few API calls for this corpus.
+- A person creates a read-only GitHub token and stores it as the repo secret `INGEST_GITHUB_TOKEN` for `snapshot.yml`. The default Actions token allows too few API calls for this corpus. Done 2026-11-06: a fine-grained token with read-only public-repository access.
 - A person dispatches the first `snapshot.yml` run and checks its Release.
 
 - **What it fetches.**
@@ -68,6 +68,7 @@ Corpus terms: every record carries its github.com issue URL; no author login app
 
 - Decision: The corpus load gets 10 minutes of the 30-minute spin-up, timed in `snapshot.yml` on the runner before publishing (user, 2026-11-06).
 - Decision: Ingest uses a read-only token stored as a repo secret by a person, and resumes after a rate limit or job timeout (user, 2026-11-06).
+- The token secret is named `INGEST_GITHUB_TOKEN` and was stored on 2026-11-06; `snapshot.yml` reads it under that name. It is a fine-grained token, so it expires; renew it if a dispatch fails on auth.
 - Decision: Published snapshots are never overwritten; each run gets the next `YYYY.MM.N` and a SHA-256 checksum (user, 2026-11-06).
 - Decision: Corpus terms from story 2: yes with attribution, no author logins, masking, and a takedown path; a takedown may delete earlier Release assets, the one exception to never-overwritten (user, 2026-11-06).
 - The outcome rules need these fields from each issue: labels, `state_reason`, closing PRs with merged state, `marked_as_duplicate` events, and comment `author_association` with `created_at` set against the issue's `closed_at`.

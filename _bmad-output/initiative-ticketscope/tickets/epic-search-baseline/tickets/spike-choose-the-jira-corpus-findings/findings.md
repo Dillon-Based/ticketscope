@@ -166,9 +166,10 @@ The sidecar of the resolved-only snapshot is computed on masked text, and its 81
   - `samples-apache-spark.md`
   - `samples-jira-jraserver.md`
 
-  **The "author judgement" columns are empty, for the author.**
+  **Author's judgement (Mojang, 2026-11-06):** 18 of 20 issues support-like, 2 noise (MCL-12073 in Czech, MCL-7793 in Hungarian), none dev bug. The Apache SPARK and Jira JRASERVER samples were not judged.
 - **Duplicate pairs:** 10 of the recommended subset's 10,466 pairs, drawn with unresolved targets included (3 of the 10 point at an unresolved target). All 10 are confirmed in the dump's changelog: the resolution was set to Duplicate and the link was added.
   - This shows a moderator made the call, not that the call was right. Most pairs read as real duplicates (e.g. REALMS-4485 "Can't download my world from Realms for backup" → REALMS-419 "Unable to Download Realm world"). Some are loose, e.g. MCL-9958 "minecraft launcher issue" → MCL-6629 "Launcher floated out of desktop boundaries when taskbar is at the top", and MCD-3976 (a crash in one level) → MCD-1354 ("Freezes and crashes when playing on Switch").
+  - Author's judgement of the 10 pairs: 9 dup, 1 related (REALMS-9649 "Book and quill, Sing and chat do not work" → REALMS-9150 "Chat has long delay"), none not dup.
   - The live tracker was not checked. It moved to Jira Cloud in February 2025, and its pages render client-side.
 
 ## Findings for the replan
@@ -189,8 +190,9 @@ The sidecar of the resolved-only snapshot is computed on masked text, and its 81
 
 ## Proposed Decision line (draft, needs the author's sign-off)
 
-> Decision: Switch the corpus to The Public Jira Dataset v7 (Zenodo 15719919, CC BY 4.0), subset Mojang MCL + REALMS + MCD: resolved issues to January 2022, plus the unresolved targets of their duplicates. That gives 32,154 issues with 10,466 in-subset duplicate pairs (10,162 short, 304 log-heavy at threshold 3), 0.7% unknown, loaded in 3.9 s. Outcomes come from `resolution` per spike 12's `outcome-mapping.md`. "Answered" means a Question/Support-type issue resolved after a comment by someone other than the reporter. The kind rule maps Jira `{code}`/`{noformat}` blocks onto fences, which needs a reload and a baseline update. Attribution is the line in spike 12's `terms.md`, plus a link to each source issue. If Mojang's terms are judged insufficient, fall back to Apache SPARK. The data lane (stories 1–5 and the snapshot schema) and epic-eval-gate are to be replanned (user, YYYY-MM-DD).
+> Decision: Switch the corpus to The Public Jira Dataset v7 (Zenodo 15719919, CC BY 4.0), subset Mojang MCL + REALMS + MCD: resolved issues to January 2022, plus the unresolved targets of their duplicates. That gives 32,154 issues with 10,466 in-subset duplicate pairs (10,162 short, 304 log-heavy at threshold 3), 0.7% unknown, loaded in 3.9 s. Outcomes come from `resolution` per spike 12's `outcome-mapping.md`. "Answered" means a Question/Support-type issue resolved after a comment by someone other than the reporter. The kind rule maps Jira `{code}`/`{noformat}` blocks onto fences, which needs a reload and a baseline update. Attribution is the line in spike 12's `terms.md`, plus a link to each source issue. If Mojang's terms are judged insufficient, fall back to Apache SPARK. The data lane (stories 1–5 and the snapshot schema) and epic-eval-gate are to be replanned (user, 2026-11-06).
 
+approved, dillon heffernan
 ## Proposed epic amendments (draft)
 
 - **Corpus scope:**

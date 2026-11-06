@@ -1,5 +1,7 @@
 # Samples: apache-spark
 
+**Not judged.** Decision: the author waived judging the Apache SPARK and Jira JRASERVER samples, since Mojang was chosen with its terms accepted, JRASERVER is ruled out and SPARK is only the fallback (user, 2026-11-06).
+
 Subset: instance `Apache`, projects `SPARK`, created … to … (exclusive), resolved issues only: 35034 issues. 20 drawn with `random.Random(12)`.
 
 Kind is the extended kind rule; outcome is the proposed mapping (`outcome-mapping.md`). Text is the first 160 characters of the description.

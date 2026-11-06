@@ -166,7 +166,7 @@ The sidecar of the resolved-only snapshot is computed on masked text, and its 81
   - `samples-apache-spark.md`
   - `samples-jira-jraserver.md`
 
-  **Author's judgement (Mojang, 2026-11-06):** 18 of 20 issues support-like, 2 noise (MCL-12073 in Czech, MCL-7793 in Hungarian), none dev bug. The Apache SPARK and Jira JRASERVER samples were not judged.
+  **Author's judgement (Mojang, 2026-11-06):** 18 of 20 issues support-like, 2 noise (MCL-12073 in Czech, MCL-7793 in Hungarian), none dev bug. Decision: the author waived judging the Apache SPARK and Jira JRASERVER samples, since Mojang was chosen with its terms accepted, JRASERVER is ruled out and SPARK is only the fallback (user, 2026-11-06).
 - **Duplicate pairs:** 10 of the recommended subset's 10,466 pairs, drawn with unresolved targets included (3 of the 10 point at an unresolved target). All 10 are confirmed in the dump's changelog: the resolution was set to Duplicate and the link was added.
   - This shows a moderator made the call, not that the call was right. Most pairs read as real duplicates (e.g. REALMS-4485 "Can't download my world from Realms for backup" → REALMS-419 "Unable to Download Realm world"). Some are loose, e.g. MCL-9958 "minecraft launcher issue" → MCL-6629 "Launcher floated out of desktop boundaries when taskbar is at the top", and MCD-3976 (a crash in one level) → MCD-1354 ("Freezes and crashes when playing on Switch").
   - Author's judgement of the 10 pairs: 9 dup, 1 related (REALMS-9649 "Book and quill, Sing and chat do not work" → REALMS-9150 "Chat has long delay"), none not dup.

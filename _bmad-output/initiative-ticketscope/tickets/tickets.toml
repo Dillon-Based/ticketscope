@@ -6,8 +6,8 @@
 [[epic]]
 id = 1
 slug = "epic-search-baseline"
-title = "Keyword search over Kubernetes issues, deployed on kind"
-description = "The repo and CI follow the spine's layout, with one workflow per concern and a reusable kind-deploy step that epics 2 and 4 build on. Two Helm releases, which epic 5 deploys to EKS, run on kind. The platform release holds the operators, the Gateway, the OTel Collector, Tempo and Grafana. The app release holds a two-instance CloudNativePG Postgres 18 with pgvector and pg_textsearch, backing up to SeaweedFS. An ingest job publishes a versioned corpus snapshot of Kubernetes issues (labels, comments, timeline events) as a GitHub Release asset. A load job, the only writer, loads it with each issue's kind and outcome; epic 2 derives its labelled pairs from that snapshot, and epic 3 adds its embedding table. A keyword (BM25) retrieval API serves the one search page under the spine's /v1 contract and retriever registry, which epic 3 extends and epic 4 calls. Spans follow the spine's span contract, which epics 3, 4 and 7 build on."
+title = "Keyword search over Mojang issues, deployed on kind"
+description = "The repo and CI follow the spine's layout, with one workflow per concern and a reusable kind-deploy step that epics 2 and 4 build on. Two Helm releases, which epic 5 deploys to EKS, run on kind. The platform release holds the operators, the Gateway, the OTel Collector, Tempo and Grafana. The app release holds a two-instance CloudNativePG Postgres 18 with pgvector and pg_textsearch, backing up to SeaweedFS. An ingest job publishes a versioned corpus snapshot of Mojang bug-tracker issues from The Public Jira Dataset v7 (resolution, comments, duplicate links) as a GitHub Release asset. A load job, the only writer, loads it with each issue's kind and outcome; epic 2 derives its labelled pairs from that snapshot, and epic 3 adds its embedding table. A keyword (BM25) retrieval API serves the one search page under the spine's /v1 contract and retriever registry, which epic 3 extends and epic 4 calls. Spans follow the spine's span contract, which epics 3, 4 and 7 build on."
 covers = ["R1", "R2", "R3", "R5", "R8", "R11"]
 
 [[epic]]
@@ -16,7 +16,7 @@ slug = "epic-eval-gate"
 title = "Retrieval is scored on every PR and regressions block the merge"
 description = "Labelled duplicate pairs are derived from epic 1's corpus snapshot and committed per snapshot version. An eval job scores every mode in the core retriever registry through the real Postgres adapter. It reports Recall@k, MRR and p95 latency, split short versus log-heavy. It runs on every PR in its own workflow. Recall@k or MRR regressions against a committed baseline block the merge; p95 is reported, not gated. The README results table is generated from CI output. Epic 3's new modes are scored by it, and epic 8 publishes its table."
 covers = ["R6", "R7"]
-after = [{ epic = 1, needs = "the corpus snapshot with labels, comments and timeline events, the core retriever registry, and the CI workflow layout" }]
+after = [{ epic = 1, needs = "the schema-v2 Mojang Jira corpus snapshot with resolutions, comments and duplicate links (story 1.13), the core retriever registry, and the CI workflow layout" }]
 
 [[epic]]
 id = 3

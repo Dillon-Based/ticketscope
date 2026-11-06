@@ -47,6 +47,7 @@ A reviewer sees retrieval scores that CI produced on labelled data, and a regres
 
 ## Notes
 
-- Waits on epic-search-baseline because: it needs the corpus snapshot with labels, comments and timeline events, the core retriever registry, and the CI workflow layout.
+- Waits on epic-search-baseline because: it needs the schema-v2 Mojang Jira corpus snapshot with resolutions, comments and duplicate links (story 1.13), the core retriever registry, and the CI workflow layout.
 - Decision: Adopted the architecture spine. Pairs come from the snapshot, eval calls the core registry rather than the API's mode parameter, and p95 is reported but not gated (user, 2026-11-05).
 - Decision: A cut of this epic drops only the blocking check; R6's eval job and table survive for epics 3 and 8 (user, 2026-11-06).
+- Decision: The corpus is now Mojang bug-tracker issues from The Public Jira Dataset v7 (epic-search-baseline spike 12). Labelled pairs come from the Jira duplicate links in story 1.13's schema-v2 snapshot: spike 12 measured 10,466 in-subset pairs (10,162 short, 304 log-heavy at threshold 3), and the author judged 9 of 10 sampled pairs real duplicates. The log-heavy margin is thin; refinement should check it against story 1.5's final kind threshold (user, 2026-11-06).

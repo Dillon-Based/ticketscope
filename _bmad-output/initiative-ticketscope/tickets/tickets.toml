@@ -1,30 +1,31 @@
 # ticketscope epics, in build order. `id` is permanent, never reused.
 # Cut rule: one source capability per epic, and every brief cut-list item
 # (Grafana, MCP OAuth, EKS, eval gate) is a whole epic, so a cut drops an epic, never half of one.
+# Shared decisions live in the adopted architecture spine (../architecture-ticketscope/); epics cite its AD ids.
 
 [[epic]]
 id = 1
 slug = "epic-search-baseline"
 title = "Keyword search over Kubernetes issues, deployed on kind"
-description = "The repo and CI are in place, with one workflow per concern and a reusable kind-deploy step for epics 2, 4 and 5 to extend. Images and a Helm chart, which epic 5 deploys to EKS, run on kind with CloudNativePG Postgres and the pgvector extension enabled; epic 3 owns the embedding column. The ingest job stores Kubernetes issues with labels, closing comments and how each ended, for epic 2's labelled pairs. A keyword (BM25) retrieval API has a pinned mode parameter and response contract that epic 3 extends and epic 4 calls, and it serves the one search page. An OTel collector and a trace backend ship in the chart, and retrieval and database spans follow a pinned span contract that epics 3, 4 and 7 build on."
+description = "The repo and CI follow the spine's layout, with one workflow per concern and a reusable kind-deploy step that epics 2 and 4 build on. Two Helm releases, which epic 5 deploys to EKS, run on kind. The platform release holds the operators, the Gateway, the OTel Collector, Tempo and Grafana. The app release holds a two-instance CloudNativePG Postgres 18 with pgvector and pg_textsearch, backing up to SeaweedFS. An ingest job publishes a versioned corpus snapshot of Kubernetes issues (labels, comments, timeline events) as a GitHub Release asset. A load job, the only writer, loads it with each issue's kind and outcome; epic 2 derives its labelled pairs from that snapshot, and epic 3 adds its embedding table. A keyword (BM25) retrieval API serves the one search page under the spine's /v1 contract and retriever registry, which epic 3 extends and epic 4 calls. Spans follow the spine's span contract, which epics 3, 4 and 7 build on."
 covers = ["R1", "R2", "R3", "R5", "R8", "R11"]
 
 [[epic]]
 id = 2
 slug = "epic-eval-gate"
 title = "Retrieval is scored on every PR and regressions block the merge"
-description = "Labelled duplicate pairs are extracted from the corpus epic 1 stored. An eval job scores every retrieval mode the API offers by Recall@k, MRR and p95 latency, split short versus log-heavy. It runs on every PR in its own workflow, blocks regressions, and generates the README results table from CI output. Epic 3's new modes are scored by it, and epic 8 publishes its table."
+description = "Labelled duplicate pairs are derived from epic 1's corpus snapshot and committed per snapshot version. An eval job scores every mode in the core retriever registry through the real Postgres adapter. It reports Recall@k, MRR and p95 latency, split short versus log-heavy. It runs on every PR in its own workflow. Recall@k or MRR regressions against a committed baseline block the merge; p95 is reported, not gated. The README results table is generated from CI output. Epic 3's new modes are scored by it, and epic 8 publishes its table."
 covers = ["R6", "R7"]
-after = [{ epic = 1, needs = "the ingested corpus with labels and comments, the retrieval API's mode parameter, and the CI workflow layout" }]
+after = [{ epic = 1, needs = "the corpus snapshot with labels, comments and timeline events, the core retriever registry, and the CI workflow layout" }]
 
 [[epic]]
 id = 3
 slug = "epic-hybrid-retrieval"
 title = "Dense and hybrid retrieval, scored against keyword"
-description = "Issues are embedded with a small CPU model into an embedding column and index that this epic owns in pgvector. The retrieval API offers dense and hybrid modes beside keyword under epic 1's contract and span conventions, and epic 2's gate scores all three in CI, with the results published whatever they show. The model's CPU and memory needs set the chart values epic 5 sizes nodes for, and the final numbers feed epic 8's table."
+description = "Issues are embedded with a small CPU model, chosen by a scored eval, into an issue_embedding table keyed by model that this epic owns in pgvector. Precomputed embeddings are published as Release assets, so spin-up never embeds. Dense and hybrid modes join keyword in the retriever registry under epic 1's /v1 contract and span contract. Epic 2's gate scores all three in CI, and the results are published whatever they show. The model's CPU and memory needs set the chart defaults that epic 5 sizes nodes for, and the final numbers feed epic 8's table."
 covers = ["R2", "R6"]
 after = [
-  { epic = 1, needs = "the pgvector extension, the retrieval API's mode parameter and the span contract" },
+  { epic = 1, needs = "pgvector, the retriever registry, the load job and the span contract" },
   { epic = 2, needs = "the eval job and CI gate that score the new modes" },
 ]
 
@@ -32,19 +33,19 @@ after = [
 id = 4
 slug = "epic-mcp-server"
 title = "Claude Desktop calls search_similar_issues on a remote MCP server"
-description = "A stateless Streamable HTTP MCP server, built to the 2026-07-28 spec, runs in the chart and exposes search_similar_issues and get_issue over epic 1's retrieval API, in its default mode. An MCP client test passes in CI on kind, Claude Desktop answers from it through a tunnel, and one trace runs from the tool call through retrieval to the database in epic 1's trace backend. There is no auth yet; epic 6 adds it. Epic 5 serves this endpoint live, and epic 7 charts its tool-call telemetry."
+description = "A stateless Streamable HTTP MCP server, built to the 2026-07-28 spec, runs as its own Deployment in the chart. It exposes search_similar_issues and get_issue, which call epic 1's /v1 API over HTTP and return its bodies, with an optional mode argument. An MCP client test passes in CI on kind. Claude Desktop answers from it through a named tunnel. One trace runs from the tool call through retrieval to the database in epic 1's Tempo. There is no auth yet; epic 6 adds it. Epic 5 serves this endpoint live, epic 7 charts its tool-call telemetry, and epic 8 uses its trace screenshot."
 covers = ["R4", "R8"]
-after = [{ epic = 1, needs = "the retrieval API contract, the Helm chart, the CI layout, and the OTel collector, backend and span contract" }]
+after = [{ epic = 1, needs = "the /v1 API and contract module, the Helm releases, the CI layout, and the OTel Collector, Tempo and span contract" }]
 
 [[epic]]
 id = 5
 slug = "epic-eks-environment"
-title = "terraform apply brings up the live URL on EKS from nothing"
-description = "Terraform provisions short-lived EKS with a public HTTPS URL (DNS name and certificate). GitHub Actions deploys epic 1's chart and images there through OIDC, with no stored keys. The page and epic 4's MCP endpoint are live in under 30 minutes, including loading the corpus. Destroy leaves nothing billing, and hosting costs under $10/month. CloudNativePG backups go to S3, and a restore drill and a failure drill are recorded. Epic 6's OAuth flow, epic 7's dashboard and epic 8's live link all run on this URL."
+title = "terraform apply brings up the live URL on EKS in under 30 minutes"
+description = "A persistent bootstrap layer holds the DNS zone, certificate, OIDC deploy role, state and backup bucket, ECR and a budget alarm. Terraform provisions a short-lived EKS environment from it, and GitHub Actions deploys epic 1's releases and images there through OIDC, with no stored keys. The page and epic 4's MCP endpoint are live on a fixed HTTPS hostname in under 30 minutes, including loading the corpus. An ordered teardown leaves only the bootstrap layer billing. An expiry destroys forgotten environments, and hosting costs under $10/month. CloudNativePG backups go to S3, and a restore drill and a failure drill are recorded. Epic 6's OAuth flow and epic 8's live link run on this URL, and epic 7's dashboard runs in this environment."
 covers = ["R3", "R10", "R11"]
 after = [
-  { epic = 1, needs = "the Helm chart and images that CI already deploys to kind" },
-  { epic = 3, needs = "the embedding model's resource needs, which size nodes and corpus load time" },
+  { epic = 1, needs = "the Helm releases and images that CI already deploys to kind" },
+  { epic = 3, needs = "the embedding model's resource needs and precomputed embeddings, which size nodes and corpus load time" },
   { epic = 4, needs = "the MCP server in the chart, so the live URL serves it" },
 ]
 
@@ -52,34 +53,35 @@ after = [
 id = 6
 slug = "epic-mcp-oauth"
 title = "Claude Desktop authenticates to the live MCP server"
-description = "The MCP server requires OAuth 2.1 with Client ID Metadata Documents. Claude Desktop's remote-connector flow authenticates against epic 5's live HTTPS URL and calls search_similar_issues, and unauthenticated calls are refused. Epic 8 records this session."
+description = "The MCP server requires OAuth 2.1 with Client ID Metadata Documents, as a resource server against an external hosted authorisation server. Claude Desktop's remote-connector flow authenticates against epic 5's live HTTPS URL and calls search_similar_issues, and unauthenticated calls are refused. Epic 8 records this session."
 covers = ["R4"]
 after = [
   { epic = 4, needs = "the MCP server" },
-  { epic = 5, needs = "a public HTTPS URL for the OAuth redirect and Claude Desktop's connector" },
+  { epic = 5, needs = "a fixed public HTTPS hostname for the OAuth redirect and Claude Desktop's connector" },
 ]
 
 [[epic]]
 id = 7
 slug = "epic-grafana-dashboard"
 title = "One Grafana dashboard shows the service's telemetry"
-description = "One Grafana dashboard, deployed with the chart on epic 5's live environment, shows request rate, retrieval latency for each of epic 3's modes, epic 4's MCP tool calls, and errors. Its metrics are derived from the spans that epics 1, 3 and 4 emit."
+description = "One Grafana dashboard, provisioned by the platform release on epic 5's live environment, shows request rate, retrieval latency for each of epic 3's modes, epic 4's MCP tool calls, and errors. Its metrics come from the spans that epics 1, 3 and 4 emit, through the collector's spanmetrics connector into Prometheus, which this epic adds."
 covers = ["R9"]
 after = [
   { epic = 3, needs = "dense and hybrid modes, so latency by mode has all three" },
-  { epic = 4, needs = "the MCP tool-call telemetry" },
-  { epic = 5, needs = "the live environment and its chart values" },
-  { epic = 6, needs = "the settled live ingress and chart values, which both edit" },
+  { epic = 4, needs = "the MCP tool-call spans" },
+  { epic = 5, needs = "the live environment and its values file" },
+  { epic = 6, needs = "the settled EKS values file, which both edit; this order also follows the cut order, so a cut drops this epic first" },
 ]
 
 [[epic]]
 id = 8
 slug = "epic-reviewer-package"
 title = "A reviewer gets ticketscope in 5 minutes"
-description = "The README has an architecture diagram, epic 2's CI eval table with epic 3's final numbers, a recorded clip of Claude Desktop using ticketscope from epic 6, a trace screenshot from epic 4, and two or three decision records. Every supported claim has a backed row in the claims ledger, and the wording follows the claim discipline."
+description = "The README has an architecture diagram, epic 2's CI eval table with epic 3's final numbers, a recorded clip of Claude Desktop using ticketscope from epic 6, a trace screenshot from epic 4, epic 5's live URL and recorded CloudNativePG drills, and two or three decision records. Every supported claim has a backed row in the claims ledger, and the wording follows the claim discipline."
 covers = ["R12", "R13"]
 after = [
   { epic = 3, needs = "final keyword, dense and hybrid numbers in the CI table" },
-  { epic = 5, needs = "the live URL and the recorded CloudNativePG drills" },
+  { epic = 4, needs = "the end-to-end trace to screenshot, and the named tunnel the README links if epic 5 is cut" },
+  { epic = 5, needs = "the live URL and the recorded CloudNativePG drills; if epic 5 is cut, this edge is dropped, the README links the kind deployment through the tunnel, and this epic records the drills on kind" },
   { epic = 6, needs = "the authenticated Claude Desktop session to record; if epic 6 is cut, this edge is dropped and the clip is unauthenticated" },
 ]

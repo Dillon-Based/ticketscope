@@ -19,7 +19,7 @@ Measured on 2026-11-06 from The Public Jira Dataset v7 (Zenodo 15719919, CC BY 4
 
 It is the subset closest to support tickets: players reporting that they can't log in, the launcher crashes, or they can't join a Realm.
 
-- **Open condition: terms.** Nothing grants third parties the right to republish Mojang bug-tracker text, and nothing forbids it (see `terms.md`). That is the same footing GitHub text had before spike 2.
+- **Terms: accepted by the author.** Nothing grants third parties the right to republish Mojang bug-tracker text, and nothing forbids it (see `terms.md`), the same footing GitHub text had before spike 2. The author ruled that this is enough, on spike 2's conditions (user, 2026-11-06).
 - **Fallback: Apache SPARK.** 35,034 issues, 1,847 pairs (1,419 short, 428 log-heavy), 0.0% unknown, a load of 10.0 s. Its terms footing is better, since the Apache License's definition of "Contribution" arguably covers issue-tracker text. But these are developer bug reports, so they fit support tickets no better than Kubernetes.
 - **Ruled out:**
   - MongoDB SERVER: its site terms forbid redistribution without written permission.
@@ -138,7 +138,7 @@ All columns use the "+ open targets" variant: resolved issues plus the unresolve
 
 | Test | mojang-mcl-realms-mcd | apache-spark | mongodb-server | jira-jraserver |
 |---|---|---|---|---|
-| Terms allow a public Release asset | Author's call (see `terms.md`) | Arguably yes (ALv2 "Contribution") | **No**: written permission required | Author's call |
+| Terms allow a public Release asset | **Yes**: accepted by the author (user, 2026-11-06) | Arguably yes (ALv2 "Contribution") | **No**: written permission required | Author's call |
 | ≥ ~1,000 pairs, ≥ ~200 of each kind | 10,466; 10,162 / 304 | 1,902; 1,464 / 438 | 4,846; 4,259 / 587 | **No**: 182 log-heavy |
 | < 20% unknown | 0.7% | 0.1% | 0.7% | 1.1% |
 | Within the 600 s load | **3.9 s** (32,154 issues) | **10.0 s** (resolved only, 35,034 issues; the 35,082-issue + open variant was not timed) | not timed | not timed |

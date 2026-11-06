@@ -20,6 +20,10 @@ Checked on 2026-11-06 from public web pages. This is not legal advice, and for m
 
 Sources: [Zenodo record 15719919](https://zenodo.org/records/15719919); [Minecraft EULA](https://www.minecraft.net/eula); [minecraft.net: final days to migrate your bug account](https://www.minecraft.net/en-us/article/final-days-to-migrate-your-bug-account); [Atlassian Community platform terms](https://www.atlassian.com/legal/community-platform-terms-of-use); [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0); [MongoDB Terms of Use](https://www.mongodb.com/legal/terms-of-use). Third-party summaries seen during the search (ConductAtlas pages on the Minecraft EULA) were not relied on.
 
+## Author's ruling
+
+Ruling: Mojang's terms are acceptable for storing and republishing the subset's issue text as a public Release asset and demo index, on the conditions below (user, 2026-11-06).
+
 ## Conditions a switch would carry (proposal)
 
 The same four conditions as spike 2, adapted:

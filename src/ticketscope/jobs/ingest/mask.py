@@ -1,5 +1,7 @@
 """Masking under the corpus terms (spike 2): secrets, emails and @handle mentions.
 
+Also drops NUL characters, which Postgres text cannot store.
+
 Applied to the title, the body and every comment body before a record is checkpointed
 or written. Order matters: secrets first (a PEM block may hold anything), then emails,
 then mentions, so `user@example.com` is masked as an email and never as a mention.
@@ -34,7 +36,12 @@ _MENTION = re.compile(r"(?<![\w/.@])@([A-Za-z0-9](?:[A-Za-z0-9-]{0,38}))(?![\w/-
 
 
 def mask(text: str) -> str:
-    """Replace secrets, emails and @handle mentions with fixed markers."""
+    """Drop NUL characters, then replace secrets, emails and @handle mentions with markers.
+
+    NUL (U+0000) is valid in JSON but not in a Postgres text column, so a snapshot holding
+    one cannot be loaded. It goes first, so it can never split a secret and hide it.
+    """
+    text = text.replace("\x00", "")
     text = _PEM_BLOCK.sub(SECRET_MARKER, text)
     text = _SECRETS.sub(SECRET_MARKER, text)
     text = _EMAIL.sub(EMAIL_MARKER, text)

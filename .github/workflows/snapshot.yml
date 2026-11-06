@@ -1,0 +1,373 @@
+# Corpus snapshot (AD-6, AD-12, AD-17): on dispatch from main, ingest closed
+# kubernetes/kubernetes issues, validate and time a load of the result, then
+# publish it as the next free `snapshot-YYYY.MM.N` Release.
+#
+# Ingest takes ~4-5 h at 5,000 requests/h, so it runs as up to four sequential
+# passes. Each pass restores the previous pass's checkpoint and stops with exit 3
+# (checkpoint saved) before the job time limit; later passes are skipped once one
+# completes.
+#
+# Tokens: ingest reads GitHub with the read-only INGEST_GITHUB_TOKEN secret and only
+# sends GET. Creating the Release is the only write, and it uses GITHUB_TOKEN.
+# The workflow never deletes a Release; takedown deletions are a person's step.
+name: snapshot
+
+on:
+  workflow_dispatch:
+    inputs:
+      window_days:
+        description: Days back from the run to include issues closed in
+        type: number
+        default: 1095
+      cap:
+        description: Most issues to keep, most recently closed first
+        type: number
+        default: 20000
+
+permissions:
+  contents: read
+
+# One run at a time, so two runs never claim the same version. Never cancelled.
+concurrency:
+  group: snapshot
+  cancel-in-progress: false
+
+env:
+  WORK_ARTIFACT_DAYS: 7
+
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Publish only from main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::dispatch snapshot.yml on main, not ${GITHUB_REF}"
+          exit 1
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+      - run: uv sync --locked --no-dev
+      - name: Next free version for this month
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            gh api --paginate "repos/${GITHUB_REPOSITORY}/git/matching-refs/tags/snapshot-" --jq '.[].ref'
+            gh release list --limit 1000 --json tagName --jq '.[].tagName'
+          } > tags.txt
+          version="$(uv run python -m ticketscope.jobs.ingest.version --month "$(date -u +%Y.%m)" < tags.txt)"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "Planned snapshot version: ${version}" >> "$GITHUB_STEP_SUMMARY"
+
+  ingest-1:
+    needs: plan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
+    outputs:
+      complete: ${{ steps.ingest.outputs.complete }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+      - run: uv sync --locked --no-dev
+      - name: Ingest (pass 1)
+        id: ingest
+        env:
+          TICKETSCOPE_INGEST_GITHUB_TOKEN: ${{ secrets.INGEST_GITHUB_TOKEN }}
+          VERSION: ${{ needs.plan.outputs.version }}
+          WINDOW_DAYS: ${{ inputs.window_days }}
+          CAP: ${{ inputs.cap }}
+        run: |
+          set +e
+          uv run ticketscope-ingest --version "$VERSION" --window-days "$WINDOW_DAYS" \
+            --cap "$CAP" --deadline-minutes 330 --work-dir work --out-dir out
+          code=$?
+          set -e
+          case "$code" in
+            0) echo "complete=true" >> "$GITHUB_OUTPUT" ;;
+            3) echo "complete=false" >> "$GITHUB_OUTPUT" ;;
+            *) exit "$code" ;;
+          esac
+      - uses: actions/upload-artifact@v5
+        with:
+          name: work-1
+          path: work/
+          retention-days: ${{ env.WORK_ARTIFACT_DAYS }}
+      - if: steps.ingest.outputs.complete == 'true'
+        uses: actions/upload-artifact@v5
+        with:
+          name: snapshot
+          path: out/
+          retention-days: ${{ env.WORK_ARTIFACT_DAYS }}
+
+  ingest-2:
+    needs: [plan, ingest-1]
+    if: needs.ingest-1.outputs.complete == 'false'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
+    outputs:
+      complete: ${{ steps.ingest.outputs.complete }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+      - run: uv sync --locked --no-dev
+      - uses: actions/download-artifact@v6
+        with:
+          name: work-1
+          path: work/
+      - name: Ingest (pass 2)
+        id: ingest
+        env:
+          TICKETSCOPE_INGEST_GITHUB_TOKEN: ${{ secrets.INGEST_GITHUB_TOKEN }}
+          VERSION: ${{ needs.plan.outputs.version }}
+          WINDOW_DAYS: ${{ inputs.window_days }}
+          CAP: ${{ inputs.cap }}
+        run: |
+          set +e
+          uv run ticketscope-ingest --version "$VERSION" --window-days "$WINDOW_DAYS" \
+            --cap "$CAP" --deadline-minutes 330 --work-dir work --out-dir out
+          code=$?
+          set -e
+          case "$code" in
+            0) echo "complete=true" >> "$GITHUB_OUTPUT" ;;
+            3) echo "complete=false" >> "$GITHUB_OUTPUT" ;;
+            *) exit "$code" ;;
+          esac
+      - uses: actions/upload-artifact@v5
+        with:
+          name: work-2
+          path: work/
+          retention-days: ${{ env.WORK_ARTIFACT_DAYS }}
+      - if: steps.ingest.outputs.complete == 'true'
+        uses: actions/upload-artifact@v5
+        with:
+          name: snapshot
+          path: out/
+          retention-days: ${{ env.WORK_ARTIFACT_DAYS }}
+
+  ingest-3:
+    needs: [plan, ingest-2]
+    if: needs.ingest-2.outputs.complete == 'false'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
+    outputs:
+      complete: ${{ steps.ingest.outputs.complete }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+      - run: uv sync --locked --no-dev
+      - uses: actions/download-artifact@v6
+        with:
+          name: work-2
+          path: work/
+      - name: Ingest (pass 3)
+        id: ingest
+        env:
+          TICKETSCOPE_INGEST_GITHUB_TOKEN: ${{ secrets.INGEST_GITHUB_TOKEN }}
+          VERSION: ${{ needs.plan.outputs.version }}
+          WINDOW_DAYS: ${{ inputs.window_days }}
+          CAP: ${{ inputs.cap }}
+        run: |
+          set +e
+          uv run ticketscope-ingest --version "$VERSION" --window-days "$WINDOW_DAYS" \
+            --cap "$CAP" --deadline-minutes 330 --work-dir work --out-dir out
+          code=$?
+          set -e
+          case "$code" in
+            0) echo "complete=true" >> "$GITHUB_OUTPUT" ;;
+            3) echo "complete=false" >> "$GITHUB_OUTPUT" ;;
+            *) exit "$code" ;;
+          esac
+      - uses: actions/upload-artifact@v5
+        with:
+          name: work-3
+          path: work/
+          retention-days: ${{ env.WORK_ARTIFACT_DAYS }}
+      - if: steps.ingest.outputs.complete == 'true'
+        uses: actions/upload-artifact@v5
+        with:
+          name: snapshot
+          path: out/
+          retention-days: ${{ env.WORK_ARTIFACT_DAYS }}
+
+  ingest-4:
+    needs: [plan, ingest-3]
+    if: needs.ingest-3.outputs.complete == 'false'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
+    outputs:
+      complete: ${{ steps.ingest.outputs.complete }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+      - run: uv sync --locked --no-dev
+      - uses: actions/download-artifact@v6
+        with:
+          name: work-3
+          path: work/
+      - name: Ingest (pass 4, the last)
+        id: ingest
+        env:
+          TICKETSCOPE_INGEST_GITHUB_TOKEN: ${{ secrets.INGEST_GITHUB_TOKEN }}
+          VERSION: ${{ needs.plan.outputs.version }}
+          WINDOW_DAYS: ${{ inputs.window_days }}
+          CAP: ${{ inputs.cap }}
+        run: |
+          set +e
+          uv run ticketscope-ingest --version "$VERSION" --window-days "$WINDOW_DAYS" \
+            --cap "$CAP" --deadline-minutes 330 --work-dir work --out-dir out
+          code=$?
+          set -e
+          case "$code" in
+            0) echo "complete=true" >> "$GITHUB_OUTPUT" ;;
+            3) echo "::error::ingest did not finish in four passes; lower cap or window_days"
+               exit 1 ;;
+            *) exit "$code" ;;
+          esac
+      - uses: actions/upload-artifact@v5
+        with:
+          name: work-4
+          path: work/
+          retention-days: ${{ env.WORK_ARTIFACT_DAYS }}
+      - if: steps.ingest.outputs.complete == 'true'
+        uses: actions/upload-artifact@v5
+        with:
+          name: snapshot
+          path: out/
+          retention-days: ${{ env.WORK_ARTIFACT_DAYS }}
+
+  validate:
+    # Runs once some pass completed and none failed.
+    needs: [plan, ingest-1, ingest-2, ingest-3, ingest-4]
+    if: >-
+      ${{ !cancelled() && !contains(needs.*.result, 'failure') && (
+      needs.ingest-1.outputs.complete == 'true' ||
+      needs.ingest-2.outputs.complete == 'true' ||
+      needs.ingest-3.outputs.complete == 'true' ||
+      needs.ingest-4.outputs.complete == 'true') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    outputs:
+      load_seconds: ${{ steps.time.outputs.load_seconds }}
+    env:
+      VERSION: ${{ needs.plan.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+      - run: uv sync --locked
+      - uses: actions/download-artifact@v6
+        with:
+          name: snapshot
+          path: out/
+      - name: Checksum
+        working-directory: out
+        run: sha256sum -c "${VERSION}.jsonl.gz.sha256"
+      - name: Schema validation
+        run: |
+          uv run python - "out/${VERSION}.jsonl.gz" <<'EOF'
+          import gzip, json, sys
+          from jsonschema import Draft202012Validator
+          from ticketscope.core.snapshot import SnapshotIssue
+
+          schema = json.load(open("snapshot/schema-v1.json"))
+          validator = Draft202012Validator(schema, format_checker=Draft202012Validator.FORMAT_CHECKER)
+          count = 0
+          with gzip.open(sys.argv[1], "rt", encoding="utf-8") as lines:
+              for lineno, line in enumerate(lines, start=1):
+                  record = json.loads(line)
+                  errors = list(validator.iter_errors(record))
+                  if errors:
+                      sys.exit(f"line {lineno}: {errors[0].message}")
+                  SnapshotIssue.model_validate(record)
+                  count += 1
+          if count == 0:
+              sys.exit("the snapshot is empty")
+          print(f"{count} issues valid against schema v1")
+          EOF
+      - name: Build the Postgres image
+        run: docker build -f images/postgres.Dockerfile -t ticketscope-postgres:18-snapshot .
+      - name: Timed load (budget 600 s)
+        id: time
+        env:
+          POSTGRES_IMAGE: ticketscope-postgres:18-snapshot
+        run: |
+          set -o pipefail
+          if ! seconds="$(scripts/time-load.sh out "$VERSION" | tail -n1)" \
+              || ! [[ "$seconds" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+            echo "::error::timed load failed (migrate or load exited non-zero, or no time printed)"
+            exit 1
+          fi
+          echo "load_seconds=${seconds}" >> "$GITHUB_OUTPUT"
+          echo "Timed load: ${seconds} s (budget 600 s)" >> "$GITHUB_STEP_SUMMARY"
+          if ! python3 -c "import sys; sys.exit(0 if float('${seconds}') <= 600 else 1)"; then
+            echo "::error::load took ${seconds} s, over the 600 s budget; lower window_days or cap"
+            exit 1
+          fi
+
+  publish:
+    needs: [plan, validate]
+    if: ${{ !cancelled() && needs.validate.result == 'success' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      VERSION: ${{ needs.plan.outputs.version }}
+      LOAD_SECONDS: ${{ needs.validate.outputs.load_seconds }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+      - run: uv sync --locked --no-dev
+      - uses: actions/download-artifact@v6
+        with:
+          name: snapshot
+          path: out/
+      - name: Re-check the version is still free
+        run: |
+          {
+            gh api --paginate "repos/${GITHUB_REPOSITORY}/git/matching-refs/tags/snapshot-" --jq '.[].ref'
+            gh release list --limit 1000 --json tagName --jq '.[].tagName'
+          } > tags.txt
+          month="$(echo "$VERSION" | cut -d. -f1-2)"
+          next="$(uv run python -m ticketscope.jobs.ingest.version --month "$month" < tags.txt)"
+          if [[ "$next" != "$VERSION" ]]; then
+            echo "::error::planned ${VERSION}, but the next free version is now ${next}"
+            exit 1
+          fi
+          if grep -qx -e "snapshot-${VERSION}" -e "refs/tags/snapshot-${VERSION}" tags.txt; then
+            echo "::error::tag snapshot-${VERSION} already exists"
+            exit 1
+          fi
+      - name: Release notes
+        run: |
+          jq -r --arg load "$LOAD_SECONDS" --arg repo "$GITHUB_REPOSITORY" '
+            "Corpus snapshot \(.version) of closed `\(.repo)` issues (schema v\(.schema_version)).",
+            "",
+            "- Window: issues closed \(.window.start) to \(.window.end) (\(.window.days) days), most recently closed first, capped at \(.cap)",
+            "- Issues: \(.count) (\(.excluded) excluded by the takedown list)",
+            "- Kind split at threshold \(.kind_threshold): \(.kinds.short) short, \(.kinds.log_heavy) log-heavy",
+            "- Timed load into the in-repo Postgres image: \($load) s (budget 600 s)",
+            "- SHA-256: `\(.sha256)` (`sha256sum -c \(.asset).sha256`)",
+            "",
+            "## Attribution",
+            "",
+            "The issue text belongs to its authors and comes from [kubernetes/kubernetes](https://github.com/kubernetes/kubernetes). Every record links to its github.com issue. No author login is stored; comments keep only `author_association`. `@handle` mentions are replaced with `@[user]`, email addresses with `[email masked]`, and token- or key-shaped secrets with `[secret masked]`.",
+            "",
+            "## Takedown",
+            "",
+            "To have an issue removed, open an issue in [\($repo)](https://github.com/\($repo)/issues). It goes on `snapshot/exclusions.txt`, the next version leaves it out, and the earlier Release assets that hold it are deleted. See the README section \"Corpus attribution and takedown\"."
+          ' out/report.json > notes.md
+          cat notes.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Create the Release
+        # No --clobber: creation fails rather than touch an existing Release.
+        # The kinds sidecar and report stay unpublished.
+        run: |
+          gh release create "snapshot-${VERSION}" \
+            "out/${VERSION}.jsonl.gz" "out/${VERSION}.jsonl.gz.sha256" \
+            --target "$GITHUB_SHA" \
+            --title "Corpus snapshot ${VERSION}" \
+            --notes-file notes.md

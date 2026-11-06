@@ -51,7 +51,7 @@ jobs:
           fi
           helm lint deploy/charts/platform -f deploy/charts/platform/values-kind.yaml
           helm lint deploy/charts/ticketscope -f deploy/charts/ticketscope/values-kind.yaml \
-            --set-string image.app.tag=lint --set-string image.postgres.tag=lint
+            --set-string image.app.tag=lint --set-string image.postgres.tag=18-lint
 
   changes:
     runs-on: ubuntu-24.04
@@ -89,7 +89,7 @@ jobs:
       - name: Build postgres image (${{ matrix.platform }})
         run: >-
           docker build --platform ${{ matrix.platform }}
-          -f images/postgres.Dockerfile -t ticketscope-postgres:${{ github.sha }} .
+          -f images/postgres.Dockerfile -t ticketscope-postgres:18-${{ github.sha }} .
 
   kind-deploy:
     uses: ./.github/workflows/_kind-deploy.yml

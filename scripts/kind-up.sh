@@ -27,7 +27,11 @@ CPK_IMAGE="registry.k8s.io/cloud-provider-kind/cloud-controller-manager:v0.12.0"
 CPK_CONTAINER="${CLUSTER_NAME}-cloud-provider-kind"
 TAG="${TAG:-$(git rev-parse HEAD)}"
 APP_IMAGE="ticketscope-app:${TAG}"
-PG_IMAGE="ticketscope-postgres:${TAG}"
+# CNPG reads the Postgres major from the tag (regex ^(\d\.?)+), so the
+# Postgres image tag leads with it: 18-<git SHA> (AD-16 still holds).
+PG_MAJOR=18
+PG_TAG="${PG_MAJOR}-${TAG}"
+PG_IMAGE="ticketscope-postgres:${PG_TAG}"
 PLATFORM_NS=platform
 APP_NS=ticketscope
 GATEWAY_NAME=ticketscope
@@ -102,7 +106,7 @@ helm --kube-context "$KCTX" upgrade --install ticketscope deploy/charts/ticketsc
   --namespace "$APP_NS" --create-namespace \
   -f deploy/charts/ticketscope/values-kind.yaml \
   --set-string "image.app.tag=${TAG}" \
-  --set-string "image.postgres.tag=${TAG}" \
+  --set-string "image.postgres.tag=${PG_TAG}" \
   --timeout 25m
 log "waiting for api to be Ready"
 k -n "$APP_NS" rollout status deploy/ticketscope-api --timeout=5m

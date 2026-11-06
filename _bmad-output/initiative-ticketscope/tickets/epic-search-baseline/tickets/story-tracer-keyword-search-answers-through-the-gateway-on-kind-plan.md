@@ -3,7 +3,7 @@ title: 'Tracer: keyword search answers through the Gateway on kind'
 type: 'feature'
 ticket: '1'
 created: '2026-11-06'
-status: 'built'
+status: done
 baseline_revision: '4ca22e31f1371030a3c5a788ee0c51e106c6f61d'
 route: 'full'
 route_source: 'auto'

@@ -1,0 +1,729 @@
+{
+  "schema_version": "0.3.0",
+  "snapshot_at": "2026-11-07T00:00:00Z",
+  "repo": "Dillon-Based/ticketscope",
+  "collection_mode": "contract_static",
+  "collection_status": "COLLECTED",
+  "inventory_basis": "static test inventory (pytest testpaths) plus recorded CI run 42385558996",
+  "gate_basis": "requirement oracle (v7 epic R lines) with criterion exception rows",
+  "source_sha": "e71a5ba4bb2851469df4ff665666d3ff5f6f5550",
+  "target": {
+    "type": "epic",
+    "id": "ticketscope--e1",
+    "label": "Epic 1: Keyword search over Mojang issues, deployed on kind"
+  },
+  "decision_mode": "deterministic",
+  "evaluator": "bmad-tea-trace (headless, bmad-loop)",
+  "confidence": "high",
+  "oracle": {
+    "resolution_mode": "formal_requirements",
+    "confidence": "high",
+    "sources": [
+      "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/epic-search-baseline.md",
+      "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/tickets.toml"
+    ],
+    "external_pointer_status": "not_used",
+    "synthetic": false,
+    "granularity": "requirements",
+    "rows": [
+      {
+        "id": "ticketscope--e1--R1",
+        "kind": "requirement",
+        "requirement": "An ingest job publishes a versioned corpus snapshot of the Mojang subset of The Public Jira Dataset v7 (see Corpus scope). The snapshot carries every field the spine's snapshot contract names. It is met when a published snapshot validates against the committed JSON Schema and holds both short and log-heavy issues.",
+        "parent": "parent R1",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/epic-search-baseline.md:33",
+        "priority": "P2",
+        "priority_basis": "contributors",
+        "coverage": "NONE",
+        "contributors": [
+          {
+            "id": "ticketscope--e1-s2--verify",
+            "story": "ticketscope--e1-s2",
+            "coverage": "NONE"
+          }
+        ],
+        "missing_behaviors": [
+          "a published snapshot validates against the committed JSON Schema",
+          "the snapshot holds both short and log-heavy issues"
+        ]
+      },
+      {
+        "id": "ticketscope--e1--R2",
+        "kind": "requirement",
+        "requirement": "A load job, the only writer, loads the pinned snapshot and stores each issue's kind and outcome, each computed once in core. It is met when every loaded issue has a kind and an outcome, and the load reports the share of each kind and each outcome.",
+        "parent": "parent R1",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/epic-search-baseline.md:34",
+        "priority": "P1",
+        "priority_basis": "inferred",
+        "coverage": "NONE",
+        "contributors": [],
+        "missing_behaviors": [
+          "no story covers it"
+        ]
+      },
+      {
+        "id": "ticketscope--e1--R3",
+        "kind": "requirement",
+        "requirement": "Keyword (BM25) retrieval through `/v1/search` returns ranked issues with how each ended. It is met when a vague query and a log-heavy query each return ranked issues with outcomes.",
+        "parent": "parent R2",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/epic-search-baseline.md:35",
+        "priority": "P1",
+        "priority_basis": "inferred",
+        "coverage": "NONE",
+        "contributors": [],
+        "missing_behaviors": [
+          "no story covers it"
+        ]
+      },
+      {
+        "id": "ticketscope--e1--R4",
+        "kind": "requirement",
+        "requirement": "One search page takes ticket text and shows the ranked issues with how each ended. It is met when the page renders results for both example queries.",
+        "parent": "parent R5",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/epic-search-baseline.md:36",
+        "priority": "P1",
+        "priority_basis": "inferred",
+        "coverage": "NONE",
+        "contributors": [],
+        "missing_behaviors": [
+          "no story covers it"
+        ]
+      },
+      {
+        "id": "ticketscope--e1--R5",
+        "kind": "requirement",
+        "requirement": "CloudNativePG Postgres runs on the cluster with pgvector, pg_textsearch, two instances, persistent volumes and backups to SeaweedFS. It is met when CI deploys it on kind on every PR and a backup completes.",
+        "parent": "parent R3",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/epic-search-baseline.md:37",
+        "priority": "P0",
+        "priority_basis": "inferred",
+        "coverage": "NONE",
+        "contributors": [],
+        "missing_behaviors": [
+          "no story covers it"
+        ]
+      },
+      {
+        "id": "ticketscope--e1--R6",
+        "kind": "requirement",
+        "requirement": "One search request yields one trace whose retrieval and database spans follow the span contract, viewable in Grafana through Tempo. It is met when CI on kind shows that trace.",
+        "parent": "parent R8",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/epic-search-baseline.md:38",
+        "priority": "P1",
+        "priority_basis": "inferred",
+        "coverage": "NONE",
+        "contributors": [],
+        "missing_behaviors": [
+          "no story covers it"
+        ]
+      },
+      {
+        "id": "ticketscope--e1--R7",
+        "kind": "requirement",
+        "requirement": "Helm deploys the platform and app releases, and CI runs them on kind on every PR through the reusable kind-deploy step. It is met when the integrated check passes on a PR.",
+        "parent": "parent R11",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/epic-search-baseline.md:39",
+        "priority": "P0",
+        "priority_basis": "inferred",
+        "coverage": "NONE",
+        "contributors": [],
+        "missing_behaviors": [
+          "no story covers it"
+        ]
+      },
+      {
+        "id": "ticketscope--e1-s1--AC-1",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "Given a PR, when ci.yml runs, then ruff, pyright, pytest and lint-imports pass, and _kind-deploy brings up both releases and passes the smoke test.",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-tracer-keyword-search-answers-through-the-gateway-on-kind-plan.md:94",
+        "priority": "P0",
+        "priority_basis": "inferred",
+        "coverage": "FULL"
+      },
+      {
+        "id": "ticketscope--e1-s1--AC-2",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "Given a PR that changes images/, when ci.yml runs, then both images build for linux/amd64 and linux/arm64.",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-tracer-keyword-search-answers-through-the-gateway-on-kind-plan.md:95",
+        "priority": "P2",
+        "priority_basis": "inferred",
+        "coverage": "NONE"
+      },
+      {
+        "id": "ticketscope--e1-s1--AC-3",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "Given a one-line change that makes a core module import ticketscope.adapters.postgres, when lint-imports runs, then it fails.",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-tracer-keyword-search-answers-through-the-gateway-on-kind-plan.md:96",
+        "priority": "P1",
+        "priority_basis": "inferred",
+        "coverage": "PARTIAL"
+      },
+      {
+        "id": "ticketscope--e1-s1--AC-4",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "Given a _kind-deploy run, when it finishes, then its job summary shows peak memory, free disk, and the wall-clock time from kind-up to api Ready.",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-tracer-keyword-search-answers-through-the-gateway-on-kind-plan.md:97",
+        "priority": "P3",
+        "priority_basis": "inferred",
+        "coverage": "NONE"
+      },
+      {
+        "id": "ticketscope--e1-s3--AC-1",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "Given the recordings, when ingest runs to completion, then the output validates against the schema, each record's url is its github.com issue URL, and no recorded user.login value appears anywhere in the gzipped output.",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-ingest-publishes-a-versioned-corpus-snapshot-plan.md:91",
+        "priority": "P1",
+        "priority_basis": "inferred",
+        "coverage": "PARTIAL"
+      },
+      {
+        "id": "ticketscope--e1-s3--AC-2",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "Given a completed run, when the outputs are listed, then <version>.jsonl.gz, <version>.jsonl.gz.sha256 (matching sha256sum -c), <version>-kinds.json and report.json exist.",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-ingest-publishes-a-versioned-corpus-snapshot-plan.md:92",
+        "priority": "P2",
+        "priority_basis": "inferred",
+        "coverage": "FULL"
+      },
+      {
+        "id": "ticketscope--e1-s3--AC-3",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "Given snapshot.yml is dispatched on main (person's step), when it finishes, then a snapshot-YYYY.MM.N Release holds the asset and checksum, and its notes state window, count, kind split, load seconds <= 600, attribution and the takedown path; a second dispatch publishes N+1 and leaves the first unchanged.",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-ingest-publishes-a-versioned-corpus-snapshot-plan.md:93",
+        "priority": "P1",
+        "priority_basis": "inferred",
+        "coverage": "PARTIAL"
+      },
+      {
+        "id": "ticketscope--e1-s12--AC-1",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "The instances and leading projects are compared on the decision rule",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/spike-choose-the-jira-corpus.md:65",
+        "priority": "P2",
+        "priority_basis": "inferred",
+        "coverage": "NONE"
+      },
+      {
+        "id": "ticketscope--e1-s12--AC-2",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "The recommended subset is shown to work",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/spike-choose-the-jira-corpus.md:67",
+        "priority": "P2",
+        "priority_basis": "inferred",
+        "coverage": "NONE"
+      },
+      {
+        "id": "ticketscope--e1-s12--AC-3",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "The answer and its consequences are recorded where the waiting tickets read them",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/spike-choose-the-jira-corpus.md:69",
+        "priority": "P2",
+        "priority_basis": "inferred",
+        "coverage": "NONE"
+      },
+      {
+        "id": "ticketscope--e1-s12--AC-4",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "The author accepts it",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/spike-choose-the-jira-corpus.md:78",
+        "priority": "P3",
+        "priority_basis": "inferred",
+        "coverage": "NONE"
+      },
+      {
+        "id": "ticketscope--e1-s4--AC-1",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "Given the unit suite, when uv run pytest tests/unit/test_derive.py -v runs, then one named case passes for each outcome branch (duplicate, fixed, not_planned, stale, answered, unknown), the duplicate-also-fixed tie, the CONTRIBUTOR-only support issue, the unmerged cross-referenced PR, and kind cases at threshold-1 and threshold.",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-derive-kind-and-outcome-in-core-plan.md:80",
+        "priority": "P2",
+        "priority_basis": "inferred",
+        "coverage": "NONE"
+      },
+      {
+        "id": "ticketscope--e1-s4--AC-2",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "Given the default threshold, when derive_kind runs over each issue in snapshot/fixture.jsonl, then it returns the kind in snapshot/fixture-kinds.json (checked by hand in Implementation Notes; story 5 owns the committed test).",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-derive-kind-and-outcome-in-core-plan.md:81",
+        "priority": "P1",
+        "priority_basis": "inferred",
+        "coverage": "FULL"
+      },
+      {
+        "id": "ticketscope--e1-s14--AC-1",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "Given the unit suite, when uv run pytest tests/unit/test_derive_jira.py -v runs, then one passing case exists per outcome class from a Jira resolution, an unmapped resolution reading unknown, an answered and a not-answered Question case, and kind cases with {code} and {noformat} blocks on either side of the threshold.",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-derive-jira-outcome-and-kind-in-core-plan.md:91",
+        "priority": "P1",
+        "priority_basis": "inferred",
+        "coverage": "FULL"
+      },
+      {
+        "id": "ticketscope--e1-s14--AC-2",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "Given story 4's suite, when uv run pytest tests/unit/test_derive.py runs, then every GitHub-rule case still passes.",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-derive-jira-outcome-and-kind-in-core-plan.md:92",
+        "priority": "P3",
+        "priority_basis": "inferred",
+        "coverage": "NONE"
+      },
+      {
+        "id": "ticketscope--e1-s14--AC-3",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "Given the defaults, when derivation_version() is called, then it returns kind2-t3.outcome3, not story 4's kind1-t3.outcome2.",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-derive-jira-outcome-and-kind-in-core-plan.md:93",
+        "priority": "P2",
+        "priority_basis": "inferred",
+        "coverage": "FULL"
+      },
+      {
+        "id": "ticketscope--e1-s13--AC-1",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "Given the recorded slice, when ingest runs through jira.select and main.write_outputs, then every line validates against schema-v2.json and parses as SnapshotIssueV2, and sha256sum -c passes.",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-ingest-publishes-the-jira-snapshot-schema-v2-plan.md:95",
+        "priority": "P1",
+        "priority_basis": "inferred",
+        "coverage": "FULL"
+      },
+      {
+        "id": "ticketscope--e1-s13--AC-2",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "Given SnapshotIssueV2 changes, when tests run, then the schema drift test fails until python -m ticketscope.jobs.ingest.schema --write is rerun.",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-ingest-publishes-the-jira-snapshot-schema-v2-plan.md:96",
+        "priority": "P2",
+        "priority_basis": "inferred",
+        "coverage": "FULL"
+      },
+      {
+        "id": "ticketscope--e1-s13--AC-3",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "Given the v2 fixture, when scripts/time-load.sh runs on it, then it prints a load time and exits 0.",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-ingest-publishes-the-jira-snapshot-schema-v2-plan.md:97",
+        "priority": "P2",
+        "priority_basis": "inferred",
+        "coverage": "NONE"
+      },
+      {
+        "id": "ticketscope--e1-s13--AC-4",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "Given a restored dump on the person's machine after merge, when scripts/publish-snapshot.sh runs, then a snapshot-YYYY.MM.N Release holds the asset and checksum, with notes stating subset, count, pairs by kind, kind split, load seconds <= 600 and the attribution line.",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-ingest-publishes-the-jira-snapshot-schema-v2-plan.md:98",
+        "priority": "P1",
+        "priority_basis": "inferred",
+        "coverage": "PARTIAL"
+      },
+      {
+        "id": "ticketscope--e1-s5--AC-1",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "Given the kind CI run, when uv run pytest -m kind tests/smoke runs after kind-up.sh, then checks (1)-(6) pass on snapshot 2026.11.1.",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-load-the-pinned-snapshot-with-kind-and-outcome-plan.md:96",
+        "priority": "P1",
+        "priority_basis": "inferred",
+        "coverage": "FULL"
+      },
+      {
+        "id": "ticketscope--e1-s5--AC-2",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "Given an asset whose checksum differs from the pin, when load runs against a DB already holding a corpus, then it exits 1 and the corpus and corpus_meta are unchanged (unit test with fakes, plus the adapter test).",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-load-the-pinned-snapshot-with-kind-and-outcome-plan.md:97",
+        "priority": "P1",
+        "priority_basis": "inferred",
+        "coverage": "FULL"
+      },
+      {
+        "id": "ticketscope--e1-s5--AC-3",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "Given the fixture, when the unit suite runs, then every fixture issue's computed kind equals fixture-kinds.json, and test_app/test_modes still find TARGET_NUMBER at rank 1.",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-load-the-pinned-snapshot-with-kind-and-outcome-plan.md:98",
+        "priority": "P1",
+        "priority_basis": "inferred",
+        "coverage": "FULL"
+      },
+      {
+        "id": "ticketscope--e1-s5--AC-4",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "Given eval/golden-queries.json, when test_golden_queries.py runs, then each source and expected issue exists in the pinned asset, and each expected issue differs from its source.",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-load-the-pinned-snapshot-with-kind-and-outcome-plan.md:99",
+        "priority": "P1",
+        "priority_basis": "inferred",
+        "coverage": "FULL"
+      },
+      {
+        "id": "ticketscope--e1-s5--AC-5",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "Given scripts/time-load.sh <dir> 2026.11.1 with only the asset in <dir>, when it runs, then it exits 0 and prints a time under 600.",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-load-the-pinned-snapshot-with-kind-and-outcome-plan.md:100",
+        "priority": "P2",
+        "priority_basis": "inferred",
+        "coverage": "NONE"
+      },
+      {
+        "id": "ticketscope--e1-s6--AC-1",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "Given the kind cluster with this branch's image, when uv run pytest -m kind tests/smoke runs, then every smoke test passes, the new /v1 checks included.",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-complete-the-v1-contract-plan.md:96",
+        "priority": "P1",
+        "priority_basis": "inferred",
+        "coverage": "FULL"
+      },
+      {
+        "id": "ticketscope--e1-s6--AC-2",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "Given src/ticketscope/core/modes.py imports ticketscope.adapters.postgres, when uv run lint-imports runs, then it fails (the layering is unchanged).",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-complete-the-v1-contract-plan.md:97",
+        "priority": "P1",
+        "priority_basis": "inferred",
+        "coverage": "PARTIAL"
+      },
+      {
+        "id": "ticketscope--e1-s6--AC-3",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "Given a POST /v1/search response saved before this change, when the same request runs after it, then the body is identical.",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-complete-the-v1-contract-plan.md:98",
+        "priority": "P2",
+        "priority_basis": "inferred",
+        "coverage": "NONE"
+      },
+      {
+        "id": "ticketscope--e1-s7--AC-1",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "Given the kind cluster running this branch's image, when the vague and the log-heavy query from eval/golden-queries.json are each submitted to the page through the Gateway, then each response renders a ranked list where every row shows a title link, a kind and an outcome.",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-search-page-shows-ranked-issues-with-how-each-ended-plan.md:80",
+        "priority": "P1",
+        "priority_basis": "inferred",
+        "coverage": "FULL"
+      },
+      {
+        "id": "ticketscope--e1-s7--AC-2",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "Given uv run pytest -m kind tests/smoke on that cluster, when it runs, then every smoke test passes, including section (1c).",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-search-page-shows-ranked-issues-with-how-each-ended-plan.md:81",
+        "priority": "P1",
+        "priority_basis": "inferred",
+        "coverage": "FULL"
+      },
+      {
+        "id": "ticketscope--e1-s7--AC-3",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "Given a POST /v1/search body saved before this change, when the same request runs after it, then the body is identical.",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-search-page-shows-ranked-issues-with-how-each-ended-plan.md:82",
+        "priority": "P2",
+        "priority_basis": "inferred",
+        "coverage": "NONE"
+      },
+      {
+        "id": "ticketscope--e1-s8--AC-1",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "Given a PR, when ci.yml runs, then the checks and charts jobs pass, and _kind-deploy passes every kind smoke test, including test (7).",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-postgres-backs-up-to-seaweedfs-on-kind-plan.md:92",
+        "priority": "P0",
+        "priority_basis": "inferred",
+        "coverage": "FULL"
+      },
+      {
+        "id": "ticketscope--e1-s8--AC-2",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "Given scripts/kind-up.sh on the local kind cluster, when it finishes and test (7) runs, then the Backup reaches completed and its objects are listed in the ticketscope-backups bucket.",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-postgres-backs-up-to-seaweedfs-on-kind-plan.md:93",
+        "priority": "P1",
+        "priority_basis": "inferred",
+        "coverage": "FULL"
+      },
+      {
+        "id": "ticketscope--e1-s8--AC-3",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "Given a second scripts/kind-up.sh run on the same cluster, when it finishes, then the plugin TLS Secrets and ticketscope-backup-s3 carry the same data as before the run.",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-postgres-backs-up-to-seaweedfs-on-kind-plan.md:94",
+        "priority": "P2",
+        "priority_basis": "inferred",
+        "coverage": "FULL"
+      },
+      {
+        "id": "ticketscope--e1-s9--AC-1",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "Given the kind cluster from scripts/kind-up.sh on this branch, when uv run pytest -m kind tests/smoke runs, then every test passes, including (8) and (8b).",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-one-search-request-yields-one-trace-in-tempo-plan.md:96",
+        "priority": "P1",
+        "priority_basis": "inferred",
+        "coverage": "FULL"
+      },
+      {
+        "id": "ticketscope--e1-s9--AC-2",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "Given the repo, when uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run lint-imports && uv run pytest runs, then all pass, including test_telemetry.py.",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-one-search-request-yields-one-trace-in-tempo-plan.md:97",
+        "priority": "P2",
+        "priority_basis": "inferred",
+        "coverage": "FULL"
+      },
+      {
+        "id": "ticketscope--e1-s9--AC-3",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "Given the api pod on kind, when kubectl -n ticketscope logs deploy/ticketscope-api is read after a search, then each line is a JSON object, and the lines logged during the request carry the trace's trace_id.",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-one-search-request-yields-one-trace-in-tempo-plan.md:98",
+        "priority": "P2",
+        "priority_basis": "inferred",
+        "coverage": "UNIT-ONLY"
+      },
+      {
+        "id": "ticketscope--e1-s9--AC-4",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "Given Grafana port-forwarded (kubectl -n platform port-forward svc/grafana 3000:80), when the trace id from (8) is opened in Explore on the Tempo datasource, then the same span tree is shown (manual, human-visual).",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-one-search-request-yields-one-trace-in-tempo-plan.md:99",
+        "priority": "P3",
+        "priority_basis": "inferred",
+        "coverage": "PARTIAL"
+      },
+      {
+        "id": "ticketscope--e1-s10--AC-1",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "Given the change, when grep -rnE \"SnapshotIssue([^V]|$)|TimelineEvent|_github_outcome|MAINTAINER_ASSOCIATIONS\" src tests runs, then it finds nothing.",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-refactor-sweep-plan.md:69",
+        "priority": "P3",
+        "priority_basis": "inferred",
+        "coverage": "FULL"
+      },
+      {
+        "id": "ticketscope--e1-s10--AC-2",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "Given the change, when ruff, pyright, lint-imports and pytest run, then all pass, and preprocessing_version() still returns pre1.kind2-t3.outcome3.",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-refactor-sweep-plan.md:70",
+        "priority": "P2",
+        "priority_basis": "inferred",
+        "coverage": "FULL"
+      },
+      {
+        "id": "ticketscope--e1-s10--AC-3",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "Given a kind cluster that ran the baseline and then kind-up.sh on the sweep commit, when the golden queries are posted before and after, then the two sets of responses are identical.",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-refactor-sweep-plan.md:71",
+        "priority": "P2",
+        "priority_basis": "inferred",
+        "coverage": "NONE"
+      },
+      {
+        "id": "ticketscope--e1-s10--AC-4",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "Given a cluster that was just upgraded in place, when uv run pytest -m kind tests/smoke runs once, then (3) passes on the first run.",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-refactor-sweep-plan.md:72",
+        "priority": "P2",
+        "priority_basis": "inferred",
+        "coverage": "FULL"
+      },
+      {
+        "id": "ticketscope--e1-s11--AC-1",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "Given the local kind cluster on the pinned snapshot, when uv run pytest -m kind tests/integrated -v runs, then exactly five tests run and pass, and the output reports each golden entry's verdict and rank.",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-integrated-check-on-kind-plan.md:70",
+        "priority": "P1",
+        "priority_basis": "inferred",
+        "coverage": "FULL"
+      },
+      {
+        "id": "ticketscope--e1-s11--AC-2",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "Given each of the five checks broken on purpose by hand, one at a time (e.g. a stricter schema copy, a NULLed kind via SQL, a golden expected number swapped in a scratch copy, Tempo scaled to 0, the backup ObjectStore pointed at a missing bucket), when the suite runs, then that check fails; the break is then reverted and the suite passes again.",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-integrated-check-on-kind-plan.md:71",
+        "priority": "P1",
+        "priority_basis": "inferred",
+        "coverage": "PARTIAL"
+      },
+      {
+        "id": "ticketscope--e1-s11--AC-3",
+        "kind": "exception",
+        "exception": "unlinked",
+        "requirement": "Given the change, when uv run pytest runs without a cluster, then the integrated module is deselected and the new unit tests pass.",
+        "source": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-integrated-check-on-kind-plan.md:72",
+        "priority": "P2",
+        "priority_basis": "inferred",
+        "coverage": "FULL"
+      }
+    ]
+  },
+  "gate_status": "FAIL",
+  "coverage": {
+    "inventory": {
+      "covered": 24,
+      "total": 52,
+      "pct": 46.15
+    },
+    "priority_breakdown": {
+      "P0": {
+        "total": 4,
+        "covered": 2,
+        "percentage": 50.0
+      },
+      "P1": {
+        "total": 23,
+        "covered": 13,
+        "percentage": 56.52
+      },
+      "P2": {
+        "total": 20,
+        "covered": 8,
+        "percentage": 40.0
+      },
+      "P3": {
+        "total": 5,
+        "covered": 1,
+        "percentage": 20.0
+      }
+    },
+    "by_level": {
+      "e2e": {
+        "tests": 3,
+        "criteria_covered": 14
+      },
+      "api": {
+        "tests": 0,
+        "criteria_covered": 0
+      },
+      "component": {
+        "tests": 0,
+        "criteria_covered": 0
+      },
+      "unit": {
+        "tests": 20,
+        "criteria_covered": 22
+      },
+      "live": {
+        "tests": 0,
+        "criteria_covered": 0
+      },
+      "other": {
+        "tests": 0,
+        "criteria_covered": 0
+      }
+    }
+  },
+  "tests": {
+    "files": 37,
+    "cases": 740,
+    "skipped_cases": 0,
+    "fixme_cases": 0,
+    "pending_cases": 0
+  },
+  "risk_summary": {
+    "critical_open": 2,
+    "high_open": 10,
+    "medium_open": 12,
+    "low_open": 4
+  },
+  "heuristics": {
+    "endpoint_gaps": 0,
+    "auth_negative_path_status": "not_applicable",
+    "error_path_status": "covered",
+    "ui_journey_status": "not_applicable",
+    "ui_state_status": "not_applicable"
+  },
+  "live_evidence": {
+    "present": false
+  },
+  "gate_criteria": {
+    "p0_coverage_required": "100%",
+    "p0_coverage_actual": "50.0%",
+    "p0_status": "NOT_MET",
+    "p1_coverage_target": "90%",
+    "p1_coverage_minimum": "80%",
+    "p1_coverage_actual": "56.52%",
+    "p1_status": "NOT_MET",
+    "overall_coverage_minimum": "80%",
+    "overall_coverage_actual": "46.15%",
+    "overall_status": "NOT_MET"
+  },
+  "blockers": [
+    {
+      "id": "ticketscope--e1--R5",
+      "severity": "critical",
+      "reason": "P0 requirement row with no linked criterion (no story criterion names it)"
+    },
+    {
+      "id": "ticketscope--e1--R7",
+      "severity": "critical",
+      "reason": "P0 requirement row with no linked criterion (no story criterion names it)"
+    }
+  ],
+  "rejected_evidence": [],
+  "recommendations": [
+    {
+      "priority": "P0",
+      "action": "Name the epic R ids on each ticket criterion (or give each story leaf numbered criteria with R ids) so requirement rows gain contributors; re-run trace",
+      "requirements": [
+        "ticketscope--e1--R1",
+        "ticketscope--e1--R2",
+        "ticketscope--e1--R3",
+        "ticketscope--e1--R4",
+        "ticketscope--e1--R5",
+        "ticketscope--e1--R6",
+        "ticketscope--e1--R7"
+      ]
+    },
+    {
+      "priority": "P0",
+      "action": "Push the three local commits (stories 1.9 confirm, 1.10, 1.11), open the PR, and get the integrated-check job green on GitHub-hosted kind",
+      "requirements": [
+        "ticketscope--e1--R7",
+        "ticketscope--e1--R5"
+      ]
+    },
+    {
+      "priority": "P1",
+      "action": "Commit a negative import-linter test and a ticketscope_ro write-refusal smoke test",
+      "requirements": []
+    },
+    {
+      "priority": "P2",
+      "action": "Turn the manual before/after /v1 diffs and time-load.sh runs into committed checks",
+      "requirements": []
+    }
+  ],
+  "links": {
+    "trace_report_path": "_bmad-output/test-artifacts/trace/traceability-matrix-epic-ticketscope--e1.md",
+    "trace_report_url": "",
+    "artifact_url": "",
+    "journey_evidence_url": ""
+  }
+}

@@ -3,7 +3,7 @@ title: 'One search request yields one trace in Tempo'
 type: 'feature'
 ticket: '9'
 created: '2026-11-07'
-status: blocked
+status: done
 baseline_revision: 'ffe83d9750ca56c5a632071ed0fc7f6d8a69416a'
 route: 'full'
 route_source: 'auto'
@@ -19,8 +19,6 @@ warnings: [oversized]
 deferred: []
 operator_actions:
   - "Port-forward Grafana (kubectl -n platform port-forward svc/grafana 3000:80), sign in with the admin credentials from the platform/grafana Secret, open Explore on the Tempo datasource, look up the trace id from smoke test (8) (or any recent POST /v1/search trace), and confirm it shows the ticketscope-api SERVER span, then retrieval keyword, then the psycopg db query span."
-blocked_at: "2026-11-07"
-blocked_reason: "awaiting operator: Port-forward Grafana (kubectl -n platform port-forward svc/grafana 3000:80), sign in with the admin credentials from the platform/grafana Secret, open Explore on the Tempo datasource, look up the trace id from smoke test (8) (or any recent POST /v1/search trace), and confirm it shows the ticketscope-api SERVER span, then retrieval keyword, then the psycopg db query span."
 ---
 
 <intent-contract>
@@ -173,3 +171,11 @@ Status: awaiting-operator
 - Smoke (3) still fails after an in-place upgrade; (6b)'s upgrade also leaves a no-op load (deferred from earlier stories).
 - Tempo keeps the chart's default jaeger receiver ports (cluster-internal), and traces do not survive a Tempo restart (no persistence, by design).
 - In (8) the SERVER span's parent is the test's synthetic `traceparent`, so Grafana shows the trace with a missing root parent.
+
+## Operator Confirmation
+
+Confirmed 2026-11-07: the external actions this story owed were carried out.
+
+- Port-forward Grafana (kubectl -n platform port-forward svc/grafana 3000:80), sign in with the admin credentials from the platform/grafana Secret, open Explore on the Tempo datasource, look up the trace id from smoke test (8) (or any recent POST /v1/search trace), and confirm it shows the ticketscope-api SERVER span, then retrieval keyword, then the psycopg db query span.
+
+_Appended by the bmad-loop orchestrator (`bmad-loop confirm`, #335): a human confirmed these external actions out of band, and the story was advanced from `awaiting-operator` to `done`._

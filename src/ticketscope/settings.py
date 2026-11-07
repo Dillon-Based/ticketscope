@@ -32,8 +32,11 @@ class Settings(BaseSettings):
     ro_role: str = "ticketscope_ro"
     db_wait_timeout_seconds: int = 900
 
-    # load
+    # load: the pin (AD-6, AD-25). The chart's values.yaml sets version and checksum.
     snapshot_version: str = "fixture"
+    snapshot_sha256: str = ""
+    snapshot_base_url: str = "https://github.com/Dillon-Based/ticketscope/releases/download"
+    snapshot_download_timeout_seconds: int = 300
     snapshot_dir: Path = Path("snapshots")
 
     def conninfo(self) -> str:

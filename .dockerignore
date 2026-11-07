@@ -4,5 +4,4 @@
 !.python-version
 !src/
 !migrations/
-!snapshot/
 **/__pycache__

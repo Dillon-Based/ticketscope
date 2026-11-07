@@ -173,7 +173,41 @@ _COPY_SQL = (
 )
 
 
-def replace_corpus(conninfo: str, snapshot_version: str, rows: Iterable[IssueRow]) -> int:
+@dataclass(frozen=True, slots=True)
+class CorpusMeta:
+    """The single `corpus_meta` row's identity: what decides whether `load` reloads."""
+
+    snapshot_version: str
+    embedding_model_id: str | None
+    preprocessing_version: str | None
+
+
+def read_corpus_meta(conninfo: str) -> CorpusMeta | None:
+    """The `corpus_meta` row, or `None` when nothing has been loaded yet."""
+    with psycopg.connect(conninfo) as conn:
+        row = conn.execute(
+            "SELECT snapshot_version, embedding_model_id, preprocessing_version"
+            " FROM corpus_meta LIMIT 1"
+        ).fetchone()
+    if row is None:
+        return None
+    return CorpusMeta(
+        snapshot_version=_text(row[0]) or "",
+        embedding_model_id=_text(row[1]),
+        preprocessing_version=_text(row[2]),
+    )
+
+
+def _text(value: object) -> str | None:
+    """A text column as `str`; psycopg returns bytes from a SQL_ASCII database."""
+    if value is None:
+        return None
+    if isinstance(value, bytes):
+        return value.decode("utf-8")
+    return str(value)
+
+
+def replace_corpus(conninfo: str, meta: CorpusMeta, rows: Iterable[IssueRow]) -> int:
     """Replace every issue row and the single `corpus_meta` row in one transaction.
 
     On any error the transaction rolls back and the previous corpus stays.
@@ -188,7 +222,9 @@ def replace_corpus(conninfo: str, snapshot_version: str, rows: Iterable[IssueRow
                 count += 1
         conn.execute("DELETE FROM corpus_meta")
         conn.execute(
-            "INSERT INTO corpus_meta (snapshot_version, loaded_at) VALUES (%s, now())",
-            (snapshot_version,),
+            "INSERT INTO corpus_meta"
+            " (snapshot_version, embedding_model_id, preprocessing_version, loaded_at)"
+            " VALUES (%s, %s, %s, now())",
+            (meta.snapshot_version, meta.embedding_model_id, meta.preprocessing_version),
         )
     return count

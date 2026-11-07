@@ -1,0 +1,37 @@
+{
+  "snapshot_version": "2026.11.1",
+  "mode": "keyword",
+  "k": 10,
+  "queries": [
+    {
+      "id": "vague",
+      "kind": "short",
+      "query": "Item Level Drops",
+      "chosen_by": "Drawn with random.Random(5) from 150 sorted (source, duplicate_target) pairs of this kind whose target is in the snapshot, kept when the twin ranked in the top 10 under keyword (pg_textsearch BM25), then picked as the pair whose titles share the fewest words (Jaccard over lowercase words longer than 2 characters) with no OS user-name path in its text; the query is the source title verbatim, twin at rank 5.",
+      "source_issue": {
+        "number": 477621,
+        "key": "MCD-6745"
+      },
+      "expected_issue": {
+        "number": 462385,
+        "key": "MCD-6467"
+      },
+      "known_keyword_miss": false
+    },
+    {
+      "id": "log-heavy",
+      "kind": "log_heavy",
+      "query": "Offline bug in launcher\n\nif you have multiple profiles always one of them says offline.\nand if you try to login and go on a server it sais \"bat loggin\"\n\n\nTrying to log in...\nLogging in with access token\nCouldn't go online\nnet.minecraft.launcher.authentication.exceptions.InvalidCredentialsException: Invalid token.\n\tat net.minecraft.launcher.authentication.yggdrasil.YggdrasilAuthenticationService.makeRequest(YggdrasilAuthenticationService.java:123)\n\tat net.minecraft.launcher.authentication.yggdrasil.YggdrasilAuthenticationService.logInWithToken(YggdrasilAuthenticationService.java:97)\n\tat net.minecraft.launcher.authentication.yggdrasil.YggdrasilAuthenticationService.logIn(YggdrasilAuthenticationService.java:50)\n\tat net.minecraft.launcher.ui.sidebar.login.NotLoggedInForm$1.run(NotLoggedInForm.java:162)\n\tat java.util.concurrent.Executors$RunnableAdapter.call(Unknown Source)\n\tat java.util.concurrent.FutureTask$Sync.innerRun(Unknown Source)\n\tat java.util.concurrent.FutureTask.run(Unknown Source)\n\tat java.util.concurrent.ThreadPoolExecutor.runWorker(Unknown Source)\n\tat java.util.concurrent.ThreadPoolExecutor$Worker.run(Unknown Source)\n\tat java.lang.Thread.run(Unknown Source)\n\nGoing to play offline as '[user]'...",
+      "chosen_by": "Drawn with random.Random(5) from 150 sorted (source, duplicate_target) pairs of this kind whose target is in the snapshot, kept when the twin ranked in the top 10 under keyword (pg_textsearch BM25), then picked as the pair whose titles share the fewest words (Jaccard over lowercase words longer than 2 characters) with no OS user-name path in its text; the query is the source title, a blank line and the body as pasted with one player name replaced by [user], twin at rank 9.",
+      "source_issue": {
+        "number": 40574,
+        "key": "MCL-866"
+      },
+      "expected_issue": {
+        "number": 38127,
+        "key": "MCL-602"
+      },
+      "known_keyword_miss": false
+    }
+  ]
+}

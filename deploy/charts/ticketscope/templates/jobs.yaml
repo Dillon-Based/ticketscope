@@ -65,6 +65,19 @@ spec:
           env:
             {{- include "ticketscope.ownerDbEnv" . | nindent 12 }}
             - name: TICKETSCOPE_SNAPSHOT_VERSION
-              value: {{ .Values.snapshot.version | quote }}
+              value: {{ required "snapshot.version is required" .Values.snapshot.version | quote }}
+            - name: TICKETSCOPE_SNAPSHOT_SHA256
+              value: {{ required "snapshot.sha256 is required (the pinned checksum)" .Values.snapshot.sha256 | quote }}
+            - name: TICKETSCOPE_SNAPSHOT_BASE_URL
+              value: {{ .Values.snapshot.baseUrl | quote }}
+            # The image user (10001) cannot write /app; the asset is fetched here.
+            - name: TICKETSCOPE_SNAPSHOT_DIR
+              value: /snapshots
+          volumeMounts:
+            - name: snapshots
+              mountPath: /snapshots
           resources:
             {{- toYaml .Values.jobs.resources | nindent 12 }}
+      volumes:
+        - name: snapshots
+          emptyDir: {}

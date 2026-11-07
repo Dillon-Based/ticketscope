@@ -29,7 +29,8 @@ def test_best_match(client: TestClient) -> None:
     assert scores == sorted(scores, reverse=True)
     for result in body.results:
         assert result.issue.number >= 900000
-        assert result.outcome.status == "unknown"
+    # Outcomes are derived by core at load (story 5); the target is resolved Fixed.
+    assert body.results[0].outcome.status == "fixed"
     raw = response.json()["results"][0]
     assert set(raw) == {"rank", "score", "issue", "outcome"}
     assert set(raw["issue"]) == {"number", "title", "url", "kind", "state"}

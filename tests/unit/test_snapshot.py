@@ -8,11 +8,11 @@ from typing import Any
 import pytest
 from jsonschema import Draft202012Validator
 
-from tests.target import SNAPSHOT_DIR
-from ticketscope.core.derive import derive_kind
+from tests.target import SNAPSHOT_DIR, fixture_kinds
+from ticketscope.core.derive import derive_kind, derive_outcome, search_text
 from ticketscope.core.snapshot import SnapshotIssueV2
 from ticketscope.jobs.ingest import schema as schema_module
-from ticketscope.jobs.load.main import build_rows, read_kinds, read_snapshot
+from ticketscope.jobs.load.main import build_rows, read_snapshot
 
 V1_LINE = {
     "number": 1,
@@ -126,7 +126,7 @@ def test_fixture_parses_as_snapshot_issue_v2() -> None:
 
 
 def test_fixture_records_kinds_outside_the_schema_and_they_hold() -> None:
-    kinds = read_kinds(SNAPSHOT_DIR / "fixture-kinds.json")
+    kinds = fixture_kinds()
     issues = [SnapshotIssueV2.model_validate(line) for line in _lines()]
     assert set(kinds) == {i.number for i in issues}
     assert set(kinds.values()) == {"short", "log_heavy"}
@@ -135,42 +135,31 @@ def test_fixture_records_kinds_outside_the_schema_and_they_hold() -> None:
 
 
 def test_fixture_log_heavy_issues_use_jira_blocks() -> None:
-    kinds = read_kinds(SNAPSHOT_DIR / "fixture-kinds.json")
+    kinds = fixture_kinds()
     for line in _lines():
         if kinds[line["number"]] == "log_heavy":
             assert "{code" in line["body"] or "{noformat}" in line["body"]
             assert "```" not in line["body"]
 
 
-def test_sidecar_rejects_an_unknown_kind(tmp_path: Path) -> None:
-    path = tmp_path / "kinds.json"
-    path.write_text(json.dumps({"900001": "medium"}))
-    with pytest.raises(ValueError, match="unknown kind"):
-        read_kinds(path)
-
-
 # --- load reads v2 (case 2) --------------------------------------------------------------
 
 
 def test_load_builds_one_row_per_issue(snapshot_dir: Path) -> None:
-    rows = list(
-        build_rows(
-            read_snapshot(snapshot_dir / "fixture.jsonl.gz"),
-            read_kinds(snapshot_dir / "fixture-kinds.json"),
-        )
-    )
+    rows = list(build_rows(read_snapshot(snapshot_dir / "fixture.jsonl.gz")))
     issues = {i.number: i for i in (SnapshotIssueV2.model_validate(x) for x in _lines())}
     assert len(rows) == len(issues)
-    assert {r.outcome_status for r in rows} == {"unknown"}
-    assert all(r.outcome_source is None for r in rows)
     assert all(r.state_reason is None for r in rows)
     assert all(r.closed_at == issues[r.number].resolved_at for r in rows)
-    assert all(r.title in r.search_text for r in rows)
-
-
-def test_load_fails_on_an_issue_without_a_kind(snapshot_dir: Path) -> None:
-    with pytest.raises(ValueError, match="no kind"):
-        list(build_rows(read_snapshot(snapshot_dir / "fixture.jsonl.gz"), {}))
+    assert all(r.search_text == search_text(issues[r.number]) for r in rows)
+    for r in rows:
+        outcome = derive_outcome(issues[r.number])
+        assert (r.outcome_status, r.outcome_summary, r.outcome_source, r.outcome_ref) == (
+            outcome.status,
+            outcome.summary,
+            outcome.source,
+            outcome.ref,
+        )
 
 
 def test_load_reports_the_bad_line(tmp_path: Path) -> None:

@@ -21,4 +21,5 @@ A published snapshot is never overwritten: each run publishes the next version. 
 
 1. adds the key to [`snapshot/exclusions.txt`](snapshot/exclusions.txt), so ingest never writes it again;
 2. runs `scripts/publish-snapshot.sh`, which publishes a new version without the issue;
-3. deletes the assets of the earlier Releases that hold the issue. This is the one exception to "never overwritten", and a person does it by hand.
+3. opens a pull request that bumps `snapshot.version` and `snapshot.sha256` in [`deploy/charts/ticketscope/values.yaml`](deploy/charts/ticketscope/values.yaml) to the new Release, so every environment loads it;
+4. deletes the assets of the earlier Releases that hold the issue. This is the one exception to "never overwritten", and a person does it by hand.

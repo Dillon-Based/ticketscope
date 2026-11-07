@@ -22,9 +22,12 @@ retrieval:
   # Server default when a request omits `mode` (AD-4, AD-25). Owned by epic 3.
   defaultMode: keyword
 
+# The pinned snapshot that load reads (AD-6): a `snapshot-<version>` Release asset and
+# its SHA-256. Set here only; environment files never override it (AD-25).
 snapshot:
-  # The pinned snapshot version that load reads (AD-6). Story 5 swaps in a real one.
-  version: fixture
+  version: "2026.11.1"
+  sha256: "e7940ba12db44b9ac909e2634d537e30406448f45a9d780fd96fa7e6ec211b2f"
+  baseUrl: "https://github.com/Dillon-Based/ticketscope/releases/download"
 
 api:
   replicas: 1

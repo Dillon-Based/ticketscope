@@ -4,6 +4,7 @@ Pure functions over a snapshot issue, so the load, the ingest report and the eva
 A schema v1 `SnapshotIssue` (GitHub) uses the GitHub rules; a schema v2 `SnapshotIssueV2`
 (Mojang Jira) uses the Jira resolution mapping, the answered rule and Jira block toggles.
 Changing a rule or the default threshold changes `derivation_version`, which forces a reload.
+`preprocessing_version` covers the derivations plus the search-text construction (AD-21).
 """
 
 import re
@@ -18,9 +19,11 @@ from ticketscope.core.snapshot import (
     TimelineEvent,
 )
 
-DEFAULT_KIND_THRESHOLD = 3  # provisional; story 5 sets the final threshold
+DEFAULT_KIND_THRESHOLD = 3  # measured on snapshot 2026.11.1 (story 5): 309 log-heavy pairs
 KIND_RULE_VERSION = "kind2"
 OUTCOME_RULE_VERSION = "outcome3"
+# How `search_text` builds an issue's indexed text. Bump it when that changes.
+PREPROCESSING_RULE_VERSION = "pre1"
 
 DUPLICATE_LABEL = "triage/duplicate"
 STALE_LABELS = frozenset({"lifecycle/stale", "lifecycle/rotten"})
@@ -46,6 +49,19 @@ def derivation_version(threshold: int = DEFAULT_KIND_THRESHOLD) -> str:
     """The version of every derivation rule, e.g. `kind2-t3.outcome3`."""
     _check_threshold(threshold)
     return f"{KIND_RULE_VERSION}-t{threshold}.{OUTCOME_RULE_VERSION}"
+
+
+def preprocessing_version() -> str:
+    """What `load` records in `corpus_meta`, e.g. `pre1.kind2-t3.outcome3` (AD-21).
+
+    A change to the search text or to any derivation changes it, which forces a reload.
+    """
+    return f"{PREPROCESSING_RULE_VERSION}.{derivation_version()}"
+
+
+def search_text(issue: SnapshotIssueV2) -> str:
+    """The text that keyword search ranks: the title, a blank line, then the body."""
+    return f"{issue.title}\n\n{issue.body or ''}"
 
 
 # --- outcome -------------------------------------------------------------------------------

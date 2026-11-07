@@ -3,7 +3,7 @@ title: 'Ingest publishes the Jira snapshot (schema v2)'
 type: 'feature'
 ticket: '13'
 created: '2026-11-06'
-status: 'built'
+status: done
 baseline_revision: 'f4de1fb5c40119747da0cbbfa50a21388ad5dd3e'
 route: 'full'
 route_source: 'auto'
@@ -105,6 +105,12 @@ context:
 - Over-budget guard is enforced twice: the script checks `<= 600`, and `notes.render_notes` refuses a load time over 600 s (no notes, no Release).
 - Extra test `tests/unit/test_publish_script.py`: the script's guards in a throwaway git clone with stubbed `uv`/`gh`/`docker` (off main, dirty, HEAD != origin/main refuse before any tool runs).
 - Verified also against a real MongoDB (`mongo:7` with the slice inserted): `ticketscope-ingest`, `shasum -c`, `schema --check`, `notes`, and `scripts/time-load.sh` on the output (exit 0).
+
+- Person-run publish (2026-11-07, from `main` at `b525b53`): `snapshot-2026.11.1`. 32,153 issues (235 open targets, 2 repeated keys dropped, 0 bad times, 0 links dropped); 31,339 short / 814 log-heavy; 10,473 in-subset duplicate pairs (10,164 short / 309 log-heavy); load 2.6 s; sha256 `e7940ba12db44b9ac909e2634d537e30406448f45a9d780fd96fa7e6ec211b2f`. Post-publish checks:
+  - None of the subset's 71,192 person ids appears in the asset; there are no emails, and every Jira mention reads `[~user]`.
+  - 20 sampled records match the dump on id, URL, title, resolution, type and comment count.
+  - The live bugs.mojang.com comparison was not possible: it is now a JS app.
+  - The dump's link shape matched the assumption: each link side carries a string `id`.
 
 ## Plan Change Log
 

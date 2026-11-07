@@ -1,62 +1,17 @@
 """One issue of a corpus snapshot (AD-6).
 
-A snapshot is compressed JSONL: one issue per line. `SnapshotIssue` is the old v1
-(GitHub) shape, kept for synthetic tests only. `SnapshotIssueV2` is the Mojang Jira shape
-that `snapshot/schema-v2.json` is generated from; it carries no reporter or author
+A snapshot is compressed JSONL: one issue per line. `SnapshotIssueV2` is the Mojang Jira
+shape that `snapshot/schema-v2.json` is generated from; it carries no reporter or author
 identity, only each comment's `from_reporter` flag.
 """
 
-from datetime import datetime
 from typing import Annotated, Literal, Self
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 
-SCHEMA_VERSION = 1
-
 
 class _Frozen(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
-
-
-class Label(_Frozen):
-    name: str
-
-
-class Comment(_Frozen):
-    author_association: str
-    body: str
-    created_at: datetime
-
-
-class TimelineEvent(_Frozen):
-    """A timeline event. `marked_as_duplicate`, `cross-referenced` and `closed` matter.
-
-    `source_*` fields carry the duplicate target or the cross-referencing / closing PR.
-    """
-
-    event: str
-    created_at: datetime
-    source_number: int | None = None
-    source_url: str | None = None
-    source_is_pull_request: bool | None = None
-    source_merged: bool | None = None
-
-
-class SnapshotIssue(_Frozen):
-    number: int
-    url: str
-    title: str
-    body: str | None
-    state: Literal["open", "closed"]
-    state_reason: Literal["completed", "not_planned", "duplicate", "reopened"] | None
-    created_at: datetime
-    closed_at: datetime | None
-    labels: list[Label]
-    comments: list[Comment]
-    timeline: list[TimelineEvent]
-
-
-# --- schema v2 (Mojang Jira) ---------------------------------------------------------------
 
 
 class JiraComment(_Frozen):

@@ -4,11 +4,12 @@ Needs `TICKETSCOPE_GATEWAY_URL` (e.g. `http://172.18.0.5`) and
 `TICKETSCOPE_GATEWAY_HOST` (the route hostname), plus `kubectl` and `helm` on the cluster.
 Run with `uv run pytest -m kind tests/smoke`. The tests run in file order: (1) search
 through the Gateway, (1b) the rest of the /v1 contract through the Gateway, (1c) the
-search page through the Gateway, (2) SQL on the CNPG primary, (3) the load report, (4) a
-same-pin upgrade is a no-op, (5) a stale preprocessing version reloads, (6) two ready
-instances, (6b) platform and app upgrades keep the backup TLS and credentials, (7) an
-on-demand backup completes to SeaweedFS, (8) one search yields one AD-10 trace in Tempo,
-(8b) the same trace through Grafana's Tempo datasource.
+search page through the Gateway, (2) SQL on the CNPG primary, (3) the load report, forcing
+a reload when the newest load was a no-op, (4) a same-pin upgrade is a no-op, (5) a stale
+preprocessing version reloads, (6) two ready instances, (6b) platform and app upgrades
+keep the backup TLS and credentials, (7) an on-demand backup completes to SeaweedFS, (8)
+one search yields one AD-10 trace in Tempo, (8b) the same trace through Grafana's Tempo
+datasource.
 """
 
 import base64
@@ -144,6 +145,22 @@ def _upgrade() -> None:
         ],
         check=True,
     )
+
+
+def _force_reload() -> tuple[str, tuple[str, str, str]]:
+    """Mark `corpus_meta` stale and upgrade, so the load Job reloads.
+
+    Returns the load log and `corpus_meta` right after that upgrade. Never leaves
+    `corpus_meta` stale: if the reload did not make it current, one more upgrade does.
+    """
+    current = (PIN, "", preprocessing_version())
+    _sql("UPDATE corpus_meta SET preprocessing_version = 'pre0.stale'")
+    try:
+        _upgrade()
+        return _load_log(), _corpus_meta()
+    finally:
+        if _corpus_meta() != current:
+            _upgrade()
 
 
 # (1) ---------------------------------------------------------------------------------------
@@ -319,7 +336,14 @@ def test_every_issue_is_loaded_with_a_kind_and_an_outcome() -> None:
 
 
 def test_load_log_has_the_report() -> None:
-    reports = [line for line in _load_log().splitlines() if "load report:" in line]
+    log = _load_log()
+    if "load report:" not in log:
+        # The newest load was a no-op (e.g. right after an in-place `kind-up.sh` upgrade),
+        # so it logged no report: force a reload to get a fresh one.
+        assert "no-op" in log, log
+        log, meta = _force_reload()
+        assert meta == (PIN, "", preprocessing_version())
+    reports = [line for line in log.splitlines() if "load report:" in line]
     assert reports, "no load report line"
     line = reports[-1]
     assert f"issues={ISSUE_COUNT}" in line
@@ -346,18 +370,10 @@ def test_upgrade_with_the_same_pin_is_a_no_op() -> None:
 
 
 def test_stale_preprocessing_version_reloads() -> None:
-    current = (PIN, "", preprocessing_version())
-    _sql("UPDATE corpus_meta SET preprocessing_version = 'pre0.stale'")
-    try:
-        _upgrade()
-        log = _load_log()
-        assert "reloading" in log and "preprocessing_version" in log, log
-        assert "load report:" in log
-        assert _corpus_meta() == current
-    finally:
-        # Never leave corpus_meta stale: a failed check above still gets one more reload.
-        if _corpus_meta() != current:
-            _upgrade()
+    log, meta = _force_reload()
+    assert "reloading" in log and "preprocessing_version" in log, log
+    assert "load report:" in log
+    assert meta == (PIN, "", preprocessing_version())
 
 
 # (6) ---------------------------------------------------------------------------------------

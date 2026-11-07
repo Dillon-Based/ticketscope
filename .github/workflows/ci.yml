@@ -48,12 +48,7 @@ jobs:
           helm repo add seaweedfs https://seaweedfs.github.io/seaweedfs/helm --force-update
           helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts --force-update
           helm repo add grafana-community https://grafana-community.github.io/helm-charts --force-update
-          if [[ -f deploy/charts/platform/Chart.lock ]]; then
-            helm dependency build deploy/charts/platform
-          else
-            echo "::warning::deploy/charts/platform/Chart.lock is missing; commit it"
-            helm dependency update deploy/charts/platform
-          fi
+          helm dependency build deploy/charts/platform
           helm lint deploy/charts/platform -f deploy/charts/platform/values-kind.yaml
           helm lint deploy/charts/ticketscope -f deploy/charts/ticketscope/values-kind.yaml \
             --set-string image.app.tag=lint --set-string image.postgres.tag=18-lint

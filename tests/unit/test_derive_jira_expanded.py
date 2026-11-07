@@ -1,7 +1,7 @@
 """Expanded coverage for story 14's Jira outcome and kind rules (test design R2).
 
 Beside `test_derive_jira.py`, which holds the ticket's matrix: the full resolution
-table against spike 12, the per-class `/v1` source, schema-version dispatch, the answered
+table against spike 12, the per-class `/v1` source, kind on a Jira body, the answered
 rule's edges, AD-26 tie-breaks, the toggle regex's edges and the v2 model's contract.
 Priority tags follow the epic test design: [P1] for R2 rules, [P2] for edges.
 """
@@ -29,7 +29,6 @@ from ticketscope.core.derive import (
 from ticketscope.core.snapshot import (
     DuplicateLink,
     JiraComment,
-    SnapshotIssue,
     SnapshotIssueV2,
 )
 
@@ -105,24 +104,6 @@ def dup_link(
         direction=direction,  # type: ignore[arg-type]
         link_type=link_type,
     )
-
-
-def make_github_issue(**overrides: Any) -> SnapshotIssue:
-    fields: dict[str, Any] = {
-        "number": 1,
-        "url": "https://github.com/kubernetes/kubernetes/issues/1",
-        "title": "synthetic",
-        "body": "A plain line.",
-        "state": "closed",
-        "state_reason": "completed",
-        "created_at": CREATED,
-        "closed_at": RESOLVED,
-        "labels": [],
-        "comments": [],
-        "timeline": [],
-    }
-    fields.update(overrides)
-    return SnapshotIssue(**fields)
 
 
 def answered_question(**overrides: Any) -> SnapshotIssueV2:
@@ -213,18 +194,12 @@ def test_inner_whitespace_is_not_normalised() -> None:
     assert derive_outcome(make_jira_issue(resolution="Won't  Fix")) == UNKNOWN
 
 
-# --- schema-version dispatch ----------------------------------------------------------------
+# --- kind on a Jira body ---------------------------------------------------------------------
 
 
-def test_v1_issue_keeps_github_rules() -> None:
-    """[P1] A v1 issue with no GitHub signals stays `unknown`; Jira rules never apply."""
-    assert derive_outcome(make_github_issue()) == UNKNOWN
-
-
-def test_v1_body_jira_toggles_are_not_fences() -> None:
-    """[P1] `{code}` in a v1 (GitHub) body is plain text, so kind ignores it."""
+def test_v2_body_jira_toggles_are_fences() -> None:
+    """[P1] `derive_kind` turns `{code}` / `{noformat}` toggles in a body into fences."""
     body = "{code}\nfoo\n{code}\n{noformat}\nbar\n{noformat}\n{code}\nbaz\n{code}"
-    assert derive_kind(make_github_issue(body=body)) == "short"
     assert derive_kind(make_jira_issue(body=body)) == "log_heavy"
 
 
@@ -478,7 +453,7 @@ def test_v2_naive_created_at_is_invalid() -> None:
 
 
 def test_v2_is_frozen() -> None:
-    """[P2] Snapshot issues are immutable, like v1."""
+    """[P2] Snapshot issues are immutable."""
     issue = make_jira_issue()
     with pytest.raises(ValidationError):
         issue.resolution = "Duplicate"  # type: ignore[misc]

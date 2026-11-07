@@ -47,17 +47,20 @@ done
 
 log "kind-up start (tag ${TAG})"
 
-# 1. Images, native arch only.
+# 1. Images, native arch only. BUILT is set to 1 when build() built its image.
 build() {
   local image=$1 dockerfile=$2
+  BUILT=0
   if [[ "${FORCE_BUILD:-0}" != 1 ]] && docker image inspect "$image" >/dev/null 2>&1; then
     log "image $image present"
   else
     log "building $image"
     docker build -f "$dockerfile" -t "$image" .
+    BUILT=1
   fi
 }
 build "$APP_IMAGE" images/app.Dockerfile
+APP_BUILT=$BUILT
 build "$PG_IMAGE" images/postgres.Dockerfile
 
 # 2. Cluster.
@@ -92,11 +95,7 @@ helm repo add cnpg https://cloudnative-pg.github.io/charts --force-update >/dev/
 helm repo add seaweedfs https://seaweedfs.github.io/seaweedfs/helm --force-update >/dev/null
 helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts --force-update >/dev/null
 helm repo add grafana-community https://grafana-community.github.io/helm-charts --force-update >/dev/null
-if [[ -f deploy/charts/platform/Chart.lock ]]; then
-  helm dependency build deploy/charts/platform
-else
-  helm dependency update deploy/charts/platform
-fi
+helm dependency build deploy/charts/platform
 helm --kube-context "$KCTX" upgrade --install platform deploy/charts/platform \
   --namespace "$PLATFORM_NS" --create-namespace \
   -f deploy/charts/platform/values-kind.yaml \
@@ -106,6 +105,11 @@ k -n "$PLATFORM_NS" wait "gateway/${GATEWAY_NAME}" --for=condition=Programmed --
 
 # 6. ticketscope. No --wait: Helm's wait would hold the hooks on api readiness,
 #    and api readiness needs load. migrate polls for the database itself.
+# A rebuilt image under an unchanged tag leaves the pod template as it was, so
+# Helm rolls nothing: note the deployed api image, to restart api below. A new
+# tag (or no api yet) needs no restart; Helm's rollout covers it.
+DEPLOYED_APP_IMAGE=$(k -n "$APP_NS" get deploy/ticketscope-api \
+  -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || true)
 log "installing ticketscope (hooks: migrate, then load)"
 helm --kube-context "$KCTX" upgrade --install ticketscope deploy/charts/ticketscope \
   --namespace "$APP_NS" --create-namespace \
@@ -113,6 +117,10 @@ helm --kube-context "$KCTX" upgrade --install ticketscope deploy/charts/ticketsc
   --set-string "image.app.tag=${TAG}" \
   --set-string "image.postgres.tag=${PG_TAG}" \
   --timeout 25m
+if [[ "$APP_BUILT" == 1 && "$DEPLOYED_APP_IMAGE" == "$APP_IMAGE" ]]; then
+  log "app image rebuilt under the deployed tag: restarting api"
+  k -n "$APP_NS" rollout restart deploy/ticketscope-api
+fi
 log "waiting for api to be Ready"
 k -n "$APP_NS" rollout status deploy/ticketscope-api --timeout=5m
 READY_EPOCH=$(date +%s)

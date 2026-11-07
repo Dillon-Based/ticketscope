@@ -695,14 +695,10 @@ def _search_with_traceparent() -> str:
     return trace_id
 
 
-_TRACE_ID: list[str] = []
-
-
-def _traced_search() -> str:
-    """One traced search per run, shared by (8) and (8b)."""
-    if not _TRACE_ID:
-        _TRACE_ID.append(_search_with_traceparent())
-    return _TRACE_ID[0]
+@pytest.fixture(scope="module")
+def traced_search_id() -> str:
+    """One traced search per module, shared by (8) and (8b); pytest owns its lifetime."""
+    return _search_with_traceparent()
 
 
 def _tempo(trace_id: str) -> tuple[int, str]:
@@ -724,8 +720,8 @@ def _tempo(trace_id: str) -> tuple[int, str]:
     return 404 if "NotFound" in result.stderr else 0, result.stdout + result.stderr
 
 
-def test_one_search_yields_one_trace_in_tempo() -> None:
-    trace_id = _traced_search()
+def test_one_search_yields_one_trace_in_tempo(traced_search_id: str) -> None:
+    trace_id = traced_search_id
     _poll_trace(lambda: _tempo(trace_id))
 
 
@@ -773,8 +769,8 @@ def _grafana() -> Iterator[str]:
         forward.wait(timeout=10)
 
 
-def test_the_trace_is_served_by_grafanas_tempo_datasource() -> None:
-    trace_id = _traced_search()
+def test_the_trace_is_served_by_grafanas_tempo_datasource(traced_search_id: str) -> None:
+    trace_id = traced_search_id
     secret = _secret_data(PLATFORM_NAMESPACE, "grafana")
     user = base64.b64decode(secret["admin-user"]).decode()
     password = base64.b64decode(secret["admin-password"]).decode()

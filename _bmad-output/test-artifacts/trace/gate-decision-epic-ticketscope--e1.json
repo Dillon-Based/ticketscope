@@ -1,22 +1,22 @@
 {
   "schema_version": "0.1.0",
-  "evaluated_at": "2026-11-07T00:00:00Z",
-  "repo": "Dillon-Based/ticketscope",
+  "evaluated_at": "2026-11-07T17:27:47.043271+00:00",
+  "repo": "ticketscope",
   "target": {
     "type": "epic",
     "id": "ticketscope--e1",
     "label": "Epic 1: Keyword search over Mojang issues, deployed on kind"
   },
   "collection_status": "COLLECTED",
-  "gate_basis": "requirement oracle (v7 epic R lines) with criterion exception rows",
+  "gate_basis": "priority_thresholds",
   "gate_status": "FAIL",
-  "rationale": "P0 coverage is 50.0% (required: 100%). 2 critical requirement(s) below FULL coverage.",
+  "rationale": "P0 coverage is 33% (required: 100%). 2 critical requirement(s) below FULL coverage.",
   "p0_status": "NOT_MET",
   "p1_status": "NOT_MET",
   "overall_status": "NOT_MET",
   "critical_open": 2,
   "links": {
-    "trace_report_path": "_bmad-output/test-artifacts/trace/traceability-matrix-epic-ticketscope--e1.md",
+    "trace_report_path": "/Users/dillonheffernan/Code/ticketscope/_bmad-output/test-artifacts/trace/traceability-matrix-epic-ticketscope--e1.md",
     "trace_report_url": "",
     "artifact_url": "",
     "journey_evidence_url": ""

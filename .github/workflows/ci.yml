@@ -1,6 +1,7 @@
 # PR CI (AD-17): lint, types, import-linter, unit tests, chart lint, the epic's
-# integrated check on one kind deploy (integrated suite, then smoke, on the same cluster),
-# and multi-arch image builds when images change.
+# integrated check on one kind deploy (integrated suite, then smoke, on the same cluster,
+# then one smoke pass after an in-place kind-up.sh upgrade), multi-arch image builds when
+# images change or on dispatch, and the run's trace live-verification results.
 name: ci
 
 on:
@@ -32,7 +33,14 @@ jobs:
       - name: import-linter
         run: uv run lint-imports
       - name: pytest
-        run: uv run pytest
+        run: uv run pytest --junitxml=reports/unit.xml
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports-unit
+          path: reports/
+          if-no-files-found: ignore
 
   charts:
     runs-on: ubuntu-24.04
@@ -73,9 +81,10 @@ jobs:
               - 'images/**'
 
   images:
-    # AD-16: both images for both arches, on native runners (no QEMU).
+    # AD-16: both images for both arches, on native runners (no QEMU). A manual dispatch
+    # builds them too, so the multi-arch build can be verified at any commit.
     needs: changes
-    if: needs.changes.outputs.images == 'true'
+    if: needs.changes.outputs.images == 'true' || github.event_name == 'workflow_dispatch'
     strategy:
       fail-fast: false
       matrix:
@@ -102,4 +111,47 @@ jobs:
     # state, before smoke's upgrades and forced reloads.
     uses: ./.github/workflows/_kind-deploy.yml
     with:
-      check: uv run pytest -m kind tests/integrated tests/smoke
+      check: uv run pytest -m kind tests/integrated tests/smoke --junitxml=reports/kind.xml
+      # Story 10 AC-4: the first smoke run after an in-place upgrade passes (3).
+      upgrade_check: uv run pytest -m kind tests/smoke --junitxml=reports/kind-upgrade.xml
+
+  evidence:
+    # Trace live-verification results for this run (bmad-tea-trace input). Runs whatever
+    # the other jobs did, so a failure is recorded as `fail`, never left out.
+    needs: [checks, charts, changes, images, integrated-check]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: reports-*
+          path: reports
+          merge-multiple: true
+      - name: Resolve the commit the run verified
+        id: source
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          # A PR run checks out the merge ref. Record the PR head only when the merge tree
+          # equals it (base already in head); otherwise record the merge commit itself.
+          git fetch --no-tags --depth=1 origin "$HEAD_SHA"
+          if git diff --quiet "$HEAD_SHA" HEAD; then sha="$HEAD_SHA"; else sha="$(git rev-parse HEAD)"; fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "Recording results against $sha (checked out $(git rev-parse HEAD))"
+      - name: Build live-verification-results.json
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SOURCE_SHA: ${{ steps.source.outputs.sha }}
+          RUN_ID: ${{ github.run_id }}
+        run: >-
+          python3 scripts/live_results.py --sha "$SOURCE_SHA"
+          --run-url "$RUN_URL" --needs "$NEEDS" --reports reports
+          --producer "GitHub Actions ci run $RUN_ID (scripts/live_results.py)"
+          --out live-verification-results.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: live-verification-results
+          path: live-verification-results.json

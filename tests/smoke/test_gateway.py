@@ -438,6 +438,16 @@ def test_cluster_has_two_ready_instances() -> None:
     assert status.get("readyInstances") == 2, status
 
 
+def test_cluster_runs_both_extensions_on_persistent_volumes() -> None:
+    """R5: pgvector and pg_textsearch are installed in the app database, and each of the
+    two instances keeps its data on a bound PersistentVolumeClaim."""
+    extensions = set(_sql("SELECT extname FROM pg_extension").split())
+    assert {"vector", "pg_textsearch"} <= extensions, extensions
+    claims = json.loads(_kubectl("get", "pvc", "-l", f"cnpg.io/cluster={CLUSTER}", "-o", "json"))
+    bound = [c["metadata"]["name"] for c in claims["items"] if c["status"].get("phase") == "Bound"]
+    assert len(bound) >= 2, f"bound PVCs for {CLUSTER}: {bound}"
+
+
 # (6b) --------------------------------------------------------------------------------------
 
 _KEPT_SECRETS = (
@@ -785,3 +795,36 @@ def test_the_trace_is_served_by_grafanas_tempo_datasource(traced_search_id: str)
             return response.status_code, response.text
 
         _poll_trace(fetch)
+
+
+# (8c) --------------------------------------------------------------------------------------
+
+
+def _api_log_lines() -> list[str]:
+    """Recent log lines of every api pod (one replica today; the selector keeps it right)."""
+    out = _kubectl("logs", "-l", "app.kubernetes.io/component=api", "--since=10m", "--tail=-1")
+    return [line for line in out.splitlines() if line.strip()]
+
+
+@pytest.mark.criterion("ticketscope--e1-s9--AC-3")
+def test_api_logs_are_json_lines_carrying_the_request_trace_id() -> None:
+    """Story 9 AC-3 on the deployed pod: every api log line is a JSON object, and the
+    lines logged for a traced search carry that request's trace id."""
+    trace_id = _search_with_traceparent()
+
+    def request_lines() -> list[dict[str, Any]]:
+        records: list[dict[str, Any]] = []
+        for line in _api_log_lines():
+            try:
+                record = json.loads(line)
+            except ValueError as error:
+                raise AssertionError(f"api log line is not JSON: {line[:500]}") from error
+            assert isinstance(record, dict), f"api log line is not a JSON object: {line[:500]}"
+            records.append(record)
+        mine = [r for r in records if r.get("trace_id") == trace_id]
+        assert mine, f"no api log line carries trace_id {trace_id}"
+        return mine
+
+    mine = eventually(request_lines, timeout=30, interval=2)
+    assert any("POST /v1/search" in str(r.get("message")) for r in mine), mine
+    assert all(r.get("span_id") for r in mine), mine

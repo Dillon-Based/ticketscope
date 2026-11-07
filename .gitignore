@@ -14,3 +14,6 @@ __pycache__/
 
 # Helm: Chart.lock is committed, fetched dependency archives are not
 deploy/charts/*/charts/*.tgz
+
+# CI test reports (scripts/live_results.py input)
+/reports/

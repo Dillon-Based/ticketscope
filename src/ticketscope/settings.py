@@ -23,6 +23,11 @@ class Settings(BaseSettings):
     # Retrieval (AD-25: the chart's values.yaml sets the real default).
     default_mode: str = "keyword"
 
+    # Traces (AD-10): OTLP/HTTP base URL of the in-cluster collector; empty exports nothing.
+    otlp_endpoint: str = ""
+    # Query text goes on the retrieval span only when this is true.
+    trace_query_text: bool = False
+
     # api
     http_host: str = "0.0.0.0"
     http_port: int = 8080

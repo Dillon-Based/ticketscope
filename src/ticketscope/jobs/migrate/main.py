@@ -8,6 +8,7 @@ migration 0001's default grants name.
 import logging
 import sys
 
+from ticketscope import telemetry
 from ticketscope.adapters.postgres import apply_migrations, wait_for_database
 from ticketscope.settings import Settings
 
@@ -15,8 +16,20 @@ log = logging.getLogger("ticketscope.migrate")
 
 
 def main() -> int:
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     settings = Settings()
+    provider = telemetry.setup(telemetry.SERVICE_JOBS, settings.otlp_endpoint)
+    try:
+        with telemetry.job_span(provider, "migrate") as failed:
+            code = run(settings)
+            if code:
+                failed()
+        return code
+    finally:
+        provider.shutdown()  # flush the job's spans before the process exits
+
+
+def run(settings: Settings) -> int:
+    """Wait for the database and the read-only role, then apply every pending migration."""
     conninfo = settings.conninfo()
     try:
         wait_for_database(

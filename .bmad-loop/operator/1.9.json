@@ -1,0 +1,12 @@
+{
+  "actions": [
+    "Port-forward Grafana (kubectl -n platform port-forward svc/grafana 3000:80), sign in with the admin credentials from the platform/grafana Secret, open Explore on the Tempo datasource, look up the trace id from smoke test (8) (or any recent POST /v1/search trace), and confirm it shows the ticketscope-api SERVER span, then retrieval keyword, then the psycopg db query span."
+  ],
+  "followup_review_recommended": false,
+  "parked_at": "2026-11-07",
+  "ref": "1.9",
+  "run_id": "20261106-180417-b664",
+  "source": "tickets",
+  "spec_file": "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-one-search-request-yields-one-trace-in-tempo-plan.md",
+  "story_key": "1.9"
+}

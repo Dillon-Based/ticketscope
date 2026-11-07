@@ -19,6 +19,7 @@ forbidden_modules =
     psycopg
     pydantic_settings
     uvicorn
+    opentelemetry
 
 [importlinter:contract:contract]
 name = contract imports only pydantic
@@ -35,6 +36,7 @@ forbidden_modules =
     psycopg
     pydantic_settings
     uvicorn
+    opentelemetry
 
 [importlinter:contract:adapters]
 name = driven adapters import only core
@@ -69,6 +71,9 @@ forbidden_modules =
     ticketscope.http
     fastapi
     uvicorn
+# telemetry.instrument_app names FastAPI for type checking only; jobs never load it.
+ignore_imports =
+    ticketscope.telemetry -> fastapi
 
 [importlinter:contract:settings]
 name = settings is cross-cutting and imports no ticketscope layer
@@ -81,3 +86,16 @@ forbidden_modules =
     ticketscope.adapters
     ticketscope.http
     ticketscope.jobs
+
+[importlinter:contract:telemetry]
+name = telemetry is cross-cutting and imports no ticketscope layer
+type = forbidden
+source_modules =
+    ticketscope.telemetry
+forbidden_modules =
+    ticketscope.contract
+    ticketscope.core
+    ticketscope.adapters
+    ticketscope.http
+    ticketscope.jobs
+    ticketscope.settings

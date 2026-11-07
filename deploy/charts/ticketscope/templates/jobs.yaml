@@ -32,6 +32,7 @@ spec:
           command: ["ticketscope-migrate"]
           env:
             {{- include "ticketscope.ownerDbEnv" . | nindent 12 }}
+            {{- include "ticketscope.otlpEnv" . | nindent 12 }}
           resources:
             {{- toYaml .Values.jobs.resources | nindent 12 }}
 ---
@@ -64,6 +65,7 @@ spec:
           command: ["ticketscope-load"]
           env:
             {{- include "ticketscope.ownerDbEnv" . | nindent 12 }}
+            {{- include "ticketscope.otlpEnv" . | nindent 12 }}
             - name: TICKETSCOPE_SNAPSHOT_VERSION
               value: {{ required "snapshot.version is required" .Values.snapshot.version | quote }}
             - name: TICKETSCOPE_SNAPSHOT_SHA256

@@ -7,15 +7,22 @@ through the Gateway, (1b) the rest of the /v1 contract through the Gateway, (1c)
 search page through the Gateway, (2) SQL on the CNPG primary, (3) the load report, (4) a
 same-pin upgrade is a no-op, (5) a stale preprocessing version reloads, (6) two ready
 instances, (6b) platform and app upgrades keep the backup TLS and credentials, (7) an
-on-demand backup completes to SeaweedFS.
+on-demand backup completes to SeaweedFS, (8) one search yields one AD-10 trace in Tempo,
+(8b) the same trace through Grafana's Tempo datasource.
 """
 
+import base64
 import json
 import os
 import re
+import secrets
+import socket
 import subprocess
 import time
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from html.parser import HTMLParser
+from typing import Any
 from urllib.parse import urlencode
 
 import httpx2
@@ -482,3 +489,216 @@ def test_on_demand_backup_completes_to_seaweedfs() -> None:
         check=False,
         capture_output=True,
     )
+
+
+# (8) ---------------------------------------------------------------------------------------
+
+TRACE_TIMEOUT_SECONDS = 60
+TRACE_QUERY = str(GOLDEN["queries"][0]["query"])
+
+
+def _attributes(item: dict[str, Any]) -> dict[str, Any]:
+    """OTLP JSON attributes as a plain dict (`intValue` arrives as a string)."""
+    out: dict[str, Any] = {}
+    for attribute in item.get("attributes") or []:
+        value: dict[str, Any] = attribute.get("value") or {}
+        if "intValue" in value:
+            out[attribute["key"]] = int(value["intValue"])
+        elif value:
+            out[attribute["key"]] = next(iter(value.values()))
+    return out
+
+
+def _spans(trace: dict[str, Any]) -> list[dict[str, Any]]:
+    """Every span of a Tempo `/api/v2/traces` body, with its resource's `service.name`."""
+    body: dict[str, Any] = trace.get("trace", trace)
+    spans: list[dict[str, Any]] = []
+    for resource_spans in body.get("resourceSpans") or []:
+        service = _attributes(resource_spans.get("resource") or {}).get("service.name")
+        for scope_spans in resource_spans.get("scopeSpans") or []:
+            for span in scope_spans.get("spans") or []:
+                spans.append({**span, "service": service, "attrs": _attributes(span)})
+    return spans
+
+
+_KINDS = {"1": "INTERNAL", "2": "SERVER", "3": "CLIENT"}
+
+
+def _kind(span: dict[str, Any]) -> str:
+    """`SPAN_KIND_SERVER` or a bare enum number, as `SERVER`."""
+    kind = str(span.get("kind", ""))
+    return _KINDS.get(kind, kind.removeprefix("SPAN_KIND_"))
+
+
+def _assert_ad10_tree(trace: dict[str, Any]) -> None:
+    """SERVER `POST /v1/search` -> INTERNAL `retrieval keyword` -> psycopg CLIENT.
+    Span ids are compared as returned (base64 or hex), within this one response."""
+    spans = _spans(trace)
+    servers = [
+        s
+        for s in spans
+        if s["service"] == "ticketscope-api"
+        and _kind(s) == "SERVER"
+        and s.get("name") == "POST /v1/search"
+    ]
+    assert len(servers) == 1, spans
+    server = servers[0]
+    [retrieval] = [s for s in spans if s.get("name") == "retrieval keyword"]
+    assert retrieval["service"] == "ticketscope-api"
+    assert _kind(retrieval) == "INTERNAL"
+    assert retrieval.get("parentSpanId") == server["spanId"]
+    attrs = retrieval["attrs"]
+    assert attrs["gen_ai.operation.name"] == "retrieval"
+    assert attrs["gen_ai.data_source.id"] == "ticketscope-mojang-jira"
+    assert attrs["ticketscope.retrieval.mode"] == "keyword"
+    assert attrs["ticketscope.retrieval.k"] == 10
+    assert attrs["ticketscope.corpus.version"] == PIN
+    assert attrs["ticketscope.result.count"] >= 1
+    # No query text on any span (not opted in).
+    query = TRACE_QUERY.lower()
+    for span in spans:
+        assert not any(query in str(v).lower() for v in span["attrs"].values()), span
+    db = [
+        s
+        for s in spans
+        if _kind(s) == "CLIENT"
+        and s["attrs"].get("db.system.name") == "postgresql"
+        and s.get("parentSpanId") == retrieval["spanId"]
+    ]
+    assert db, spans
+
+
+def _poll_trace(fetch: Callable[[], tuple[int, str]]) -> dict[str, Any]:
+    """Poll `fetch` (status, body) until the trace has the full AD-10 tree."""
+    deadline = time.monotonic() + TRACE_TIMEOUT_SECONDS
+    last: tuple[int, str] = (0, "")
+    while True:
+        last = fetch()
+        if last[0] == 200:
+            try:
+                trace: dict[str, Any] = json.loads(last[1])
+                _assert_ad10_tree(trace)
+                return trace
+            except AssertionError, KeyError, ValueError:
+                pass
+        if time.monotonic() > deadline:
+            break
+        time.sleep(3)
+    status, body = last
+    if status == 200:
+        _assert_ad10_tree(json.loads(body))  # fail with the real assertion
+    pytest.fail(f"trace not complete in {TRACE_TIMEOUT_SECONDS}s: last {status}: {body[:2000]}")
+
+
+def _search_with_traceparent() -> str:
+    """POST one golden query with a fresh `traceparent`; return its trace id (hex)."""
+    trace_id = secrets.token_hex(16)
+    parent_id = secrets.token_hex(8)
+    url, host = _gateway()
+    response = httpx2.post(
+        f"{url}/v1/search",
+        json={"query": TRACE_QUERY, "mode": "keyword", "k": 10},
+        headers={"Host": host, "traceparent": f"00-{trace_id}-{parent_id}-01"},
+        timeout=30,
+    )
+    assert response.status_code == 200, response.text
+    assert SearchResponse.model_validate(response.json()).results, "no results"
+    return trace_id
+
+
+_TRACE_ID: list[str] = []
+
+
+def _traced_search() -> str:
+    """One traced search per run, shared by (8) and (8b)."""
+    if not _TRACE_ID:
+        _TRACE_ID.append(_search_with_traceparent())
+    return _TRACE_ID[0]
+
+
+def _tempo(trace_id: str) -> tuple[int, str]:
+    """Tempo's trace-by-id through the API server's service proxy (Tempo is not exposed)."""
+    result = subprocess.run(
+        [
+            "kubectl",
+            "get",
+            "--raw",
+            f"/api/v1/namespaces/{PLATFORM_NAMESPACE}/services/tempo:3200/proxy"
+            f"/api/v2/traces/{trace_id}",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode == 0:
+        return 200, result.stdout
+    return 404 if "NotFound" in result.stderr else 0, result.stdout + result.stderr
+
+
+def test_one_search_yields_one_trace_in_tempo() -> None:
+    trace_id = _traced_search()
+    _poll_trace(lambda: _tempo(trace_id))
+
+
+# (8b) --------------------------------------------------------------------------------------
+
+
+def _free_port() -> int:
+    with socket.socket() as sock:
+        sock.bind(("127.0.0.1", 0))
+        return int(sock.getsockname()[1])
+
+
+@contextmanager
+def _grafana() -> Iterator[str]:
+    """A port-forward to Grafana (never exposed, AD-14); yields its base URL."""
+    port = _free_port()
+    forward = subprocess.Popen(
+        [
+            "kubectl",
+            "-n",
+            PLATFORM_NAMESPACE,
+            "port-forward",
+            "svc/grafana",
+            f"{port}:80",
+        ],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    base = f"http://127.0.0.1:{port}"
+    try:
+        deadline = time.monotonic() + 30
+        while True:
+            try:
+                if httpx2.get(f"{base}/api/health", timeout=5).status_code == 200:
+                    break
+            except httpx2.HTTPError:
+                pass
+            if forward.poll() is not None or time.monotonic() > deadline:
+                forward.terminate()  # an unterminated read would block until EOF
+                _, stderr = forward.communicate(timeout=10)
+                pytest.fail(f"Grafana port-forward not ready: {stderr}")
+            time.sleep(1)
+        yield base
+    finally:
+        forward.terminate()
+        forward.wait(timeout=10)
+
+
+def test_the_trace_is_served_by_grafanas_tempo_datasource() -> None:
+    trace_id = _traced_search()
+    secret = _secret_data(PLATFORM_NAMESPACE, "grafana")
+    user = base64.b64decode(secret["admin-user"]).decode()
+    password = base64.b64decode(secret["admin-password"]).decode()
+    with _grafana() as base:
+
+        def fetch() -> tuple[int, str]:
+            response = httpx2.get(
+                f"{base}/api/datasources/proxy/uid/tempo/api/v2/traces/{trace_id}",
+                auth=(user, password),
+                timeout=30,
+            )
+            return response.status_code, response.text
+
+        _poll_trace(fetch)

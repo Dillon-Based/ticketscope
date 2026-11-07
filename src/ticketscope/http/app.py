@@ -13,9 +13,11 @@ import uvicorn
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse
+from opentelemetry.sdk.trace import TracerProvider
 from starlette.concurrency import run_in_threadpool
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from ticketscope import telemetry
 from ticketscope.contract.search import (
     Issue,
     IssueDetail,
@@ -120,8 +122,13 @@ PAGE_MODE = "keyword"
 PAGE_K = 10
 
 
-def create_app(store: CorpusStore | None = None, settings: Settings | None = None) -> FastAPI:
-    """Build the app. Without a `store`, wire the Postgres adapter as `ticketscope_ro`."""
+def create_app(
+    store: CorpusStore | None = None,
+    settings: Settings | None = None,
+    tracer_provider: TracerProvider | None = None,
+) -> FastAPI:
+    """Build the app. Without a `store`, wire the Postgres adapter as `ticketscope_ro`.
+    Without a `tracer_provider`, spans go to the global one (`telemetry.setup` in `main`)."""
     settings = settings or Settings()
     if store is None:
         from ticketscope.adapters.postgres import PostgresCorpusStore
@@ -129,11 +136,28 @@ def create_app(store: CorpusStore | None = None, settings: Settings | None = Non
         store = PostgresCorpusStore(settings.conninfo())
     corpus = store
     default_mode = settings.default_mode
+    record_query_text = settings.trace_query_text
+    tracer = telemetry.get_tracer(tracer_provider)
 
     app = FastAPI(title="ticketscope", version="1")
     app.add_exception_handler(StarletteHTTPException, _http_problem)
     app.add_exception_handler(RequestValidationError, _validation_problem)
     app.add_exception_handler(Exception, _server_problem)
+    telemetry.instrument_app(app, tracer_provider, record_query_text)
+
+    def retrieve(mode_name: str, query: str, k: int, version: str) -> list[Scored]:
+        """One registry mode's search inside the AD-10 retrieval span."""
+        with telemetry.retrieval_span(
+            tracer,
+            mode=mode_name,
+            k=k,
+            corpus_version=version,
+            query=query,
+            record_query_text=record_query_text,
+        ) as span:
+            hits = REGISTRY[mode_name].build(corpus).search(query, k)
+            span.result_count(len(hits))
+        return hits
 
     @app.get("/healthz")
     def healthz() -> dict[str, str]:  # pyright: ignore[reportUnusedFunction]
@@ -142,7 +166,9 @@ def create_app(store: CorpusStore | None = None, settings: Settings | None = Non
     @app.get("/readyz")
     def readyz(response: Response) -> dict[str, str]:  # pyright: ignore[reportUnusedFunction]
         try:
-            version = corpus.corpus_version()
+            # Probes are not traced (AD-10): neither the SERVER span nor its db query.
+            with telemetry.untraced():
+                version = corpus.corpus_version()
         except Exception as exc:
             log.warning("readiness check failed: %s", exc)
             version = None
@@ -170,7 +196,7 @@ def create_app(store: CorpusStore | None = None, settings: Settings | None = Non
         version = corpus.corpus_version()
         if version is None:
             raise HTTPException(status_code=503, detail="corpus not loaded")
-        hits = mode.build(corpus).search(request.query, request.k)
+        hits = retrieve(mode.name, request.query, request.k, version)
         return SearchResponse(
             mode=mode.name,  # pyright: ignore[reportArgumentType]
             score_kind=mode.score_kind,
@@ -184,12 +210,13 @@ def create_app(store: CorpusStore | None = None, settings: Settings | None = Non
         if not query.strip():
             return HTMLResponse(page.render(query, message=page.BLANK_MESSAGE))
         try:
-            if corpus.corpus_version() is None:
+            version = corpus.corpus_version()
+            if version is None:
                 return HTMLResponse(
                     page.render(query, message=page.NOT_LOADED_MESSAGE, error=True),
                     status_code=503,
                 )
-            hits = REGISTRY[PAGE_MODE].build(corpus).search(query, PAGE_K)
+            hits = retrieve(PAGE_MODE, query, PAGE_K, version)
             if not hits:
                 return HTMLResponse(page.render(query, message=page.NO_MATCH_MESSAGE))
             return HTMLResponse(page.render(query, _results(hits)))
@@ -235,10 +262,13 @@ def create_app(store: CorpusStore | None = None, settings: Settings | None = Non
 
 def main() -> None:
     settings = Settings()
-    logging.basicConfig(level=logging.INFO)
+    # JSON logs and the global provider before uvicorn starts; `log_config=None` keeps
+    # uvicorn's own loggers on the JSON root handler.
+    telemetry.setup(telemetry.SERVICE_API, settings.otlp_endpoint)
     uvicorn.run(
         "ticketscope.http.app:create_app",
         factory=True,
         host=settings.http_host,
         port=settings.http_port,
+        log_config=None,
     )

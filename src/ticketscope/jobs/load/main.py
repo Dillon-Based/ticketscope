@@ -17,6 +17,7 @@ from collections.abc import Iterable, Iterator
 from pathlib import Path
 from typing import get_args
 
+from ticketscope import telemetry
 from ticketscope.adapters.postgres import (
     CorpusMeta,
     IssueRow,
@@ -113,10 +114,22 @@ def report_line(version: str, count: int, counts: Counter[str], seconds: float, 
 
 
 def main() -> int:
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    settings = Settings()
+    provider = telemetry.setup(telemetry.SERVICE_JOBS, settings.otlp_endpoint)
     # httpx2 logs each request URL at INFO; the Release redirect carries a signed query.
     logging.getLogger("httpx2").setLevel(logging.WARNING)
-    settings = Settings()
+    try:
+        with telemetry.job_span(provider, "load") as failed:
+            code = run(settings)
+            if code:
+                failed()
+        return code
+    finally:
+        provider.shutdown()  # flush the job's spans before the process exits
+
+
+def run(settings: Settings) -> int:
+    """The load itself: 0 on success or no-op, 1 with the previous corpus kept."""
     version = settings.snapshot_version
     if not settings.snapshot_sha256.strip():
         log.error(

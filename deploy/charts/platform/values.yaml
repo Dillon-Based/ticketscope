@@ -65,3 +65,112 @@ seaweedfs:
         memory: 256Mi
       limits:
         memory: 1Gi
+
+# --- Traces (AD-10, AD-11): collector -> Tempo, Grafana over Tempo -----------------------
+# Traces only: no metrics or logs pipeline, no spanmetrics, no Prometheus (epic 7).
+# None of the three is exposed (AD-14): no HTTPRoute, Ingress or LoadBalancer; reach
+# Grafana with `kubectl -n platform port-forward svc/grafana 3000:80`.
+
+# The OTel Collector. Apps send OTLP/HTTP to otel-collector.platform.svc:4318.
+otel-collector:
+  enabled: true
+  fullnameOverride: otel-collector
+  mode: deployment
+  image:
+    repository: otel/opentelemetry-collector-contrib
+    tag: "0.164.0"  # Stack pin; the chart's appVersion is 0.163.2
+  ports:
+    otlp:
+      enabled: true
+    otlp-http:
+      enabled: true
+    jaeger-compact:
+      enabled: false
+    jaeger-thrift:
+      enabled: false
+    jaeger-grpc:
+      enabled: false
+    zipkin:
+      enabled: false
+  # alternateConfig, not config: as a subchart, null cannot remove config's default
+  # receivers and pipelines (helm/helm#12879). Nothing here is merged with defaults.
+  alternateConfig:
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: ${env:MY_POD_IP}:4317
+          http:
+            endpoint: ${env:MY_POD_IP}:4318
+    processors:
+      memory_limiter:
+        check_interval: 5s
+        limit_percentage: 80
+        spike_limit_percentage: 25
+      batch: {}
+    exporters:
+      # `otlp_grpc` is the OTLP gRPC exporter's name in collector-contrib 0.164.
+      otlp_grpc:
+        endpoint: tempo.platform.svc:4317
+        tls:
+          insecure: true
+    extensions:
+      health_check:
+        endpoint: ${env:MY_POD_IP}:13133
+    service:
+      extensions: [health_check]
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, batch]
+          exporters: [otlp_grpc]
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
+
+# Tempo, single binary, in-memory WAL and local blocks: traces live for a day and do
+# not survive a restart (no persistence).
+tempo:
+  enabled: true
+  fullnameOverride: tempo
+  tempo:
+    reportingEnabled: false
+    retention: 24h
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        memory: 512Mi
+  persistence:
+    enabled: false
+
+# Grafana with one provisioned Tempo datasource. The admin password is the chart's
+# generated Secret `grafana` (key admin-password), never in values or git.
+grafana:
+  enabled: true
+  fullnameOverride: grafana
+  testFramework:
+    enabled: false
+  persistence:
+    enabled: false
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        - name: Tempo
+          type: tempo
+          uid: tempo
+          access: proxy
+          url: http://tempo.platform.svc:3200
+          isDefault: true
+          editable: false
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 384Mi

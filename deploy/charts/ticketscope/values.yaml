@@ -29,6 +29,12 @@ snapshot:
   sha256: "e7940ba12db44b9ac909e2634d537e30406448f45a9d780fd96fa7e6ec211b2f"
   baseUrl: "https://github.com/Dillon-Based/ticketscope/releases/download"
 
+# Traces (AD-10, AD-11): OTLP/HTTP to the platform release's collector, the same in
+# every environment (AD-13). Query text goes on spans only when recordQueryText is true.
+telemetry:
+  otlpEndpoint: "http://otel-collector.platform.svc:4318"
+  recordQueryText: false
+
 api:
   replicas: 1
   resources:

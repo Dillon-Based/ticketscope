@@ -39,3 +39,9 @@ helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version }}
 - name: TICKETSCOPE_DB_WAIT_TIMEOUT_SECONDS
   value: {{ .Values.jobs.dbWaitTimeoutSeconds | quote }}
 {{- end }}
+
+{{/* OTLP export for every app process (AD-10). */}}
+{{- define "ticketscope.otlpEnv" -}}
+- name: TICKETSCOPE_OTLP_ENDPOINT
+  value: {{ .Values.telemetry.otlpEndpoint | quote }}
+{{- end }}

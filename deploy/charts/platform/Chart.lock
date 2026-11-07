@@ -5,5 +5,20 @@ dependencies:
 - name: cloudnative-pg
   repository: https://cloudnative-pg.github.io/charts
   version: 0.29.1
-digest: sha256:d0c2f055868684fb30db1c8a0a208bab5656e4be68cc9e84aad12bc3e06560fb
-generated: "2026-11-06T09:10:07.277096-05:00"
+- name: plugin-barman-cloud
+  repository: https://cloudnative-pg.github.io/charts
+  version: 0.8.1
+- name: seaweedfs
+  repository: https://seaweedfs.github.io/seaweedfs/helm
+  version: 4.52.0
+- name: opentelemetry-collector
+  repository: https://open-telemetry.github.io/opentelemetry-helm-charts
+  version: 0.178.2
+- name: tempo
+  repository: https://grafana-community.github.io/helm-charts
+  version: 3.2.1
+- name: grafana
+  repository: https://grafana-community.github.io/helm-charts
+  version: 14.4.0
+digest: sha256:93839b3d55b280341b4aad0c23d8f50d8e41ed65234c61432e834911c576443b
+generated: "2026-11-07T07:56:07.483012-05:00"

@@ -15,14 +15,14 @@ from typing import Any
 import pytest
 from jsonschema import Draft202012Validator
 
-from tests.target import SNAPSHOT_DIR
+from tests.target import SNAPSHOT_DIR, read_kinds
 from ticketscope.adapters import jira_dump
 from ticketscope.core.derive import derive_kind, derive_outcome, duplicate_target
 from ticketscope.core.snapshot import SnapshotIssueV2
 from ticketscope.jobs.ingest import jira
 from ticketscope.jobs.ingest import main as ingest
 from ticketscope.jobs.ingest.mask import EMAIL_MARKER, JIRA_USER_MARKER, SECRET_MARKER, mask_jira
-from ticketscope.jobs.load.main import build_rows, read_kinds, read_snapshot
+from ticketscope.jobs.load.main import build_rows, read_snapshot
 
 SLICE = Path(__file__).parent / "ingest" / "slice.json"
 VERSION = "2026.11.1"
@@ -98,7 +98,7 @@ def test_checksum_matches_and_load_reads_the_output(written: tuple[Path, dict[st
     digest, name = (out / f"{VERSION}.jsonl.gz.sha256").read_text().split()
     assert name == asset.name
     assert digest == hashlib.sha256(asset.read_bytes()).hexdigest() == report["sha256"]
-    rows = list(build_rows(read_snapshot(asset), read_kinds(out / f"{VERSION}-kinds.json")))
+    rows = list(build_rows(read_snapshot(asset)))
     assert len(rows) == report["count"]
 
 

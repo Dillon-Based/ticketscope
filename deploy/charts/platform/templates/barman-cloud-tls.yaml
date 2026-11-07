@@ -1,0 +1,40 @@
+{{- /*
+mTLS Secrets for the Barman Cloud Plugin (AD-18), in place of the plugin chart's
+cert-manager Certificates: same names and keys, which the plugin Deployment mounts
+and the operator reads through the plugin Service's cnpg.io/plugin*Secret
+annotations. Self-signed (each cert is its own CA, so ca.crt is tls.crt), about
+10 years, generated once and kept across upgrades through lookup.
+*/ -}}
+{{- if index .Values "barman-cloud" "enabled" }}
+{{- $certs := list
+  (dict "name" "barman-cloud-server-tls" "cn" "barman-cloud" "dns" (list "barman-cloud"))
+  (dict "name" "barman-cloud-client-tls" "cn" "barman-cloud-client" "dns" (list))
+}}
+{{- range $certs }}
+{{- $existing := lookup "v1" "Secret" $.Release.Namespace .name }}
+{{- $crt := "" }}
+{{- $key := "" }}
+{{- if and $existing $existing.data (hasKey $existing.data "tls.crt") (hasKey $existing.data "tls.key") }}
+{{- $crt = index $existing.data "tls.crt" | b64dec }}
+{{- $key = index $existing.data "tls.key" | b64dec }}
+{{- else }}
+{{- $cert := genSelfSignedCert .cn nil .dns 3650 }}
+{{- $crt = $cert.Cert }}
+{{- $key = $cert.Key }}
+{{- end }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ .name }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    app.kubernetes.io/part-of: ticketscope
+    app.kubernetes.io/managed-by: {{ $.Release.Service }}
+type: kubernetes.io/tls
+data:
+  tls.crt: {{ $crt | b64enc }}
+  tls.key: {{ $key | b64enc }}
+  ca.crt: {{ $crt | b64enc }}
+{{- end }}
+{{- end }}

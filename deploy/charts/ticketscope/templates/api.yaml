@@ -44,6 +44,9 @@ spec:
                   key: password
             - name: TICKETSCOPE_DEFAULT_MODE
               value: {{ .Values.retrieval.defaultMode | quote }}
+            {{- include "ticketscope.otlpEnv" . | nindent 12 }}
+            - name: TICKETSCOPE_TRACE_QUERY_TEXT
+              value: {{ .Values.telemetry.recordQueryText | quote }}
           livenessProbe:
             httpGet:
               path: /healthz
@@ -97,6 +100,10 @@ spec:
         - path:
             type: PathPrefix
             value: /v1
+        # The search page (AD-14). Exact, so /healthz and a future /mcp do not ride it.
+        - path:
+            type: Exact
+            value: /
       backendRefs:
         - name: ticketscope-api
           port: 80

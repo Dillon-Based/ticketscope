@@ -2,7 +2,9 @@ apiVersion: v2
 name: platform
 description: >-
   ticketscope platform release (AD-13): Gateway API CRDs and the one Gateway,
-  Envoy Gateway as the GatewayClass implementation on kind, and the CNPG operator.
+  Envoy Gateway as the GatewayClass implementation on kind, the CNPG operator
+  and its Barman Cloud Plugin, SeaweedFS as the backup target on kind, and the
+  traces pipeline (AD-11): the OTel Collector, Tempo, and Grafana over Tempo.
 type: application
 version: 0.1.0
 appVersion: "0.1.0"
@@ -18,3 +20,31 @@ dependencies:
     version: 0.29.1
     repository: https://cloudnative-pg.github.io/charts
     condition: cnpg.enabled
+  # Barman Cloud Plugin (CNPG-I) for Cluster backups (AD-18). Runs beside the
+  # operator, which finds plugins by Service in its own namespace.
+  - name: plugin-barman-cloud
+    alias: barman-cloud
+    version: 0.8.1
+    repository: https://cloudnative-pg.github.io/charts
+    condition: barman-cloud.enabled
+  # S3-compatible backup target, kind only (AD-13); values-kind.yaml enables it.
+  - name: seaweedfs
+    version: 4.52.0
+    repository: https://seaweedfs.github.io/seaweedfs/helm
+    condition: seaweedfs.enabled
+  # Traces only (AD-11): apps send OTLP to the collector, which forwards to Tempo;
+  # Grafana's Explore reads Tempo. None of the three is exposed (AD-14).
+  - name: opentelemetry-collector
+    alias: otel-collector
+    version: 0.178.2
+    repository: https://open-telemetry.github.io/opentelemetry-helm-charts
+    condition: otel-collector.enabled
+  # Tempo 3.1 and Grafana 13.3 (Stack) are published in the grafana-community repo.
+  - name: tempo
+    version: 3.2.1
+    repository: https://grafana-community.github.io/helm-charts
+    condition: tempo.enabled
+  - name: grafana
+    version: 14.4.0
+    repository: https://grafana-community.github.io/helm-charts
+    condition: grafana.enabled

@@ -4,8 +4,9 @@
 #
 #   scripts/time-load.sh <snapshot-dir> <version>
 #
-# <snapshot-dir> holds <version>.jsonl.gz and <version>-kinds.json, as ingest
-# writes them. Starts a throwaway container (initdb + postgres with
+# <snapshot-dir> holds <version>.jsonl.gz, as ingest writes it or as downloaded
+# from its Release. load verifies it against TICKETSCOPE_SNAPSHOT_SHA256, which
+# this script sets to the file's own SHA-256 (the asset is the one being timed). Starts a throwaway container (initdb + postgres with
 # pg_textsearch preloaded), creates the extensions, the app owner and the
 # ticketscope_ro role as CNPG would, runs migrate, then times load.
 # Logs go to stderr; the last line on stdout is the load time in seconds.
@@ -22,9 +23,13 @@ if [[ $# -ne 2 ]]; then
 fi
 SNAPSHOT_DIR="$(cd "$1" && pwd)"
 VERSION="$2"
-for f in "${SNAPSHOT_DIR}/${VERSION}.jsonl.gz" "${SNAPSHOT_DIR}/${VERSION}-kinds.json"; do
-  [[ -f "$f" ]] || { echo "missing $f" >&2; exit 2; }
-done
+ASSET="${SNAPSHOT_DIR}/${VERSION}.jsonl.gz"
+[[ -f "$ASSET" ]] || { echo "missing $ASSET" >&2; exit 2; }
+if command -v sha256sum >/dev/null; then
+  SHA256="$(sha256sum "$ASSET" | cut -d' ' -f1)"
+else
+  SHA256="$(shasum -a 256 "$ASSET" | cut -d' ' -f1)"
+fi
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
@@ -81,6 +86,7 @@ export TICKETSCOPE_DB_WAIT_TIMEOUT_SECONDS=60
 export TICKETSCOPE_MIGRATIONS_DIR="${ROOT}/migrations"
 export TICKETSCOPE_SNAPSHOT_DIR="$SNAPSHOT_DIR"
 export TICKETSCOPE_SNAPSHOT_VERSION="$VERSION"
+export TICKETSCOPE_SNAPSHOT_SHA256="$SHA256"
 
 log "migrate"
 $RUN ticketscope-migrate >&2

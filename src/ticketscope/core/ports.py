@@ -2,7 +2,7 @@
 
 from typing import Protocol
 
-from ticketscope.core.model import Scored
+from ticketscope.core.model import IssueDetail, Scored
 
 
 class CorpusStore(Protocol):
@@ -10,6 +10,10 @@ class CorpusStore(Protocol):
 
     def keyword_search(self, query: str, k: int) -> list[Scored]:
         """Return up to `k` BM25 hits, best first, with higher-is-better scores."""
+        ...
+
+    def get_issue(self, number: int) -> IssueDetail | None:
+        """Return the issue with its body, or None when `number` is not loaded."""
         ...
 
     def corpus_version(self) -> str | None:
@@ -20,4 +24,6 @@ class CorpusStore(Protocol):
 class Retriever(Protocol):
     """One retrieval mode."""
 
-    def search(self, query: str, k: int) -> list[Scored]: ...
+    def search(self, query: str, k: int, exclude: frozenset[int] = frozenset()) -> list[Scored]:
+        """Return up to `k` hits, best first, none of whose numbers is in `exclude`."""
+        ...

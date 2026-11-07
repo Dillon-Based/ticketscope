@@ -18,11 +18,7 @@ COPY pyproject.toml uv.lock .python-version ./
 RUN uv sync --frozen --no-dev --no-install-project
 COPY src ./src
 RUN uv sync --frozen --no-dev --no-editable
-# The fixture snapshot ships in the image under version `fixture` (pinned in values).
-COPY snapshot/fixture.jsonl snapshot/fixture-kinds.json /tmp/snapshot/
-RUN mkdir -p /app/snapshots \
- && gzip -9 -n -c /tmp/snapshot/fixture.jsonl > /app/snapshots/fixture.jsonl.gz \
- && cp /tmp/snapshot/fixture-kinds.json /app/snapshots/fixture-kinds.json
+# No snapshot ships in the image: load fetches the pinned Release asset (AD-6).
 
 FROM ${PYTHON_IMAGE}
 ENV PATH=/app/.venv/bin:$PATH \

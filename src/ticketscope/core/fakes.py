@@ -2,9 +2,9 @@
 
 import re
 from collections import Counter
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 
-from ticketscope.core.model import IssueRecord, Scored
+from ticketscope.core.model import IssueDetail, IssueRecord, Scored
 
 _TOKEN = re.compile(r"\w+")
 
@@ -24,9 +24,12 @@ class InMemoryCorpusStore:
         self,
         documents: Iterable[tuple[IssueRecord, str]] = (),
         corpus_version: str | None = None,
+        *,
+        bodies: Mapping[int, str | None] | None = None,
     ) -> None:
         self._docs = [(issue, Counter(_terms(text))) for issue, text in documents]
         self._version = corpus_version
+        self._bodies = dict(bodies or {})
 
     def keyword_search(self, query: str, k: int) -> list[Scored]:
         wanted = set(_terms(query))
@@ -40,3 +43,9 @@ class InMemoryCorpusStore:
 
     def corpus_version(self) -> str | None:
         return self._version
+
+    def get_issue(self, number: int) -> IssueDetail | None:
+        for issue, _counts in self._docs:
+            if issue.number == number:
+                return IssueDetail(issue=issue, body=self._bodies.get(number))
+        return None

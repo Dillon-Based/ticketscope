@@ -22,9 +22,18 @@ retrieval:
   # Server default when a request omits `mode` (AD-4, AD-25). Owned by epic 3.
   defaultMode: keyword
 
+# The pinned snapshot that load reads (AD-6): a `snapshot-<version>` Release asset and
+# its SHA-256. Set here only; environment files never override it (AD-25).
 snapshot:
-  # The pinned snapshot version that load reads (AD-6). Story 5 swaps in a real one.
-  version: fixture
+  version: "2026.11.1"
+  sha256: "e7940ba12db44b9ac909e2634d537e30406448f45a9d780fd96fa7e6ec211b2f"
+  baseUrl: "https://github.com/Dillon-Based/ticketscope/releases/download"
+
+# Traces (AD-10, AD-11): OTLP/HTTP to the platform release's collector, the same in
+# every environment (AD-13). Query text goes on spans only when recordQueryText is true.
+telemetry:
+  otlpEndpoint: "http://otel-collector.platform.svc:4318"
+  recordQueryText: false
 
 api:
   replicas: 1
@@ -56,3 +65,27 @@ database:
       memory: 256Mi
     limits:
       memory: 512Mi
+
+# Backups through the Barman Cloud Plugin (AD-18): an ObjectStore, and the
+# Cluster's plugin WAL archiver. The endpoint, destination path and credential
+# source are environment facts (AD-25), set in values-<env>.yaml.
+backup:
+  enabled: true
+  objectStoreName: ticketscope-backup
+  # s3://<bucket>/<prefix>; required when enabled.
+  destinationPath: ""
+  # Empty for AWS S3; the S3-compatible endpoint otherwise (SeaweedFS on kind).
+  endpointURL: ""
+  retentionPolicy: "7d"
+  wal:
+    compression: gzip
+  credentials:
+    # EKS: the Cluster's service account assumes an IRSA role; no keys.
+    inheritFromIAMRole: false
+    # kind: copy the keys from a chart-generated Secret in another namespace into
+    # ticketscope-backup-s3 here, at render time (the platform release installs first, AD-22).
+    copyFrom:
+      namespace: ""
+      secret: ""
+      accessKeyIdKey: ""
+      secretAccessKeyKey: ""

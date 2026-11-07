@@ -1,6 +1,7 @@
 {{/* Names: ticketscope-<component> (Consistency Conventions). */}}
 {{- define "ticketscope.dbCluster" -}}ticketscope-db{{- end }}
 {{- define "ticketscope.roSecret" -}}ticketscope-db-ro{{- end }}
+{{- define "ticketscope.backupS3Secret" -}}ticketscope-backup-s3{{- end }}
 
 {{- define "ticketscope.labels" -}}
 app.kubernetes.io/part-of: ticketscope
@@ -37,4 +38,10 @@ helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version }}
       key: password
 - name: TICKETSCOPE_DB_WAIT_TIMEOUT_SECONDS
   value: {{ .Values.jobs.dbWaitTimeoutSeconds | quote }}
+{{- end }}
+
+{{/* OTLP export for every app process (AD-10). */}}
+{{- define "ticketscope.otlpEnv" -}}
+- name: TICKETSCOPE_OTLP_ENDPOINT
+  value: {{ .Values.telemetry.otlpEndpoint | quote }}
 {{- end }}

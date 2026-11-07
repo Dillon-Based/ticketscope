@@ -12,7 +12,7 @@ from urllib.parse import urlencode
 import pytest
 from fastapi.testclient import TestClient
 
-from tests.factories import form_payload
+from tests.factories import form_payload, outcome_payload
 from tests.target import REPO, TARGET_QUERY
 from tests.unit.test_page import FORM, OUTCOMES, Parsed, parse
 from ticketscope.contract.search import Issue, Outcome, SearchResult
@@ -43,7 +43,7 @@ def _result(
                 {"number": rank, "title": title, "url": url, "kind": kind, "state": "closed"}
             ).model_dump(),
             "outcome": Outcome.model_validate(
-                {"status": status, "summary": summary, "source": "label", "ref": ref}
+                outcome_payload(status=status, summary=summary, source="label", ref=ref)
             ).model_dump(),
         }
     )
@@ -238,7 +238,8 @@ def test_page_rows_carry_ref_and_null_summary_from_the_store() -> None:
         outcome_source="linked_pr",
         outcome_ref="https://bugs.example.test/MC-1",
     )
-    response = _client((issue, "quokka")).post("/", content="q=quokka", headers=FORM)
+    body = urlencode(form_payload("quokka"))
+    response = _client((issue, "quokka")).post("/", content=body, headers=FORM)
     [row] = parse(response.text).rows
     assert (row.kind, row.outcome_attr, row.summary) == ("log-heavy", "duplicate", None)
     assert 'href="https://bugs.example.test/MC-1"' in response.text
@@ -261,14 +262,14 @@ def test_page_routes_do_not_shadow_other_paths(client: TestClient) -> None:
 
 
 def test_other_methods_on_the_page_are_405(client: TestClient) -> None:
-    response = client.put("/", content="q=x", headers=FORM)
+    response = client.put("/", content=urlencode(form_payload("x")), headers=FORM)
     assert response.status_code == 405
     assert "GET" in response.headers["allow"]
 
 
 @pytest.mark.parametrize("method", ["PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"])
 def test_405_on_the_page_lists_both_page_methods(client: TestClient, method: str) -> None:
-    response = client.request(method, "/", content="q=x", headers=FORM)
+    response = client.request(method, "/", content=urlencode(form_payload("x")), headers=FORM)
     assert response.status_code == 405
     assert set(response.headers["allow"].replace(" ", "").split(",")) == {"GET", "POST"}
 

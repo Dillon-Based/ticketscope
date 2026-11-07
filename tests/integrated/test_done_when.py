@@ -31,6 +31,7 @@ import httpx2
 import pytest
 from jsonschema import Draft202012Validator
 
+from tests.factories import search_payload
 from tests.integrated.golden import (
     GoldenRow,
     page_rank,
@@ -159,7 +160,7 @@ def test_golden_queries_return_their_twins_with_outcomes_via_v1_and_page(
 
             response = httpx2.post(
                 f"{url}/v1/search",
-                json={"query": entry["query"], "mode": mode, "k": k},
+                json=search_payload(str(entry["query"]), mode=mode, k=k),
                 headers={"Host": host},
                 timeout=30,
             )

@@ -15,6 +15,8 @@ from typing import Any
 import pytest
 from pydantic import ValidationError
 
+from tests.factories import SNAPSHOT_RESOLVED as RESOLVED
+from tests.factories import snapshot_issue
 from ticketscope.core.derive import (
     MOJANG_BROWSE_URL,
     RESOLUTION_OUTCOME,
@@ -39,8 +41,6 @@ SPIKE_MEASURE = (
     / "spike-choose-the-jira-corpus-findings/measure.py"
 )
 
-CREATED = datetime(2025, 1, 1, tzinfo=UTC)
-RESOLVED = datetime(2025, 1, 10, tzinfo=UTC)
 
 # outcome-mapping.md: values left `unknown` because they say nothing about the outcome.
 UNMAPPED_IN_DUMP = [
@@ -65,26 +65,6 @@ EXPECTED_SOURCE = {
 
 
 # --- factories ------------------------------------------------------------------------------
-
-
-def make_jira_issue(**overrides: Any) -> SnapshotIssueV2:
-    fields: dict[str, Any] = {
-        "schema_version": 2,
-        "number": 200,
-        "key": "MCL-200",
-        "url": "https://bugs.mojang.com/browse/MCL-200",
-        "title": "synthetic",
-        "body": "A plain line.",
-        "issue_type": "Bug",
-        "state": "closed",
-        "resolution": "Fixed",
-        "created_at": CREATED,
-        "resolved_at": RESOLVED,
-        "comments": [],
-        "duplicate_links": [],
-    }
-    fields.update(overrides)
-    return SnapshotIssueV2(**fields)
 
 
 def jira_comment(when: datetime, *, from_reporter: bool, body: str = "a comment") -> JiraComment:
@@ -113,7 +93,7 @@ def answered_question(**overrides: Any) -> SnapshotIssueV2:
         "comments": [jira_comment(datetime(2025, 1, 5, tzinfo=UTC), from_reporter=False)],
     }
     fields.update(overrides)
-    return make_jira_issue(**fields)
+    return snapshot_issue(**fields)
 
 
 def spike_resolution_table() -> dict[str, str]:
@@ -150,7 +130,7 @@ def test_resolution_table_keys_are_normalised() -> None:
 def test_every_mapped_resolution_yields_its_class_and_source(resolution: str, status: str) -> None:
     """[P1] Each table entry, title-cased as Jira writes it, on a Bug with no links."""
     jira_value = resolution.title()
-    outcome = derive_outcome(make_jira_issue(resolution=jira_value))
+    outcome = derive_outcome(snapshot_issue(resolution=jira_value))
     assert outcome.status == status
     assert outcome.source == EXPECTED_SOURCE[status]
     assert outcome.ref is None
@@ -163,13 +143,13 @@ def test_every_mapped_resolution_yields_its_class_and_source(resolution: str, st
 @pytest.mark.parametrize("resolution", UNMAPPED_IN_DUMP)
 def test_unmapped_values_from_the_dump_are_unknown(resolution: str) -> None:
     """[P1] outcome-mapping.md's deliberately unmapped values read `unknown`, no summary."""
-    assert derive_outcome(make_jira_issue(resolution=resolution)) == UNKNOWN
+    assert derive_outcome(snapshot_issue(resolution=resolution)) == UNKNOWN
 
 
 @pytest.mark.parametrize("resolution", ["Duplicate Issue", "  DUPLICATE  ", "duplicate"])
 def test_duplicate_spellings_point_at_target(resolution: str) -> None:
     """[P1] Both duplicate spellings, trimmed and case-folded, get the AD-26 ref."""
-    outcome = derive_outcome(make_jira_issue(resolution=resolution, duplicate_links=[dup_link(7)]))
+    outcome = derive_outcome(snapshot_issue(resolution=resolution, duplicate_links=[dup_link(7)]))
     assert outcome.status == "duplicate"
     assert outcome.source == "label"
     assert outcome.summary == "Duplicate of MCL-7"
@@ -178,20 +158,20 @@ def test_duplicate_spellings_point_at_target(resolution: str) -> None:
 
 def test_duplicate_ref_uses_target_key_not_number() -> None:
     """[P2] The browse URL is built from the readable key (another project's, here)."""
-    issue = make_jira_issue(resolution="Duplicate", duplicate_links=[dup_link(5, key="REALMS-5")])
+    issue = snapshot_issue(resolution="Duplicate", duplicate_links=[dup_link(5, key="REALMS-5")])
     assert derive_outcome(issue).ref == "https://bugs.mojang.com/browse/REALMS-5"
 
 
 def test_summary_keeps_resolution_as_written_but_trimmed() -> None:
     """[P2] The summary shows the resolution's own spelling, without surrounding spaces."""
-    outcome = derive_outcome(make_jira_issue(resolution="  Won't Fix\t"))
+    outcome = derive_outcome(snapshot_issue(resolution="  Won't Fix\t"))
     assert outcome.status == "not_planned"
     assert outcome.summary == "Resolved as Won't Fix"
 
 
 def test_inner_whitespace_is_not_normalised() -> None:
     """[P2] Only the ends are trimmed: `Won't  Fix` (two spaces) is unmapped."""
-    assert derive_outcome(make_jira_issue(resolution="Won't  Fix")) == UNKNOWN
+    assert derive_outcome(snapshot_issue(resolution="Won't  Fix")) == UNKNOWN
 
 
 # --- kind on a Jira body ---------------------------------------------------------------------
@@ -200,13 +180,13 @@ def test_inner_whitespace_is_not_normalised() -> None:
 def test_v2_body_jira_toggles_are_fences() -> None:
     """[P1] `derive_kind` turns `{code}` / `{noformat}` toggles in a body into fences."""
     body = "{code}\nfoo\n{code}\n{noformat}\nbar\n{noformat}\n{code}\nbaz\n{code}"
-    assert derive_kind(make_jira_issue(body=body)) == "log_heavy"
+    assert derive_kind(snapshot_issue(body=body)) == "log_heavy"
 
 
 def test_v2_body_backtick_fences_still_count() -> None:
     """[P2] A Markdown fence in a Jira body counts as on GitHub."""
     body = "```\nfoo\n```\n```\nbar\n```\n```\nbaz\n```"
-    assert derive_kind(make_jira_issue(body=body)) == "log_heavy"
+    assert derive_kind(snapshot_issue(body=body)) == "log_heavy"
 
 
 # --- answered rule edges --------------------------------------------------------------------
@@ -293,18 +273,18 @@ def test_answered_class_resolution_on_question_keeps_resolution_summary(resoluti
 
 def test_duplicate_target_none_without_links() -> None:
     """[P1] A duplicate with no links has no target."""
-    assert duplicate_target(make_jira_issue(resolution="Duplicate")) is None
+    assert duplicate_target(snapshot_issue(resolution="Duplicate")) is None
 
 
 def test_duplicate_target_none_for_unmapped_resolution() -> None:
     """[P2] Only a duplicate-class resolution has a target."""
-    issue = make_jira_issue(resolution="Triaged", duplicate_links=[dup_link(7)])
+    issue = snapshot_issue(resolution="Triaged", duplicate_links=[dup_link(7)])
     assert duplicate_target(issue) is None
 
 
 def test_duplicate_target_prefers_forward_even_when_higher_number() -> None:
     """[P1] Direction precedence beats number: a `duplicates` link 900 wins over 1."""
-    issue = make_jira_issue(
+    issue = snapshot_issue(
         resolution="Duplicate",
         duplicate_links=[dup_link(1, "duplicated_by"), dup_link(900)],
     )
@@ -316,8 +296,8 @@ def test_duplicate_target_prefers_forward_even_when_higher_number() -> None:
 def test_duplicate_target_tie_breaks_on_key() -> None:
     """[P2] Equal numbers in different projects resolve by key, whatever the order."""
     links = [dup_link(5, key="REALMS-5"), dup_link(5, key="MCD-5")]
-    a = make_jira_issue(resolution="Duplicate", duplicate_links=links)
-    b = make_jira_issue(resolution="Duplicate", duplicate_links=links[::-1])
+    a = snapshot_issue(resolution="Duplicate", duplicate_links=links)
+    b = snapshot_issue(resolution="Duplicate", duplicate_links=links[::-1])
     target_a, target_b = duplicate_target(a), duplicate_target(b)
     assert target_a == target_b
     assert target_a is not None
@@ -326,7 +306,7 @@ def test_duplicate_target_tie_breaks_on_key() -> None:
 
 def test_duplicate_target_resolution_trimmed_and_case_folded() -> None:
     """[P2] ` duplicate issue ` still has a target."""
-    issue = make_jira_issue(resolution=" duplicate issue ", duplicate_links=[dup_link(3)])
+    issue = snapshot_issue(resolution=" duplicate issue ", duplicate_links=[dup_link(3)])
     target = duplicate_target(issue)
     assert target is not None
     assert target.target_key == "MCL-3"
@@ -429,13 +409,13 @@ def test_v2_rejects_other_schema_versions() -> None:
     """[P1] `schema_version` must be 2."""
     for version in (1, 3):
         with pytest.raises(ValidationError):
-            make_jira_issue(schema_version=version)
+            snapshot_issue(schema_version=version)
 
 
 def test_v2_rejects_unknown_fields() -> None:
     """[P1] Extra fields, such as a reporter id, are refused (no identity, AD-6)."""
     with pytest.raises(ValidationError):
-        make_jira_issue(reporter="someone")
+        snapshot_issue(reporter="someone")
     with pytest.raises(ValidationError):
         JiraComment(body="x", created_at=RESOLVED, from_reporter=False, author="someone")  # type: ignore[call-arg]
 
@@ -449,12 +429,12 @@ def test_v2_rejects_unknown_link_direction() -> None:
 def test_v2_naive_created_at_is_invalid() -> None:
     """[P2] The issue's own `created_at` must be timezone-aware too."""
     with pytest.raises(ValidationError):
-        make_jira_issue(created_at=datetime(2025, 1, 1))
+        snapshot_issue(created_at=datetime(2025, 1, 1))
 
 
 def test_v2_is_frozen() -> None:
     """[P2] Snapshot issues are immutable."""
-    issue = make_jira_issue()
+    issue = snapshot_issue()
     with pytest.raises(ValidationError):
         issue.resolution = "Duplicate"  # type: ignore[misc]
 

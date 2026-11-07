@@ -101,12 +101,15 @@ def test_preprocessing_version_is_unchanged_by_the_sweep() -> None:
 def test_a_jira_code_toggle_body_is_log_heavy_without_an_isinstance_branch() -> None:
     """`derive_kind` now always applies `jira_to_fences`: a `{code}` block of log
     lines scores like a fenced one."""
-    from tests.unit.test_derive import body_with_score, make_issue
+    from tests.factories import snapshot_issue
+    from tests.unit.test_derive import body_with_score
 
     fenced = body_with_score(derive.DEFAULT_KIND_THRESHOLD)
     jira = fenced.replace("```", "{code}")
-    assert derive.derive_kind(make_issue(body=jira)) == "log_heavy"
-    assert derive.derive_kind(make_issue(body=jira)) == derive.derive_kind(make_issue(body=fenced))
+    assert derive.derive_kind(snapshot_issue(body=jira)) == "log_heavy"
+    assert derive.derive_kind(snapshot_issue(body=jira)) == derive.derive_kind(
+        snapshot_issue(body=fenced)
+    )
 
 
 # --- CI: dependencies from the lock only ----------------------------------------------------

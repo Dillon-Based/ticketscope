@@ -4,11 +4,9 @@ The Jira outcome rules are covered in `test_derive_jira.py` and
 `test_derive_jira_expanded.py`.
 """
 
-from datetime import UTC, datetime
-from typing import Any
-
 import pytest
 
+from tests.factories import snapshot_issue
 from ticketscope.core.derive import (
     DEFAULT_KIND_THRESHOLD,
     KIND_RULE_VERSION,
@@ -17,31 +15,6 @@ from ticketscope.core.derive import (
     derive_kind,
     kind_score,
 )
-from ticketscope.core.snapshot import SnapshotIssueV2
-
-CREATED = datetime(2025, 1, 1, tzinfo=UTC)
-RESOLVED = datetime(2025, 1, 10, tzinfo=UTC)
-
-
-def make_issue(**overrides: Any) -> SnapshotIssueV2:
-    fields: dict[str, Any] = {
-        "schema_version": 2,
-        "number": 1,
-        "key": "MCL-1",
-        "url": "https://bugs.mojang.com/browse/MCL-1",
-        "title": "synthetic",
-        "body": "A plain line.",
-        "issue_type": "Bug",
-        "state": "closed",
-        "resolution": "Fixed",
-        "created_at": CREATED,
-        "resolved_at": RESOLVED,
-        "comments": [],
-        "duplicate_links": [],
-    }
-    fields.update(overrides)
-    return SnapshotIssueV2(**fields)
-
 
 # --- kind -----------------------------------------------------------------------------------
 
@@ -56,25 +29,25 @@ def body_with_score(score: int) -> str:
 def test_kind_just_below_threshold_is_short(threshold: int) -> None:
     body = body_with_score(threshold - 1)
     assert kind_score(body) == threshold - 1
-    assert derive_kind(make_issue(body=body), threshold) == "short"
+    assert derive_kind(snapshot_issue(body=body), threshold) == "short"
 
 
 @pytest.mark.parametrize("threshold", [1, 5, 10])
 def test_kind_at_threshold_is_log_heavy(threshold: int) -> None:
     body = body_with_score(threshold)
     assert kind_score(body) == threshold
-    assert derive_kind(make_issue(body=body), threshold) == "log_heavy"
+    assert derive_kind(snapshot_issue(body=body), threshold) == "log_heavy"
 
 
 @pytest.mark.parametrize("body", [None, ""])
 def test_empty_body_is_short(body: str | None) -> None:
-    assert derive_kind(make_issue(body=body)) == "short"
+    assert derive_kind(snapshot_issue(body=body)) == "short"
 
 
 @pytest.mark.parametrize("threshold", [0, -1])
 def test_threshold_below_one_raises(threshold: int) -> None:
     with pytest.raises(ValueError):
-        derive_kind(make_issue(), threshold)
+        derive_kind(snapshot_issue(), threshold)
     with pytest.raises(ValueError):
         derivation_version(threshold)
 

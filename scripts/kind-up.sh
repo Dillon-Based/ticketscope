@@ -89,6 +89,7 @@ kind load docker-image --name "$CLUSTER_NAME" "$APP_IMAGE" "$PG_IMAGE"
 log "installing platform"
 # `dependency build` resolves non-OCI repos only through `helm repo add`.
 helm repo add cnpg https://cloudnative-pg.github.io/charts --force-update >/dev/null
+helm repo add seaweedfs https://seaweedfs.github.io/seaweedfs/helm --force-update >/dev/null
 if [[ -f deploy/charts/platform/Chart.lock ]]; then
   helm dependency build deploy/charts/platform
 else

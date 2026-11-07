@@ -66,6 +66,7 @@ jobs:
           kubectl get pods,svc,jobs -A -o wide || true
           kubectl get gateway,httproute -A -o yaml || true
           kubectl -n ticketscope get clusters.postgresql.cnpg.io -o yaml || true
+          kubectl -n ticketscope get backups.postgresql.cnpg.io,objectstores.barmancloud.cnpg.io -o yaml || true
           # Every pod in the two releases' namespaces: events, then current and
           # previous logs of each container, so a crash loop shows its cause.
           for ns in platform ticketscope; do

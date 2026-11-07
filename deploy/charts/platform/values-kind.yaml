@@ -1,5 +1,12 @@
-# kind: environment facts only (AD-25): hostname and gateway class.
+# kind: environment facts only (AD-25): hostname, gateway class, and the
+# SeaweedFS backup target with its storage class.
 gateway:
   hostname: ticketscope.kind.internal
   className: envoy
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
+
+seaweedfs:
+  enabled: true
+  allInOne:
+    data:
+      storageClass: standard

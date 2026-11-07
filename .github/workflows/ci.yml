@@ -45,6 +45,7 @@ jobs:
         run: |
           # `dependency build` resolves non-OCI repos only through `helm repo add`.
           helm repo add cnpg https://cloudnative-pg.github.io/charts --force-update
+          helm repo add seaweedfs https://seaweedfs.github.io/seaweedfs/helm --force-update
           if [[ -f deploy/charts/platform/Chart.lock ]]; then
             helm dependency build deploy/charts/platform
           else
@@ -54,6 +55,11 @@ jobs:
           helm lint deploy/charts/platform -f deploy/charts/platform/values-kind.yaml
           helm lint deploy/charts/ticketscope -f deploy/charts/ticketscope/values-kind.yaml \
             --set-string image.app.tag=lint --set-string image.postgres.tag=18-lint
+      # The platform-chart renders need the dependencies built above.
+      - uses: astral-sh/setup-uv@v10.3.3
+      - run: uv sync --locked
+      - name: chart render tests
+        run: uv run pytest tests/unit/test_chart_backup.py
 
   changes:
     runs-on: ubuntu-24.04

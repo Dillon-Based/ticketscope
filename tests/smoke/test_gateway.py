@@ -6,13 +6,15 @@ Run with `uv run pytest -m kind tests/smoke`. The tests run in file order: (1) s
 through the Gateway, (1b) the rest of the /v1 contract through the Gateway, (1c) the
 search page through the Gateway, (2) SQL on the CNPG primary, (3) the load report, (4) a
 same-pin upgrade is a no-op, (5) a stale preprocessing version reloads, (6) two ready
-instances.
+instances, (6b) platform and app upgrades keep the backup TLS and credentials, (7) an
+on-demand backup completes to SeaweedFS.
 """
 
 import json
 import os
 import re
 import subprocess
+import time
 from html.parser import HTMLParser
 from urllib.parse import urlencode
 
@@ -27,6 +29,9 @@ pytestmark = pytest.mark.kind
 
 NAMESPACE = os.environ.get("TICKETSCOPE_NAMESPACE", "ticketscope")
 CLUSTER = os.environ.get("TICKETSCOPE_CLUSTER_NAME", "ticketscope-db")
+PLATFORM_NAMESPACE = os.environ.get("TICKETSCOPE_PLATFORM_NAMESPACE", "platform")
+BACKUP_BUCKET = "ticketscope-backups"  # backup.destinationPath in values-kind.yaml
+BACKUP_TIMEOUT_SECONDS = 600
 PIN = snapshot_pin()["version"]
 GOLDEN = json.loads((REPO / "eval" / "golden-queries.json").read_text(encoding="utf-8"))
 ISSUE_COUNT = 32153  # issues in snapshot 2026.11.1
@@ -355,3 +360,125 @@ def test_cluster_has_two_ready_instances() -> None:
     out = _kubectl("get", "clusters.postgresql.cnpg.io", CLUSTER, "-o", "json")
     status = json.loads(out)["status"]
     assert status.get("readyInstances") == 2, status
+
+
+# (6b) --------------------------------------------------------------------------------------
+
+_KEPT_SECRETS = (
+    (PLATFORM_NAMESPACE, "barman-cloud-server-tls"),
+    (PLATFORM_NAMESPACE, "barman-cloud-client-tls"),
+    (PLATFORM_NAMESPACE, "seaweedfs-s3-secret"),
+    (NAMESPACE, "ticketscope-backup-s3"),
+)
+
+
+def _secret_data(namespace: str, name: str) -> dict[str, str]:
+    out = subprocess.run(
+        ["kubectl", "-n", namespace, "get", "secret", name, "-o", "jsonpath={.data}"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    data: dict[str, str] = json.loads(out or "{}")
+    return data
+
+
+def test_upgrades_keep_the_backup_tls_and_credentials() -> None:
+    before = {s: _secret_data(*s) for s in _KEPT_SECRETS}
+    assert all(before.values()), before.keys()
+    subprocess.run(
+        [
+            "helm",
+            "upgrade",
+            "platform",
+            str(REPO / "deploy" / "charts" / "platform"),
+            "-n",
+            PLATFORM_NAMESPACE,
+            "--reuse-values",
+            "--wait",
+            "--timeout",
+            "10m",
+        ],
+        check=True,
+    )
+    _upgrade()
+    after = {s: _secret_data(*s) for s in _KEPT_SECRETS}
+    for secret in _KEPT_SECRETS:
+        assert after[secret] == before[secret], secret
+
+
+# (7) ---------------------------------------------------------------------------------------
+
+
+def _backup_status(name: str) -> dict[str, object]:
+    out = _kubectl("get", "backups.postgresql.cnpg.io", name, "-o", "json")
+    status: dict[str, object] = json.loads(out).get("status", {})
+    return status
+
+
+def _bucket_listing(path: str) -> list[str]:
+    """Entry names under `path` in the backup bucket, from the SeaweedFS filer's JSON
+    listing, read inside the all-in-one pod (SeaweedFS is never exposed, AD-14)."""
+    result = subprocess.run(
+        [
+            "kubectl",
+            "-n",
+            PLATFORM_NAMESPACE,
+            "exec",
+            "deploy/seaweedfs-all-in-one",
+            "--",
+            "curl",
+            "-sSf",
+            "-H",
+            "Accept: application/json",
+            f"http://localhost:8888/buckets/{BACKUP_BUCKET}/{path.strip('/')}/?limit=1000",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0, f"listing {path}: {result.stdout}{result.stderr}"
+    entries = json.loads(result.stdout).get("Entries") or []
+    return [str(e["FullPath"]).rsplit("/", 1)[-1] for e in entries]
+
+
+def test_on_demand_backup_completes_to_seaweedfs() -> None:
+    name = f"{CLUSTER}-smoke-{int(time.time())}"
+    manifest = {
+        "apiVersion": "postgresql.cnpg.io/v1",
+        "kind": "Backup",
+        "metadata": {"name": name, "namespace": NAMESPACE},
+        "spec": {
+            "cluster": {"name": CLUSTER},
+            "method": "plugin",
+            "pluginConfiguration": {"name": "barman-cloud.cloudnative-pg.io"},
+        },
+    }
+    applied = subprocess.run(
+        ["kubectl", "-n", NAMESPACE, "apply", "-f", "-"],
+        input=json.dumps(manifest),
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert applied.returncode == 0, f"apply Backup: {applied.stdout}{applied.stderr}"
+    deadline = time.monotonic() + BACKUP_TIMEOUT_SECONDS
+    status = _backup_status(name)
+    while status.get("phase") != "completed":
+        assert status.get("phase") != "failed", f"backup failed: {status}"
+        assert time.monotonic() < deadline, f"backup not completed in time: {status}"
+        time.sleep(5)
+        status = _backup_status(name)
+    backup_id = str(status.get("backupId") or "")
+    assert backup_id, status
+    # The ObjectStore's serverName defaults to the Cluster's name.
+    server = str(status.get("serverName") or CLUSTER)
+    listing = _bucket_listing(f"{server}/base/{backup_id}")
+    assert "backup.info" in listing, listing
+    assert any(n.startswith("data.tar") for n in listing), listing
+    # Deleted only on success: a failed Backup stays for the Diagnostics step.
+    subprocess.run(
+        ["kubectl", "-n", NAMESPACE, "delete", "backups.postgresql.cnpg.io", name],
+        check=False,
+        capture_output=True,
+    )

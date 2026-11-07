@@ -1,0 +1,67 @@
+{{- /*
+Backups through the Barman Cloud Plugin (AD-18): the ObjectStore the Cluster's
+WAL archiver and its Backups write to, and (on kind) its S3 credentials, copied
+at render time from the chart-generated Secret named by backup.credentials.copyFrom.
+*/ -}}
+{{- if .Values.backup.enabled }}
+{{- $b := .Values.backup }}
+{{- $destination := required "backup.destinationPath is required when backup.enabled (s3://<bucket>/<prefix>, set per environment)" $b.destinationPath }}
+{{- $copy := $b.credentials.copyFrom }}
+{{- $s3Secret := include "ticketscope.backupS3Secret" . }}
+{{- if and (not $copy.secret) (not $b.credentials.inheritFromIAMRole) }}
+{{- fail "backup.credentials: set copyFrom.secret or inheritFromIAMRole" }}
+{{- end }}
+{{- if $copy.secret }}
+{{- $source := lookup "v1" "Secret" $copy.namespace $copy.secret }}
+{{- if and $source $source.data }}
+{{- $accessKeyId := index $source.data $copy.accessKeyIdKey | default "" }}
+{{- $secretAccessKey := index $source.data $copy.secretAccessKeyKey | default "" }}
+{{- if not (and $accessKeyId $secretAccessKey) }}
+{{- fail (printf "Secret %s/%s lacks key %s or %s; is the platform release installed with SeaweedFS (AD-22)?" $copy.namespace $copy.secret $copy.accessKeyIdKey $copy.secretAccessKeyKey) }}
+{{- end }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $s3Secret }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ticketscope.labels" . | nindent 4 }}
+type: Opaque
+data:
+  ACCESS_KEY_ID: {{ $accessKeyId }}
+  ACCESS_SECRET_KEY: {{ $secretAccessKey }}
+---
+{{- else if .Capabilities.APIVersions.Has "postgresql.cnpg.io/v1" }}
+{{- /* A live cluster without the source Secret: never install an ObjectStore with empty keys. */}}
+{{- fail (printf "backup credentials: Secret %s/%s not found; install the platform release (with SeaweedFS) first (AD-22)" $copy.namespace $copy.secret) }}
+{{- end }}
+{{- /* Otherwise an offline render (helm template / lint): no cluster to copy from. */}}
+{{- end }}
+apiVersion: barmancloud.cnpg.io/v1
+kind: ObjectStore
+metadata:
+  name: {{ $b.objectStoreName }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ticketscope.labels" . | nindent 4 }}
+spec:
+  retentionPolicy: {{ $b.retentionPolicy | quote }}
+  configuration:
+    destinationPath: {{ $destination | quote }}
+    {{- with $b.endpointURL }}
+    endpointURL: {{ . | quote }}
+    {{- end }}
+    s3Credentials:
+      {{- if $copy.secret }}
+      accessKeyId:
+        name: {{ $s3Secret }}
+        key: ACCESS_KEY_ID
+      secretAccessKey:
+        name: {{ $s3Secret }}
+        key: ACCESS_SECRET_KEY
+      {{- else }}
+      inheritFromIAMRole: true
+      {{- end }}
+    wal:
+      compression: {{ $b.wal.compression }}
+{{- end }}

@@ -10,7 +10,15 @@ import pytest
 from tests.target import REPO, snapshot_pin
 
 CHART = REPO / "deploy" / "charts" / "ticketscope"
-_IMAGE_TAGS = ["--set-string", "image.app.tag=t", "--set-string", "image.postgres.tag=18-t"]
+# Backups need an environment's destinationPath (story 8); the pin does not care.
+_IMAGE_TAGS = [
+    "--set-string",
+    "image.app.tag=t",
+    "--set-string",
+    "image.postgres.tag=18-t",
+    "--set",
+    "backup.enabled=false",
+]
 
 pytestmark = pytest.mark.skipif(shutil.which("helm") is None, reason="needs helm")
 

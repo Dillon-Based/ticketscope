@@ -1,6 +1,17 @@
-# kind: environment facts only (AD-25): hostname and storage class.
+# kind: environment facts only (AD-25): hostname, storage class, and the
+# SeaweedFS backup endpoint with its credential source (the platform release).
 hostname: ticketscope.kind.internal
 
 database:
   storage:
     storageClass: standard
+
+backup:
+  destinationPath: s3://ticketscope-backups/
+  endpointURL: http://seaweedfs-all-in-one.platform.svc:8333
+  credentials:
+    copyFrom:
+      namespace: platform
+      secret: seaweedfs-s3-secret
+      accessKeyIdKey: admin_access_key_id
+      secretAccessKeyKey: admin_secret_access_key

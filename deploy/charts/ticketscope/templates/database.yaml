@@ -54,6 +54,15 @@ spec:
         comment: read-only role for api and eval (AD-7)
         passwordSecret:
           name: {{ $secretName }}
+  {{- if .Values.backup.enabled }}
+  # WAL archiving through the Barman Cloud Plugin (AD-18): a plugin Backup
+  # completes only once its end WAL is archived.
+  plugins:
+    - name: barman-cloud.cloudnative-pg.io
+      isWALArchiver: true
+      parameters:
+        barmanObjectName: {{ .Values.backup.objectStoreName }}
+  {{- end }}
   storage:
     size: {{ .Values.database.storage.size }}
     {{- with .Values.database.storage.storageClass }}

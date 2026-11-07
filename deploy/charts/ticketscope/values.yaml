@@ -59,3 +59,27 @@ database:
       memory: 256Mi
     limits:
       memory: 512Mi
+
+# Backups through the Barman Cloud Plugin (AD-18): an ObjectStore, and the
+# Cluster's plugin WAL archiver. The endpoint, destination path and credential
+# source are environment facts (AD-25), set in values-<env>.yaml.
+backup:
+  enabled: true
+  objectStoreName: ticketscope-backup
+  # s3://<bucket>/<prefix>; required when enabled.
+  destinationPath: ""
+  # Empty for AWS S3; the S3-compatible endpoint otherwise (SeaweedFS on kind).
+  endpointURL: ""
+  retentionPolicy: "7d"
+  wal:
+    compression: gzip
+  credentials:
+    # EKS: the Cluster's service account assumes an IRSA role; no keys.
+    inheritFromIAMRole: false
+    # kind: copy the keys from a chart-generated Secret in another namespace into
+    # ticketscope-backup-s3 here, at render time (the platform release installs first, AD-22).
+    copyFrom:
+      namespace: ""
+      secret: ""
+      accessKeyIdKey: ""
+      secretAccessKeyKey: ""

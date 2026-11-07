@@ -5,5 +5,11 @@ dependencies:
 - name: cloudnative-pg
   repository: https://cloudnative-pg.github.io/charts
   version: 0.29.1
-digest: sha256:d0c2f055868684fb30db1c8a0a208bab5656e4be68cc9e84aad12bc3e06560fb
-generated: "2026-11-06T09:10:07.277096-05:00"
+- name: plugin-barman-cloud
+  repository: https://cloudnative-pg.github.io/charts
+  version: 0.8.1
+- name: seaweedfs
+  repository: https://seaweedfs.github.io/seaweedfs/helm
+  version: 4.52.0
+digest: sha256:1358a04e62bbc948640950c99f5a2128fb5eb1fcccfe29309a87538ed3b7947d
+generated: "2026-11-07T07:19:45.27971-05:00"

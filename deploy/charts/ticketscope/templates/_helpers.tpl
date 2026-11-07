@@ -1,6 +1,7 @@
 {{/* Names: ticketscope-<component> (Consistency Conventions). */}}
 {{- define "ticketscope.dbCluster" -}}ticketscope-db{{- end }}
 {{- define "ticketscope.roSecret" -}}ticketscope-db-ro{{- end }}
+{{- define "ticketscope.backupS3Secret" -}}ticketscope-backup-s3{{- end }}
 
 {{- define "ticketscope.labels" -}}
 app.kubernetes.io/part-of: ticketscope

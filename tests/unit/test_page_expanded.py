@@ -290,6 +290,9 @@ def test_api_route_matches_exact_root_and_v1_prefix_only() -> None:
             "image.app.tag=t",
             "--set-string",
             "image.postgres.tag=18-t",
+            # Backups need an environment's destinationPath (story 8).
+            "--set",
+            "backup.enabled=false",
         ],
         capture_output=True,
         text=True,

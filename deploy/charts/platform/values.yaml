@@ -22,3 +22,46 @@ cnpg:
   nameOverride: cloudnative-pg
   crds:
     create: true
+
+# Barman Cloud Plugin (AD-18), always on. No cert-manager: the plugin's mTLS
+# Secrets come from templates/barman-cloud-tls.yaml instead.
+barman-cloud:
+  enabled: true
+  certificate:
+    createIssuer: false
+    createServerCertificate: false
+    createClientCertificate: false
+
+# SeaweedFS, the S3-compatible backup target on kind only (AD-13). One
+# all-in-one pod (master, volume, filer and S3 gateway), never exposed outside
+# the cluster (AD-14). The chart generates the S3 keys in `seaweedfs-s3-secret`.
+seaweedfs:
+  enabled: false
+  fullnameOverride: seaweedfs
+  master:
+    enabled: false
+  volume:
+    enabled: false
+  filer:
+    enabled: false
+  s3:
+    enabled: false
+  allInOne:
+    enabled: true
+    # One-node kind cluster: no pod anti-affinity.
+    affinity: ""
+    s3:
+      enabled: true
+      enableAuth: true
+      createBuckets:
+        - name: ticketscope-backups
+    data:
+      type: persistentVolumeClaim
+      size: 2Gi
+      storageClass: null
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        memory: 1Gi

@@ -1,1 +1,1 @@
-"""ingest: closed GitHub issues to a versioned, masked corpus snapshot (AD-6)."""
+"""ingest: a restored Mojang Jira dump to a versioned, masked corpus snapshot (AD-6)."""

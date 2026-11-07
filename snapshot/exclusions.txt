@@ -1,5 +1,5 @@
-# Takedown list (corpus terms, condition 4): kubernetes/kubernetes issue numbers that
-# ingest never fetches or writes. One number per line; `#` starts a comment.
-# Add the number with the date of the request, publish a new snapshot, then delete
-# the earlier Release assets that hold the issue (see README, "Corpus attribution
-# and takedown").
+# Takedown list (corpus terms, spike 12 condition 4): Mojang Jira issue keys, such as
+# MCL-123, that ingest never writes nor adds as a duplicate's open target.
+# One key per line; `#` starts a comment. Add the key with the date of the request,
+# publish a new snapshot with scripts/publish-snapshot.sh, then delete the earlier
+# Release assets that hold the issue (see README, "Corpus attribution and takedown").

@@ -1,0 +1,1199 @@
+[
+ {
+  "_id": "000000000000000000000001",
+  "id": "10001",
+  "key": "MCL-1",
+  "fields": {
+   "summary": "Launcher crash reported by [~alice] and [~accountid:5b10ac8d82e05b22cc7d4ef5]",
+   "description": "Launcher crashes on start. Contact jane.doe@example.com about it. Token ghp_A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8 leaked in the log. Ping [~alice].\n{code}\n[12:00:01] [main/ERROR]: Failed to launch\n[12:00:02] [main/ERROR]: Failed to launch\njava.lang.NullPointerException\n\tat net.minecraft.launcher.Main.main(Main.java:42)\n{code}",
+   "resolution": {
+    "id": "1",
+    "name": "Fixed"
+   },
+   "resolutiondate": "2021-03-10T12:00:00.000+0000",
+   "created": "2021-03-01T10:00:00.000+0100",
+   "updated": "2021-12-01T00:00:00.000+0000",
+   "issuetype": {
+    "id": "1",
+    "name": "Bug"
+   },
+   "project": {
+    "id": "1",
+    "key": "MCL",
+    "name": "MCL"
+   },
+   "reporter": {
+    "key": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "name": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "displayName": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "active": true
+   },
+   "assignee": {
+    "key": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "name": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "displayName": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "active": true
+   },
+   "creator": {
+    "key": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "name": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "displayName": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "active": true
+   },
+   "labels": [],
+   "status": {
+    "name": "Resolved"
+   },
+   "issuelinks": [
+    {
+     "id": "1",
+     "type": {
+      "id": "10010",
+      "name": "Duplicate",
+      "inward": "is duplicated by",
+      "outward": "duplicates"
+     },
+     "inwardIssue": {
+      "key": "MCD-3",
+      "fields": {
+       "summary": "linked"
+      },
+      "id": "30003"
+     }
+    },
+    {
+     "id": "1",
+     "type": {
+      "id": "10003",
+      "name": "Relates",
+      "inward": "relates to",
+      "outward": "relates to"
+     },
+     "outwardIssue": {
+      "key": "MCD-4",
+      "fields": {
+       "summary": "linked"
+      },
+      "id": "30004"
+     }
+    },
+    {
+     "id": "1",
+     "type": {
+      "id": "10010",
+      "name": "Duplicate",
+      "inward": "is duplicated by",
+      "outward": "duplicates"
+     },
+     "outwardIssue": {
+      "key": "MCL-1",
+      "fields": {
+       "summary": "linked"
+      },
+      "id": "10001"
+     }
+    }
+   ],
+   "comments": [
+    {
+     "id": "1",
+     "author": {
+      "key": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+      "name": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+      "displayName": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+      "active": true
+     },
+     "updateAuthor": {
+      "key": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+      "name": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+      "displayName": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+      "active": true
+     },
+     "created": "2021-03-02T10:00:00.000+0000",
+     "body": "Also cc [~accountid:5b10ac8d82e05b22cc7d4ef5], AKIAIOSFODNN7EXAMPLE"
+    },
+    {
+     "id": "1",
+     "author": {
+      "key": "b2e1d4f3-2222-4b4b-8c8c-000000000002",
+      "name": "b2e1d4f3-2222-4b4b-8c8c-000000000002",
+      "displayName": "b2e1d4f3-2222-4b4b-8c8c-000000000002",
+      "active": true
+     },
+     "updateAuthor": {
+      "key": "b2e1d4f3-2222-4b4b-8c8c-000000000002",
+      "name": "b2e1d4f3-2222-4b4b-8c8c-000000000002",
+      "displayName": "b2e1d4f3-2222-4b4b-8c8c-000000000002",
+      "active": true
+     },
+     "created": "2021-03-03T10:00:00.000+0000",
+     "body": "Mail me: bob@example.org"
+    }
+   ]
+  }
+ },
+ {
+  "_id": "000000000000000000000002",
+  "id": "10005",
+  "key": "MCL-5",
+  "fields": {
+   "summary": "Repeated key, first document",
+   "description": "Synthetic slice issue.",
+   "resolution": {
+    "id": "1",
+    "name": "Fixed"
+   },
+   "resolutiondate": "2021-03-10T12:00:00.000+0000",
+   "created": "2021-03-01T10:00:00.000+0100",
+   "updated": "2021-12-01T00:00:00.000+0000",
+   "issuetype": {
+    "id": "1",
+    "name": "Bug"
+   },
+   "project": {
+    "id": "1",
+    "key": "MCL",
+    "name": "MCL"
+   },
+   "reporter": {
+    "key": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "name": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "displayName": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "active": true
+   },
+   "assignee": {
+    "key": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "name": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "displayName": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "active": true
+   },
+   "creator": {
+    "key": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "name": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "displayName": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "active": true
+   },
+   "labels": [],
+   "status": {
+    "name": "Resolved"
+   },
+   "issuelinks": [],
+   "comments": []
+  }
+ },
+ {
+  "_id": "000000000000000000000003",
+  "id": "30003",
+  "key": "MCD-3",
+  "fields": {
+   "summary": "Dungeons crash, same as the launcher one",
+   "description": "{noformat}\nERROR one\nERROR two\nERROR three\n{noformat}",
+   "resolution": {
+    "id": "1",
+    "name": "Duplicate"
+   },
+   "resolutiondate": "2021-03-10T12:00:00.000+0000",
+   "created": "2021-03-01T10:00:00.000+0100",
+   "updated": "2021-12-01T00:00:00.000+0000",
+   "issuetype": {
+    "id": "1",
+    "name": "Bug"
+   },
+   "project": {
+    "id": "1",
+    "key": "MCD",
+    "name": "MCD"
+   },
+   "reporter": {
+    "key": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "name": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "displayName": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "active": true
+   },
+   "assignee": {
+    "key": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "name": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "displayName": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "active": true
+   },
+   "creator": {
+    "key": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "name": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "displayName": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "active": true
+   },
+   "labels": [],
+   "status": {
+    "name": "Resolved"
+   },
+   "issuelinks": [
+    {
+     "id": "1",
+     "type": {
+      "id": "10010",
+      "name": "Duplicate",
+      "inward": "is duplicated by",
+      "outward": "duplicates"
+     },
+     "outwardIssue": {
+      "key": "MCL-1",
+      "fields": {
+       "summary": "linked"
+      }
+     }
+    }
+   ],
+   "comments": []
+  }
+ },
+ {
+  "_id": "000000000000000000000004",
+  "id": "30004",
+  "key": "MCD-4",
+  "fields": {
+   "summary": "Duplicate of an issue outside the subset",
+   "description": "Synthetic slice issue.",
+   "resolution": {
+    "id": "1",
+    "name": "Duplicate"
+   },
+   "resolutiondate": "2021-03-10T12:00:00.000+0000",
+   "created": "2021-03-01T10:00:00.000+0100",
+   "updated": "2021-12-01T00:00:00.000+0000",
+   "issuetype": {
+    "id": "1",
+    "name": "Bug"
+   },
+   "project": {
+    "id": "1",
+    "key": "MCD",
+    "name": "MCD"
+   },
+   "reporter": {
+    "key": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "name": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "displayName": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "active": true
+   },
+   "assignee": {
+    "key": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "name": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "displayName": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "active": true
+   },
+   "creator": {
+    "key": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "name": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "displayName": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "active": true
+   },
+   "labels": [],
+   "status": {
+    "name": "Resolved"
+   },
+   "issuelinks": [
+    {
+     "id": "1",
+     "type": {
+      "id": "10010",
+      "name": "Duplicate",
+      "inward": "is duplicated by",
+      "outward": "duplicates"
+     },
+     "outwardIssue": {
+      "key": "MC-1",
+      "fields": {
+       "summary": "linked"
+      },
+      "id": "50001"
+     }
+    },
+    {
+     "id": "1",
+     "type": {
+      "id": "10003",
+      "name": "Relates",
+      "inward": "relates to",
+      "outward": "relates to"
+     },
+     "inwardIssue": {
+      "key": "MCL-1",
+      "fields": {
+       "summary": "linked"
+      },
+      "id": "10001"
+     }
+    }
+   ],
+   "comments": []
+  }
+ },
+ {
+  "_id": "000000000000000000000005",
+  "id": "50001",
+  "key": "MC-1",
+  "fields": {
+   "summary": "Java Edition issue, out of scope",
+   "description": "Synthetic slice issue.",
+   "resolution": {
+    "id": "1",
+    "name": "Fixed"
+   },
+   "resolutiondate": "2021-03-10T12:00:00.000+0000",
+   "created": "2021-03-01T10:00:00.000+0100",
+   "updated": "2021-12-01T00:00:00.000+0000",
+   "issuetype": {
+    "id": "1",
+    "name": "Bug"
+   },
+   "project": {
+    "id": "1",
+    "key": "MC",
+    "name": "MC"
+   },
+   "reporter": {
+    "key": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "name": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "displayName": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "active": true
+   },
+   "assignee": {
+    "key": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "name": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "displayName": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "active": true
+   },
+   "creator": {
+    "key": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "name": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "displayName": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "active": true
+   },
+   "labels": [],
+   "status": {
+    "name": "Resolved"
+   },
+   "issuelinks": [],
+   "comments": []
+  }
+ },
+ {
+  "_id": "000000000000000000000006",
+  "id": "10020",
+  "key": "MCL-20",
+  "fields": {
+   "summary": "Unresolved, nothing points here",
+   "description": "Synthetic slice issue.",
+   "resolution": null,
+   "resolutiondate": null,
+   "created": "2021-03-01T10:00:00.000+0100",
+   "updated": "2021-12-01T00:00:00.000+0000",
+   "issuetype": {
+    "id": "1",
+    "name": "Bug"
+   },
+   "project": {
+    "id": "1",
+    "key": "MCL",
+    "name": "MCL"
+   },
+   "reporter": {
+    "key": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "name": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "displayName": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "active": true
+   },
+   "assignee": {
+    "key": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "name": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "displayName": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "active": true
+   },
+   "creator": {
+    "key": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "name": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "displayName": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "active": true
+   },
+   "labels": [],
+   "status": {
+    "name": "Open"
+   },
+   "issuelinks": [],
+   "comments": []
+  }
+ },
+ {
+  "_id": "000000000000000000000007",
+  "id": "10030",
+  "key": "MCL-30",
+  "fields": {
+   "summary": "Realms sign-in loop",
+   "description": "Synthetic slice issue.",
+   "resolution": {
+    "id": "1",
+    "name": "Duplicate"
+   },
+   "resolutiondate": "2021-03-10T12:00:00.000+0000",
+   "created": "2021-03-01T10:00:00.000+0100",
+   "updated": "2021-12-01T00:00:00.000+0000",
+   "issuetype": {
+    "id": "1",
+    "name": "Bug"
+   },
+   "project": {
+    "id": "1",
+    "key": "MCL",
+    "name": "MCL"
+   },
+   "reporter": {
+    "key": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "name": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "displayName": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "active": true
+   },
+   "assignee": {
+    "key": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "name": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "displayName": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "active": true
+   },
+   "creator": {
+    "key": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "name": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "displayName": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "active": true
+   },
+   "labels": [],
+   "status": {
+    "name": "Resolved"
+   },
+   "issuelinks": [
+    {
+     "id": "1",
+     "type": {
+      "id": "10010",
+      "name": "Duplicate",
+      "inward": "is duplicated by",
+      "outward": "duplicates"
+     },
+     "outwardIssue": {
+      "key": "REALMS-9",
+      "fields": {
+       "summary": "linked"
+      },
+      "id": "20009"
+     }
+    }
+   ],
+   "comments": []
+  }
+ },
+ {
+  "_id": "000000000000000000000008",
+  "id": "20009",
+  "key": "REALMS-9",
+  "fields": {
+   "summary": "Realms sign-in loops forever",
+   "description": "Synthetic slice issue.",
+   "resolution": null,
+   "resolutiondate": null,
+   "created": "2021-03-01T10:00:00.000+0100",
+   "updated": "2021-12-01T00:00:00.000+0000",
+   "issuetype": {
+    "id": "1",
+    "name": "Bug"
+   },
+   "project": {
+    "id": "1",
+    "key": "REALMS",
+    "name": "REALMS"
+   },
+   "reporter": {
+    "key": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "name": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "displayName": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "active": true
+   },
+   "assignee": {
+    "key": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "name": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "displayName": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "active": true
+   },
+   "creator": {
+    "key": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "name": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "displayName": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "active": true
+   },
+   "labels": [],
+   "status": {
+    "name": "Open"
+   },
+   "issuelinks": [
+    {
+     "id": "1",
+     "type": {
+      "id": "10010",
+      "name": "Duplicate",
+      "inward": "is duplicated by",
+      "outward": "duplicates"
+     },
+     "inwardIssue": {
+      "key": "MCL-30",
+      "fields": {
+       "summary": "linked"
+      },
+      "id": "10030"
+     }
+    }
+   ],
+   "comments": []
+  }
+ },
+ {
+  "_id": "000000000000000000000009",
+  "id": "10005",
+  "key": "MCL-5",
+  "fields": {
+   "summary": "Repeated key, second document",
+   "description": "Synthetic slice issue.",
+   "resolution": {
+    "id": "1",
+    "name": "Fixed"
+   },
+   "resolutiondate": "2021-03-10T12:00:00.000+0000",
+   "created": "2021-03-01T10:00:00.000+0100",
+   "updated": "2021-12-01T00:00:00.000+0000",
+   "issuetype": {
+    "id": "1",
+    "name": "Bug"
+   },
+   "project": {
+    "id": "1",
+    "key": "MCL",
+    "name": "MCL"
+   },
+   "reporter": {
+    "key": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "name": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "displayName": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "active": true
+   },
+   "assignee": {
+    "key": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "name": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "displayName": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "active": true
+   },
+   "creator": {
+    "key": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "name": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "displayName": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "active": true
+   },
+   "labels": [],
+   "status": {
+    "name": "Resolved"
+   },
+   "issuelinks": [],
+   "comments": []
+  }
+ },
+ {
+  "_id": "000000000000000000000010",
+  "id": "10010",
+  "key": "MCL-10",
+  "fields": {
+   "summary": "Question answered before resolution",
+   "description": "Synthetic slice issue.",
+   "resolution": {
+    "id": "1",
+    "name": "Done"
+   },
+   "resolutiondate": "2021-05-10T12:00:00.000+0000",
+   "created": "2021-05-01T08:00:00.000+0000",
+   "updated": "2021-12-01T00:00:00.000+0000",
+   "issuetype": {
+    "id": "1",
+    "name": "Question"
+   },
+   "project": {
+    "id": "1",
+    "key": "MCL",
+    "name": "MCL"
+   },
+   "reporter": {
+    "key": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "name": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "displayName": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "active": true
+   },
+   "assignee": {
+    "key": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "name": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "displayName": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "active": true
+   },
+   "creator": {
+    "key": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "name": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "displayName": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "active": true
+   },
+   "labels": [],
+   "status": {
+    "name": "Resolved"
+   },
+   "issuelinks": [],
+   "comments": [
+    {
+     "id": "1",
+     "author": {
+      "key": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+      "name": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+      "displayName": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+      "active": true
+     },
+     "updateAuthor": {
+      "key": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+      "name": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+      "displayName": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+      "active": true
+     },
+     "created": "2021-05-01T09:00:00.000+0000",
+     "body": "Any idea?"
+    },
+    {
+     "id": "1",
+     "author": {
+      "key": "b2e1d4f3-2222-4b4b-8c8c-000000000002",
+      "name": "b2e1d4f3-2222-4b4b-8c8c-000000000002",
+      "displayName": "b2e1d4f3-2222-4b4b-8c8c-000000000002",
+      "active": true
+     },
+     "updateAuthor": {
+      "key": "b2e1d4f3-2222-4b4b-8c8c-000000000002",
+      "name": "b2e1d4f3-2222-4b4b-8c8c-000000000002",
+      "displayName": "b2e1d4f3-2222-4b4b-8c8c-000000000002",
+      "active": true
+     },
+     "created": "2021-05-02T09:00:00.000+0000",
+     "body": "Reinstall the runtime."
+    },
+    {
+     "id": "1",
+     "author": {
+      "key": "b2e1d4f3-2222-4b4b-8c8c-000000000002",
+      "name": "b2e1d4f3-2222-4b4b-8c8c-000000000002",
+      "displayName": "b2e1d4f3-2222-4b4b-8c8c-000000000002",
+      "active": true
+     },
+     "updateAuthor": {
+      "key": "b2e1d4f3-2222-4b4b-8c8c-000000000002",
+      "name": "b2e1d4f3-2222-4b4b-8c8c-000000000002",
+      "displayName": "b2e1d4f3-2222-4b4b-8c8c-000000000002",
+      "active": true
+     },
+     "created": "2021-05-11T09:00:00.000+0000",
+     "body": "Closing note."
+    }
+   ]
+  }
+ },
+ {
+  "_id": "000000000000000000000011",
+  "id": "10011",
+  "key": "MCL-11",
+  "fields": {
+   "summary": "Question with only the reporter commenting",
+   "description": "Synthetic slice issue.",
+   "resolution": {
+    "id": "1",
+    "name": "Done"
+   },
+   "resolutiondate": "2021-05-10T12:00:00.000+0000",
+   "created": "2021-05-01T08:00:00.000+0000",
+   "updated": "2021-12-01T00:00:00.000+0000",
+   "issuetype": {
+    "id": "1",
+    "name": "Question"
+   },
+   "project": {
+    "id": "1",
+    "key": "MCL",
+    "name": "MCL"
+   },
+   "reporter": {
+    "key": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "name": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "displayName": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "active": true
+   },
+   "assignee": {
+    "key": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "name": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "displayName": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "active": true
+   },
+   "creator": {
+    "key": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "name": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "displayName": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "active": true
+   },
+   "labels": [],
+   "status": {
+    "name": "Resolved"
+   },
+   "issuelinks": [],
+   "comments": [
+    {
+     "id": "1",
+     "author": {
+      "key": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+      "name": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+      "displayName": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+      "active": true
+     },
+     "updateAuthor": {
+      "key": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+      "name": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+      "displayName": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+      "active": true
+     },
+     "created": "2021-05-02T09:00:00.000+0000",
+     "body": "Never mind."
+    }
+   ]
+  }
+ },
+ {
+  "_id": "000000000000000000000012",
+  "id": "10012",
+  "key": "MCL-12",
+  "fields": {
+   "summary": "Question answered only after resolution",
+   "description": "Synthetic slice issue.",
+   "resolution": {
+    "id": "1",
+    "name": "Done"
+   },
+   "resolutiondate": "2021-05-10T12:00:00.000+0000",
+   "created": "2021-05-01T08:00:00.000+0000",
+   "updated": "2021-12-01T00:00:00.000+0000",
+   "issuetype": {
+    "id": "1",
+    "name": "Question"
+   },
+   "project": {
+    "id": "1",
+    "key": "MCL",
+    "name": "MCL"
+   },
+   "reporter": {
+    "key": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "name": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "displayName": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "active": true
+   },
+   "assignee": {
+    "key": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "name": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "displayName": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "active": true
+   },
+   "creator": {
+    "key": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "name": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "displayName": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "active": true
+   },
+   "labels": [],
+   "status": {
+    "name": "Resolved"
+   },
+   "issuelinks": [],
+   "comments": [
+    {
+     "id": "1",
+     "author": {
+      "accountId": "e5f4a7c6-5555-4e4e-9f9f-000000000005",
+      "displayName": "e5f4a7c6-5555-4e4e-9f9f-000000000005",
+      "active": true
+     },
+     "updateAuthor": {
+      "accountId": "e5f4a7c6-5555-4e4e-9f9f-000000000005",
+      "displayName": "e5f4a7c6-5555-4e4e-9f9f-000000000005",
+      "active": true
+     },
+     "created": "2021-05-10T12:00:01.000+0000",
+     "body": "Late answer."
+    }
+   ]
+  }
+ },
+ {
+  "_id": "000000000000000000000013",
+  "id": "10040",
+  "key": "MCL-40",
+  "fields": {
+   "summary": "Taken down on request",
+   "description": "Synthetic slice issue.",
+   "resolution": {
+    "id": "1",
+    "name": "Fixed"
+   },
+   "resolutiondate": "2021-03-10T12:00:00.000+0000",
+   "created": "2021-03-01T10:00:00.000+0100",
+   "updated": "2021-12-01T00:00:00.000+0000",
+   "issuetype": {
+    "id": "1",
+    "name": "Bug"
+   },
+   "project": {
+    "id": "1",
+    "key": "MCL",
+    "name": "MCL"
+   },
+   "reporter": {
+    "key": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "name": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "displayName": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "active": true
+   },
+   "assignee": {
+    "key": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "name": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "displayName": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "active": true
+   },
+   "creator": {
+    "key": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "name": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "displayName": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "active": true
+   },
+   "labels": [],
+   "status": {
+    "name": "Resolved"
+   },
+   "issuelinks": [],
+   "comments": []
+  }
+ },
+ {
+  "_id": "000000000000000000000014",
+  "id": "10041",
+  "key": "MCL-41",
+  "fields": {
+   "summary": "Duplicate of a taken-down issue",
+   "description": "Synthetic slice issue.",
+   "resolution": {
+    "id": "1",
+    "name": "Duplicate"
+   },
+   "resolutiondate": "2021-03-10T12:00:00.000+0000",
+   "created": "2021-03-01T10:00:00.000+0100",
+   "updated": "2021-12-01T00:00:00.000+0000",
+   "issuetype": {
+    "id": "1",
+    "name": "Bug"
+   },
+   "project": {
+    "id": "1",
+    "key": "MCL",
+    "name": "MCL"
+   },
+   "reporter": {
+    "key": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "name": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "displayName": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "active": true
+   },
+   "assignee": {
+    "key": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "name": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "displayName": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "active": true
+   },
+   "creator": {
+    "key": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "name": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "displayName": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "active": true
+   },
+   "labels": [],
+   "status": {
+    "name": "Resolved"
+   },
+   "issuelinks": [
+    {
+     "id": "1",
+     "type": {
+      "id": "10010",
+      "name": "Duplicate",
+      "inward": "is duplicated by",
+      "outward": "duplicates"
+     },
+     "outwardIssue": {
+      "key": "REALMS-10",
+      "fields": {
+       "summary": "linked"
+      },
+      "id": "20010"
+     }
+    }
+   ],
+   "comments": []
+  }
+ },
+ {
+  "_id": "000000000000000000000015",
+  "id": "20010",
+  "key": "REALMS-10",
+  "fields": {
+   "summary": "Unresolved and taken down",
+   "description": "Synthetic slice issue.",
+   "resolution": null,
+   "resolutiondate": null,
+   "created": "2021-03-01T10:00:00.000+0100",
+   "updated": "2021-12-01T00:00:00.000+0000",
+   "issuetype": {
+    "id": "1",
+    "name": "Bug"
+   },
+   "project": {
+    "id": "1",
+    "key": "REALMS",
+    "name": "REALMS"
+   },
+   "reporter": {
+    "key": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "name": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "displayName": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "active": true
+   },
+   "assignee": {
+    "key": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "name": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "displayName": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "active": true
+   },
+   "creator": {
+    "key": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "name": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "displayName": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "active": true
+   },
+   "labels": [],
+   "status": {
+    "name": "Open"
+   },
+   "issuelinks": [],
+   "comments": []
+  }
+ },
+ {
+  "_id": "000000000000000000000016",
+  "id": "10050",
+  "key": "MCL-50",
+  "fields": {
+   "summary": "Unparseable created time",
+   "description": "Synthetic slice issue.",
+   "resolution": {
+    "id": "1",
+    "name": "Fixed"
+   },
+   "resolutiondate": "2021-03-10T12:00:00.000+0000",
+   "created": "yesterday",
+   "updated": "2021-12-01T00:00:00.000+0000",
+   "issuetype": {
+    "id": "1",
+    "name": "Bug"
+   },
+   "project": {
+    "id": "1",
+    "key": "MCL",
+    "name": "MCL"
+   },
+   "reporter": {
+    "key": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "name": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "displayName": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "active": true
+   },
+   "assignee": {
+    "key": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "name": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "displayName": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "active": true
+   },
+   "creator": {
+    "key": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "name": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "displayName": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "active": true
+   },
+   "labels": [],
+   "status": {
+    "name": "Resolved"
+   },
+   "issuelinks": [],
+   "comments": []
+  }
+ },
+ {
+  "_id": "000000000000000000000017",
+  "id": "30006",
+  "key": "MCD-6",
+  "fields": {
+   "summary": "Resolved without a resolution date",
+   "description": "Synthetic slice issue.",
+   "resolution": {
+    "id": "1",
+    "name": "Won't Fix"
+   },
+   "resolutiondate": null,
+   "created": "2021-03-01T10:00:00.000+0100",
+   "updated": "2021-12-01T00:00:00.000+0000",
+   "issuetype": {
+    "id": "1",
+    "name": "Bug"
+   },
+   "project": {
+    "id": "1",
+    "key": "MCD",
+    "name": "MCD"
+   },
+   "reporter": {
+    "key": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "name": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "displayName": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "active": true
+   },
+   "assignee": {
+    "key": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "name": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "displayName": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "active": true
+   },
+   "creator": {
+    "key": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "name": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "displayName": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "active": true
+   },
+   "labels": [],
+   "status": {
+    "name": "Resolved"
+   },
+   "issuelinks": [],
+   "comments": []
+  }
+ },
+ {
+  "_id": "000000000000000000000018",
+  "id": "30007",
+  "key": "MCD-7",
+  "fields": {
+   "summary": "Older comment shape, a bad comment time and an unknown link target",
+   "description": "Synthetic slice issue.",
+   "resolution": {
+    "id": "1",
+    "name": "Fixed"
+   },
+   "resolutiondate": "2021-03-10T12:00:00.000+0000",
+   "created": "2021-03-01T10:00:00.000+0100",
+   "updated": "2021-12-01T00:00:00.000+0000",
+   "issuetype": {
+    "id": "1",
+    "name": "Bug"
+   },
+   "project": {
+    "id": "1",
+    "key": "MCD",
+    "name": "MCD"
+   },
+   "reporter": {
+    "key": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "name": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "displayName": "a1f0c3e2-1111-4a4a-9b9b-000000000001",
+    "active": true
+   },
+   "assignee": {
+    "key": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "name": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "displayName": "c3d2e5a4-3333-4c4c-9d9d-000000000003",
+    "active": true
+   },
+   "creator": {
+    "key": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "name": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "displayName": "d4e3f6b5-4444-4d4d-8e8e-000000000004",
+    "active": true
+   },
+   "labels": [],
+   "status": {
+    "name": "Resolved"
+   },
+   "issuelinks": [
+    {
+     "id": "1",
+     "type": {
+      "id": "10010",
+      "name": "Duplicate",
+      "inward": "is duplicated by",
+      "outward": "duplicates"
+     },
+     "outwardIssue": {
+      "key": "MCL-999",
+      "fields": {
+       "summary": "linked"
+      }
+     }
+    }
+   ],
+   "comment": {
+    "comments": [
+     {
+      "id": "1",
+      "author": {
+       "key": "b2e1d4f3-2222-4b4b-8c8c-000000000002",
+       "name": "b2e1d4f3-2222-4b4b-8c8c-000000000002",
+       "displayName": "b2e1d4f3-2222-4b4b-8c8c-000000000002",
+       "active": true
+      },
+      "updateAuthor": {
+       "key": "b2e1d4f3-2222-4b4b-8c8c-000000000002",
+       "name": "b2e1d4f3-2222-4b4b-8c8c-000000000002",
+       "displayName": "b2e1d4f3-2222-4b4b-8c8c-000000000002",
+       "active": true
+      },
+      "created": "not a time",
+      "body": "Dropped: no parseable time."
+     },
+     {
+      "id": "1",
+      "author": {
+       "key": "b2e1d4f3-2222-4b4b-8c8c-000000000002",
+       "name": "b2e1d4f3-2222-4b4b-8c8c-000000000002",
+       "displayName": "b2e1d4f3-2222-4b4b-8c8c-000000000002",
+       "active": true
+      },
+      "updateAuthor": {
+       "key": "b2e1d4f3-2222-4b4b-8c8c-000000000002",
+       "name": "b2e1d4f3-2222-4b4b-8c8c-000000000002",
+       "displayName": "b2e1d4f3-2222-4b4b-8c8c-000000000002",
+       "active": true
+      },
+      "created": "2021-03-05T10:00:00.000+0000",
+      "body": "Kept."
+     }
+    ],
+    "total": 2
+   }
+  }
+ }
+]

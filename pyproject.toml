@@ -1,7 +1,7 @@
 [project]
 name = "ticketscope"
 version = "0.1.0"
-description = "Similar-issue search over Kubernetes issues, a personal project deployed and operated on Kubernetes."
+description = "Similar-issue search over Mojang bug-tracker issues (The Public Jira Dataset v7), a personal project deployed and operated on Kubernetes."
 requires-python = ">=3.14,<3.15"
 dependencies = [
     "fastapi~=0.162.0",
@@ -19,9 +19,14 @@ ticketscope-load = "ticketscope.jobs.load.main:main"
 ticketscope-ingest = "ticketscope.jobs.ingest.main:main"
 
 [dependency-groups]
-dev = [
-    "import-linter~=2.15.0",
+# Person-run ingest and publish (AD-6): never in the app image, which syncs with --no-dev.
+ingest = [
     "jsonschema~=4.26",
+    "pymongo~=4.19",
+]
+dev = [
+    { include-group = "ingest" },
+    "import-linter~=2.15.0",
     "pyright~=1.1.414",
     "pytest~=9.2",
     "ruff~=0.17.4",

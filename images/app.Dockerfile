@@ -1,5 +1,7 @@
 # The one app image (AD-2). The process is chosen by command:
-#   ticketscope-api | ticketscope-migrate | ticketscope-load | ticketscope-ingest
+#   ticketscope-api | ticketscope-migrate | ticketscope-load
+# ingest runs on a person's machine (scripts/publish-snapshot.sh); its `ingest`
+# dependency group (pymongo) is not installed here.
 # Build from the repo root: docker build -f images/app.Dockerfile .
 ARG PYTHON_IMAGE=python:3.14-slim-trixie
 
@@ -29,8 +31,6 @@ ENV PATH=/app/.venv/bin:$PATH \
 WORKDIR /app
 COPY --from=build /app /app
 COPY migrations /app/migrations
-# ingest's default --exclusions path, relative to WORKDIR.
-COPY snapshot/exclusions.txt /app/snapshot/exclusions.txt
 USER 10001:10001
 EXPOSE 8080
 CMD ["ticketscope-api"]

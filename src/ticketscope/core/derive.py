@@ -1,6 +1,8 @@
-"""Derived fields of an issue: kind and outcome (AD-8).
+"""Derived fields of an issue: kind and outcome (AD-8, AD-26).
 
-Pure functions over `SnapshotIssue`, so the load, the ingest report and the eval agree.
+Pure functions over a snapshot issue, so the load, the ingest report and the eval agree.
+A schema v1 `SnapshotIssue` (GitHub) uses the GitHub rules; a schema v2 `SnapshotIssueV2`
+(Mojang Jira) uses the Jira resolution mapping, the answered rule and Jira block toggles.
 Changing a rule or the default threshold changes `derivation_version`, which forces a reload.
 """
 
@@ -8,11 +10,17 @@ import re
 from dataclasses import dataclass
 
 from ticketscope.core.model import Kind, OutcomeSource, OutcomeStatus
-from ticketscope.core.snapshot import Comment, SnapshotIssue, TimelineEvent
+from ticketscope.core.snapshot import (
+    Comment,
+    DuplicateLink,
+    SnapshotIssue,
+    SnapshotIssueV2,
+    TimelineEvent,
+)
 
 DEFAULT_KIND_THRESHOLD = 3  # provisional; story 5 sets the final threshold
-KIND_RULE_VERSION = "kind1"
-OUTCOME_RULE_VERSION = "outcome2"
+KIND_RULE_VERSION = "kind2"
+OUTCOME_RULE_VERSION = "outcome3"
 
 DUPLICATE_LABEL = "triage/duplicate"
 STALE_LABELS = frozenset({"lifecycle/stale", "lifecycle/rotten"})
@@ -35,7 +43,7 @@ UNKNOWN = Outcome(status="unknown")
 
 
 def derivation_version(threshold: int = DEFAULT_KIND_THRESHOLD) -> str:
-    """The version of every derivation rule, e.g. `kind1-t3.outcome1`."""
+    """The version of every derivation rule, e.g. `kind2-t3.outcome3`."""
     _check_threshold(threshold)
     return f"{KIND_RULE_VERSION}-t{threshold}.{OUTCOME_RULE_VERSION}"
 
@@ -43,7 +51,14 @@ def derivation_version(threshold: int = DEFAULT_KIND_THRESHOLD) -> str:
 # --- outcome -------------------------------------------------------------------------------
 
 
-def derive_outcome(issue: SnapshotIssue) -> Outcome:
+def derive_outcome(issue: SnapshotIssue | SnapshotIssueV2) -> Outcome:
+    """The `/v1` outcome: Jira rules for a v2 issue, GitHub rules for a v1 issue."""
+    if isinstance(issue, SnapshotIssueV2):
+        return _jira_outcome(issue)
+    return _github_outcome(issue)
+
+
+def _github_outcome(issue: SnapshotIssue) -> Outcome:
     """Outcome by precedence, first match wins:
     duplicate, fixed, not_planned, stale, answered, unknown.
     """
@@ -131,6 +146,157 @@ def _answered(issue: SnapshotIssue, labels: set[str]) -> Outcome | None:
     return Outcome("answered", summary, "closing_comment", None)
 
 
+# --- Jira outcome (schema v2) ----------------------------------------------------------------
+
+MOJANG_BROWSE_URL = "https://bugs.mojang.com/browse/"
+
+# `resolution` (trimmed, lower-cased) -> outcome, per spike 12's `outcome-mapping.md`.
+# Anything else, and no resolution, is `unknown`.
+RESOLUTION_OUTCOME: dict[str, OutcomeStatus] = {
+    # duplicate
+    "duplicate": "duplicate",
+    "duplicate issue": "duplicate",
+    # fixed: a change was made or the work was delivered
+    "fixed": "fixed",
+    "done": "fixed",
+    "complete": "fixed",
+    "implemented": "fixed",
+    "resolved": "fixed",
+    "fixed-verified": "fixed",
+    "deployed": "fixed",
+    "released": "fixed",
+    "delivered": "fixed",
+    "partially completed": "fixed",
+    "staged": "fixed",
+    "current release": "fixed",
+    "next release": "fixed",
+    # not_planned: closed without a change
+    "won't fix": "not_planned",
+    "won't do": "not_planned",
+    "invalid": "not_planned",
+    "incomplete": "not_planned",
+    "incomplete description": "not_planned",
+    "cannot reproduce": "not_planned",
+    "works for me": "not_planned",
+    "not a problem": "not_planned",
+    "not a bug": "not_planned",
+    "non-issue": "not_planned",
+    "works as intended": "not_planned",
+    "works as designed": "not_planned",
+    "expected behavior": "not_planned",
+    "rejected": "not_planned",
+    "declined": "not_planned",
+    "out of scope": "not_planned",
+    "obsolete": "not_planned",
+    "out of date": "not_planned",
+    "gone away": "not_planned",
+    "later": "not_planned",
+    "deferred": "not_planned",
+    "parked": "not_planned",
+    "low priority": "not_planned",
+    "deprioritized": "not_planned",
+    "no resources": "not_planned",
+    "won't finish": "not_planned",
+    "will not implement": "not_planned",
+    "canceled": "not_planned",
+    "abandoned": "not_planned",
+    "spam": "not_planned",
+    "incorrectly filed": "not_planned",
+    "invalid ticket": "not_planned",
+    "not applicable": "not_planned",
+    "unactionable": "not_planned",
+    "unsolved mysteries": "not_planned",
+    "eol": "not_planned",
+    "incorporated": "not_planned",
+    "tracked elsewhere": "not_planned",
+    "moved": "not_planned",
+    "migrated to another its": "not_planned",
+    "resolved at apache": "not_planned",
+    "upstream": "not_planned",
+    "invalid: works as expected": "not_planned",
+    "invalid: environment issue": "not_planned",
+    "invalid: test error": "not_planned",
+    "invalid: not supported": "not_planned",
+    # stale: closed for want of a response
+    "timed out": "stale",
+    "awaiting response": "stale",
+    "automatically closed": "stale",
+    "auto closed": "stale",
+    "low engagement": "stale",
+    "pending closed": "stale",
+    # answered: closed with an answer rather than a change
+    "answered": "answered",
+    "support request": "answered",
+    "handled by support": "answered",
+    "explained": "answered",
+    "information provided": "answered",
+    "community answered": "answered",
+    "feedback received": "answered",
+    "sent to forums": "answered",
+    "sent to docs": "answered",
+    "resolved locally": "answered",
+    "workaround": "answered",
+}
+
+_QUESTION_TYPE = re.compile(r"question|support", re.IGNORECASE)
+
+
+def _jira_outcome(issue: SnapshotIssueV2) -> Outcome:
+    """The resolution's class, except that a Question/Support issue whose resolution reads
+    as fixed or is unmapped is `answered` when the answered rule holds."""
+    if issue.resolution is None:
+        return UNKNOWN
+    resolution = issue.resolution.strip()
+    status = RESOLUTION_OUTCOME.get(resolution.lower(), "unknown")
+    if status in ("fixed", "unknown") and _is_answered(issue):
+        return Outcome(
+            "answered", f"Answered before resolution ({resolution})", "closing_comment", None
+        )
+    if status == "unknown":
+        return UNKNOWN
+    if status == "duplicate":
+        target = duplicate_target(issue)
+        if target is None:
+            return Outcome("duplicate", "Resolved as duplicate", "label", None)
+        return Outcome(
+            "duplicate",
+            f"Duplicate of {target.target_key}",
+            "label",
+            f"{MOJANG_BROWSE_URL}{target.target_key}",
+        )
+    source: OutcomeSource | None = "closing_comment" if status == "answered" else None
+    return Outcome(status, f"Resolved as {resolution}", source, None)
+
+
+def _is_answered(issue: SnapshotIssueV2) -> bool:
+    """A resolved Question/Support-type issue with a non-reporter comment at or before
+    the resolution time."""
+    if not _QUESTION_TYPE.search(issue.issue_type):
+        return False
+    resolved_at = issue.resolved_at
+    if issue.resolution is None or resolved_at is None:
+        return False
+    return any(not c.from_reporter and c.created_at <= resolved_at for c in issue.comments)
+
+
+def duplicate_target(issue: SnapshotIssueV2) -> DuplicateLink | None:
+    """The issue a duplicate-class issue duplicates (AD-26): the lowest-numbered
+    `duplicates` link; failing that, the lowest-numbered link either way. `None` for
+    any other resolution or without links."""
+    if issue.resolution is None:
+        return None
+    if RESOLUTION_OUTCOME.get(issue.resolution.strip().lower()) != "duplicate":
+        return None
+    forward = [link for link in issue.duplicate_links if link.direction == "duplicates"]
+    candidates = forward or issue.duplicate_links
+    if not candidates:
+        return None
+    return min(
+        candidates,
+        key=lambda link: (link.target_number, link.target_key, link.direction, link.link_type),
+    )
+
+
 # --- kind ----------------------------------------------------------------------------------
 
 _FENCE = re.compile(r"^\s*(`{3,}|~{3,})")
@@ -182,10 +348,26 @@ def kind_score(body: str | None) -> int:
     return score
 
 
-def derive_kind(issue: SnapshotIssue, threshold: int = DEFAULT_KIND_THRESHOLD) -> Kind:
-    """`log_heavy` when `kind_score(body) >= threshold`, else `short`."""
+_JIRA_BLOCK = re.compile(r"\{(?:code|noformat)(?::[^}\n]*)?\}", re.IGNORECASE)
+
+
+def jira_to_fences(body: str | None) -> str | None:
+    """Put every `{code...}` / `{noformat}` toggle on its own line as a ``` fence."""
+    if body is None:
+        return None
+    return _JIRA_BLOCK.sub("\n```\n", body)
+
+
+def derive_kind(
+    issue: SnapshotIssue | SnapshotIssueV2, threshold: int = DEFAULT_KIND_THRESHOLD
+) -> Kind:
+    """`log_heavy` when the body's kind score reaches `threshold`, else `short`.
+
+    A v2 (Jira) body has its `{code}` / `{noformat}` toggles turned into fences first.
+    """
     _check_threshold(threshold)
-    return "log_heavy" if kind_score(issue.body) >= threshold else "short"
+    body = jira_to_fences(issue.body) if isinstance(issue, SnapshotIssueV2) else issue.body
+    return "log_heavy" if kind_score(body) >= threshold else "short"
 
 
 def _check_threshold(threshold: int) -> None:

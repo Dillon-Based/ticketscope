@@ -1,0 +1,174 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Dillon-Based/ticketscope/snapshot/schema-v2.json",
+  "$defs": {
+    "DuplicateLink": {
+      "additionalProperties": false,
+      "description": "A Duplicate-type issue link; `direction` reads from this issue toward the target.",
+      "properties": {
+        "target_number": {
+          "minimum": 1,
+          "title": "Target Number",
+          "type": "integer"
+        },
+        "target_key": {
+          "title": "Target Key",
+          "type": "string"
+        },
+        "direction": {
+          "enum": [
+            "duplicates",
+            "duplicated_by"
+          ],
+          "title": "Direction",
+          "type": "string"
+        },
+        "link_type": {
+          "title": "Link Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "target_number",
+        "target_key",
+        "direction",
+        "link_type"
+      ],
+      "title": "DuplicateLink",
+      "type": "object"
+    },
+    "JiraComment": {
+      "additionalProperties": false,
+      "properties": {
+        "body": {
+          "title": "Body",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "from_reporter": {
+          "title": "From Reporter",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "body",
+        "created_at",
+        "from_reporter"
+      ],
+      "title": "JiraComment",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "number": {
+      "minimum": 1,
+      "title": "Number",
+      "type": "integer"
+    },
+    "key": {
+      "title": "Key",
+      "type": "string"
+    },
+    "url": {
+      "title": "Url",
+      "type": "string"
+    },
+    "title": {
+      "title": "Title",
+      "type": "string"
+    },
+    "body": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Body"
+    },
+    "issue_type": {
+      "title": "Issue Type",
+      "type": "string"
+    },
+    "state": {
+      "enum": [
+        "open",
+        "closed"
+      ],
+      "title": "State",
+      "type": "string"
+    },
+    "resolution": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Resolution"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "resolved_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Resolved At"
+    },
+    "comments": {
+      "items": {
+        "$ref": "#/$defs/JiraComment"
+      },
+      "title": "Comments",
+      "type": "array"
+    },
+    "duplicate_links": {
+      "items": {
+        "$ref": "#/$defs/DuplicateLink"
+      },
+      "title": "Duplicate Links",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "number",
+    "key",
+    "url",
+    "title",
+    "body",
+    "issue_type",
+    "state",
+    "resolution",
+    "created_at",
+    "resolved_at",
+    "comments",
+    "duplicate_links"
+  ],
+  "title": "ticketscope corpus snapshot issue, schema v2",
+  "type": "object",
+  "description": "One line of a corpus snapshot (gzipped JSONL, one issue per line), Mojang Jira. Generated from ticketscope.core.snapshot.SnapshotIssueV2; do not edit by hand."
+}

@@ -465,8 +465,10 @@ def _bucket_listing(path: str) -> list[str]:
     return [str(e["FullPath"]).rsplit("/", 1)[-1] for e in entries]
 
 
-def test_on_demand_backup_completes_to_seaweedfs() -> None:
-    name = f"{CLUSTER}-smoke-{int(time.time())}"
+def _assert_on_demand_backup_completes(label: str = "smoke") -> None:
+    """Apply an on-demand plugin Backup named for `label`, wait for it to complete and
+    check its base backup is in the SeaweedFS bucket; shared with the integrated check."""
+    name = f"{CLUSTER}-{label}-{int(time.time())}"
     manifest = {
         "apiVersion": "postgresql.cnpg.io/v1",
         "kind": "Backup",
@@ -505,6 +507,10 @@ def test_on_demand_backup_completes_to_seaweedfs() -> None:
         check=False,
         capture_output=True,
     )
+
+
+def test_on_demand_backup_completes_to_seaweedfs() -> None:
+    _assert_on_demand_backup_completes()
 
 
 # (8) ---------------------------------------------------------------------------------------

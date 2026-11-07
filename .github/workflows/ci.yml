@@ -1,5 +1,6 @@
-# PR CI (AD-17): lint, types, import-linter, unit tests, chart lint, the kind
-# deploy with its smoke check, and multi-arch image builds when images change.
+# PR CI (AD-17): lint, types, import-linter, unit tests, chart lint, the epic's
+# integrated check on one kind deploy (integrated suite, then smoke, on the same cluster),
+# and multi-arch image builds when images change.
 name: ci
 
 on:
@@ -96,7 +97,9 @@ jobs:
           docker build --platform ${{ matrix.platform }}
           -f images/postgres.Dockerfile -t ticketscope-postgres:18-${{ github.sha }} .
 
-  kind-deploy:
+  integrated-check:
+    # One kind cluster per PR. The integrated suite runs first, on the freshly deployed
+    # state, before smoke's upgrades and forced reloads.
     uses: ./.github/workflows/_kind-deploy.yml
     with:
-      check: uv run pytest -m kind tests/smoke
+      check: uv run pytest -m kind tests/integrated tests/smoke

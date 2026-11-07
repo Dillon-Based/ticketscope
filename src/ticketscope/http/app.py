@@ -4,22 +4,94 @@ This is the only `http` module allowed to import a driven adapter.
 """
 
 import logging
+from collections.abc import Mapping, Sequence
+from http import HTTPStatus
+from typing import Any
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from ticketscope.contract.search import (
     Issue,
+    IssueDetail,
+    IssueResponse,
     Outcome,
     SearchRequest,
     SearchResponse,
     SearchResult,
 )
+from ticketscope.core.model import IssueRecord
 from ticketscope.core.modes import REGISTRY
 from ticketscope.core.ports import CorpusStore
 from ticketscope.settings import Settings
 
 log = logging.getLogger(__name__)
+
+PROBLEM_JSON = "application/problem+json"
+
+
+def _problem(
+    status: int,
+    detail: str,
+    headers: Mapping[str, str] | None = None,
+    **extra: object,
+) -> JSONResponse:
+    """An RFC 9457 problem body: every `/v1` error (AD-4, Errors convention)."""
+    body = {
+        "type": "about:blank",
+        "title": HTTPStatus(status).phrase,
+        "status": status,
+        "detail": detail,
+        **extra,
+    }
+    return JSONResponse(
+        body,
+        status_code=status,
+        headers=dict(headers) if headers else None,
+        media_type=PROBLEM_JSON,
+    )
+
+
+def _field(loc: Sequence[Any]) -> str:
+    """A validation `loc` without its source (`body`, `path`, `query`): `k`, `number`."""
+    parts = list(loc[1:]) if loc and loc[0] in ("body", "path", "query", "header") else list(loc)
+    return ".".join(str(p) for p in parts)
+
+
+async def _http_problem(_request: Request, exc: Exception) -> JSONResponse:
+    assert isinstance(exc, StarletteHTTPException)
+    return _problem(exc.status_code, exc.detail, headers=exc.headers)
+
+
+async def _validation_problem(_request: Request, exc: Exception) -> JSONResponse:
+    assert isinstance(exc, RequestValidationError)
+    errors: list[dict[str, Any]] = []
+    lines: list[str] = []
+    for error in exc.errors():
+        loc: list[Any] = list(error.get("loc", ()))
+        msg = str(error.get("msg", ""))
+        errors.append({"loc": loc, "msg": msg})
+        # A malformed body's loc is ("body", <char offset>): name the body, not the offset.
+        field = "body" if error.get("type") == "json_invalid" else _field(loc)
+        lines.append(f"{field}: {msg}" if field else msg)
+    return _problem(422, "; ".join(lines) or "request validation failed", errors=errors)
+
+
+async def _server_problem(_request: Request, _exc: Exception) -> JSONResponse:
+    # Starlette re-raises after this response, so the server still logs the traceback.
+    return _problem(500, "internal server error")
+
+
+def _outcome(issue: IssueRecord) -> Outcome:
+    return Outcome(
+        status=issue.outcome_status,
+        summary=issue.outcome_summary,
+        source=issue.outcome_source,
+        ref=issue.outcome_ref,
+    )
 
 
 def create_app(store: CorpusStore | None = None, settings: Settings | None = None) -> FastAPI:
@@ -33,6 +105,9 @@ def create_app(store: CorpusStore | None = None, settings: Settings | None = Non
     default_mode = settings.default_mode
 
     app = FastAPI(title="ticketscope", version="1")
+    app.add_exception_handler(StarletteHTTPException, _http_problem)
+    app.add_exception_handler(RequestValidationError, _validation_problem)
+    app.add_exception_handler(Exception, _server_problem)
 
     @app.get("/healthz")
     def healthz() -> dict[str, str]:  # pyright: ignore[reportUnusedFunction]
@@ -55,7 +130,17 @@ def create_app(store: CorpusStore | None = None, settings: Settings | None = Non
         mode_name = request.mode or default_mode
         mode = REGISTRY.get(mode_name)
         if mode is None:
-            raise HTTPException(status_code=422, detail=f"unknown mode: {mode_name}")
+            # Same shape as a Literal miss: AD-4 validates `mode` against the registry.
+            raise RequestValidationError(
+                [
+                    {
+                        "type": "value_error",
+                        "loc": ("body", "mode"),
+                        "msg": f"unknown mode: {mode_name}",
+                        "input": mode_name,
+                    }
+                ]
+            )
         version = corpus.corpus_version()
         if version is None:
             raise HTTPException(status_code=503, detail="corpus not loaded")
@@ -75,15 +160,30 @@ def create_app(store: CorpusStore | None = None, settings: Settings | None = Non
                         kind=hit.issue.kind,
                         state=hit.issue.state,
                     ),
-                    outcome=Outcome(
-                        status=hit.issue.outcome_status,
-                        summary=hit.issue.outcome_summary,
-                        source=hit.issue.outcome_source,
-                        ref=hit.issue.outcome_ref,
-                    ),
+                    outcome=_outcome(hit.issue),
                 )
                 for rank, hit in enumerate(hits, start=1)
             ],
+        )
+
+    @app.get("/v1/issues/{number}")
+    def get_issue(number: int) -> IssueResponse:  # pyright: ignore[reportUnusedFunction]
+        if corpus.corpus_version() is None:
+            raise HTTPException(status_code=503, detail="corpus not loaded")
+        found = corpus.get_issue(number)
+        if found is None:
+            raise HTTPException(status_code=404, detail=f"issue {number} not found")
+        issue = found.issue
+        return IssueResponse(
+            issue=IssueDetail(
+                number=issue.number,
+                title=issue.title,
+                url=issue.url,
+                kind=issue.kind,
+                state=issue.state,
+                body=found.body,
+            ),
+            outcome=_outcome(issue),
         )
 
     return app

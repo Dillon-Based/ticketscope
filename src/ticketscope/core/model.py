@@ -29,3 +29,14 @@ class Scored:
 
     issue: IssueRecord
     score: float
+
+
+@dataclass(frozen=True, slots=True)
+class IssueDetail:
+    """One issue with its body, for the issue-detail read (AD-4).
+
+    Kept apart from `IssueRecord` so keyword hits never carry multi-KB bodies.
+    """
+
+    issue: IssueRecord
+    body: str | None

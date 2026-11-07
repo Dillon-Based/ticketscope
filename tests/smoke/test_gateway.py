@@ -3,8 +3,9 @@
 Needs `TICKETSCOPE_GATEWAY_URL` (e.g. `http://172.18.0.5`) and
 `TICKETSCOPE_GATEWAY_HOST` (the route hostname), plus `kubectl` and `helm` on the cluster.
 Run with `uv run pytest -m kind tests/smoke`. The tests run in file order: (1) search
-through the Gateway, (2) SQL on the CNPG primary, (3) the load report, (4) a same-pin
-upgrade is a no-op, (5) a stale preprocessing version reloads, (6) two ready instances.
+through the Gateway, (1b) the rest of the /v1 contract through the Gateway, (2) SQL on
+the CNPG primary, (3) the load report, (4) a same-pin upgrade is a no-op, (5) a stale
+preprocessing version reloads, (6) two ready instances.
 """
 
 import json
@@ -16,7 +17,7 @@ import httpx2
 import pytest
 
 from tests.target import NO_MATCH_QUERY, REPO, snapshot_pin
-from ticketscope.contract.search import SearchResponse
+from ticketscope.contract.search import IssueResponse, Problem, SearchResponse
 from ticketscope.core.derive import preprocessing_version
 
 pytestmark = pytest.mark.kind
@@ -37,16 +38,29 @@ def _gateway() -> tuple[str, str]:
     return url.rstrip("/"), host
 
 
-def _search(query: str) -> SearchResponse:
+def _post_search(payload: dict[str, object]) -> httpx2.Response:
     url, host = _gateway()
-    response = httpx2.post(
-        f"{url}/v1/search",
-        json={"query": query, "mode": "keyword"},
-        headers={"Host": host},
-        timeout=30,
-    )
+    return httpx2.post(f"{url}/v1/search", json=payload, headers={"Host": host}, timeout=30)
+
+
+def _search(query: str) -> SearchResponse:
+    response = _post_search({"query": query, "mode": "keyword"})
     assert response.status_code == 200, response.text
     return SearchResponse.model_validate(response.json())
+
+
+def _get_issue(number: int) -> httpx2.Response:
+    url, host = _gateway()
+    return httpx2.get(f"{url}/v1/issues/{number}", headers={"Host": host}, timeout=30)
+
+
+def _assert_problem(response: httpx2.Response, status: int) -> Problem:
+    assert response.status_code == status, response.text
+    assert response.headers["content-type"].startswith("application/problem+json")
+    problem = Problem.model_validate(response.json())
+    assert (problem.type, problem.status) == ("about:blank", status)
+    assert problem.title and problem.detail
+    return problem
 
 
 def _kubectl(*args: str) -> str:
@@ -136,6 +150,57 @@ def test_no_match_is_empty_through_the_gateway() -> None:
     body = _search(NO_MATCH_QUERY)
     assert body.corpus_version == PIN
     assert body.results == []
+
+
+# (1b) --------------------------------------------------------------------------------------
+
+
+def test_issue_detail_matches_the_search_hit() -> None:
+    top = _search(RESULTS_QUERY).results[0]
+    response = _get_issue(top.issue.number)
+    assert response.status_code == 200, response.text
+    body = IssueResponse.model_validate(response.json())
+    assert body.issue.number == top.issue.number
+    assert body.issue.body, "empty body"
+    assert body.outcome == top.outcome
+
+
+def test_unknown_issue_is_a_404_problem() -> None:
+    problem = _assert_problem(_get_issue(1), 404)
+    assert "1" in problem.detail
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"query": RESULTS_QUERY, "mode": "keyword", "k": 0},
+        {"query": RESULTS_QUERY, "mode": "keyword", "k": 51},
+        {"query": RESULTS_QUERY, "mode": "nope"},
+    ],
+    ids=["k=0", "k=51", "mode=nope"],
+)
+def test_invalid_search_is_a_422_problem(payload: dict[str, object]) -> None:
+    problem = _assert_problem(_post_search(payload), 422)
+    assert problem.errors
+
+
+def test_operator_characters_rank() -> None:
+    body = _search('crash & launcher | (java:!) !! "x')
+    assert body.results, "no results"
+
+
+def test_a_pasted_stack_trace_of_4kb_ranks() -> None:
+    frames = [
+        "\tat net.minecraft.client.renderer.GameRenderer.render(GameRenderer.java:{n})",
+        "\tat net.minecraft.client.Minecraft.runTick(Minecraft.java:{n})",
+        "\tat com.mojang.blaze3d.systems.RenderSystem.flipFrame(RenderSystem.java:{n})",
+    ]
+    trace = 'java.lang.NullPointerException: Cannot invoke "Object.toString()"\n' + "\n".join(
+        frames[i % len(frames)].format(n=100 + i) for i in range(60)
+    )
+    assert len(trace.encode()) >= 4096
+    body = _search("Game crashed on launch\n" + trace)
+    assert body.results, "no results"
 
 
 # (2) ---------------------------------------------------------------------------------------

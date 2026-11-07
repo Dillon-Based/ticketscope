@@ -31,7 +31,7 @@ def fixture_sha256(snapshot_dir: Path) -> str:
 @pytest.fixture
 def fixture_store(snapshot_dir: Path) -> InMemoryCorpusStore:
     """The fake store holding the fixture exactly as `load` would write it."""
-    rows = build_rows(read_snapshot(snapshot_dir / "fixture.jsonl.gz"))
+    rows = list(build_rows(read_snapshot(snapshot_dir / "fixture.jsonl.gz")))
     return InMemoryCorpusStore(
         (
             (
@@ -51,4 +51,5 @@ def fixture_store(snapshot_dir: Path) -> InMemoryCorpusStore:
             for r in rows
         ),
         corpus_version="fixture",
+        bodies={r.number: r.body for r in rows},
     )

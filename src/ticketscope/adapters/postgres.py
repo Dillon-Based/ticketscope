@@ -15,7 +15,14 @@ from typing import Any, cast
 
 import psycopg
 
-from ticketscope.core.model import IssueRecord, Kind, OutcomeSource, OutcomeStatus, Scored
+from ticketscope.core.model import (
+    IssueDetail,
+    IssueRecord,
+    Kind,
+    OutcomeSource,
+    OutcomeStatus,
+    Scored,
+)
 
 log = logging.getLogger(__name__)
 
@@ -38,6 +45,29 @@ WHERE score < 0
 ORDER BY score, number
 """
 
+# The `_KEYWORD_SQL` issue columns, in the same order, plus `body`.
+_ISSUE_SQL = """
+SELECT number, title, url, kind, state,
+       outcome_status, outcome_summary, outcome_source, outcome_ref, body
+FROM issue
+WHERE number = %(number)s
+"""
+
+
+def _issue_record(row: Sequence[Any]) -> IssueRecord:
+    """The first nine columns of a `_KEYWORD_SQL` or `_ISSUE_SQL` row."""
+    return IssueRecord(
+        number=row[0],
+        title=row[1],
+        url=row[2],
+        kind=cast(Kind, row[3]),
+        state=row[4],
+        outcome_status=cast(OutcomeStatus, row[5]),
+        outcome_summary=row[6],
+        outcome_source=cast(OutcomeSource | None, row[7]),
+        outcome_ref=row[8],
+    )
+
 
 class PostgresCorpusStore:
     """`CorpusStore` over the loaded corpus. One short connection per call."""
@@ -50,23 +80,12 @@ class PostgresCorpusStore:
             return []
         with psycopg.connect(self._conninfo) as conn:
             rows = conn.execute(_KEYWORD_SQL, {"query": query, "k": k}).fetchall()
-        return [
-            Scored(
-                issue=IssueRecord(
-                    number=row[0],
-                    title=row[1],
-                    url=row[2],
-                    kind=cast(Kind, row[3]),
-                    state=row[4],
-                    outcome_status=cast(OutcomeStatus, row[5]),
-                    outcome_summary=row[6],
-                    outcome_source=cast(OutcomeSource | None, row[7]),
-                    outcome_ref=row[8],
-                ),
-                score=-float(row[9]),
-            )
-            for row in rows
-        ]
+        return [Scored(issue=_issue_record(row), score=-float(row[9])) for row in rows]
+
+    def get_issue(self, number: int) -> IssueDetail | None:
+        with psycopg.connect(self._conninfo) as conn:
+            row = conn.execute(_ISSUE_SQL, {"number": number}).fetchone()
+        return None if row is None else IssueDetail(issue=_issue_record(row), body=row[9])
 
     def corpus_version(self) -> str | None:
         with psycopg.connect(self._conninfo) as conn:

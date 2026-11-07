@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="5" time="13.169" timestamp="2026-11-07T16:21:13.901745-05:00" hostname="Dillons-Mac-mini.local"><testcase classname="tests.integrated.test_done_when" name="test_loaded_corpus_is_the_pinned_asset_valid_against_schema_v2" time="2.907" /><testcase classname="tests.integrated.test_done_when" name="test_every_loaded_issue_has_a_valid_kind_and_outcome" time="0.351" /><testcase classname="tests.integrated.test_done_when" name="test_golden_queries_return_their_twins_with_outcomes_via_v1_and_page" time="0.109" /><testcase classname="tests.integrated.test_done_when" name="test_one_search_reaches_tempo_as_the_ad10_tree" time="6.202" /><testcase classname="tests.integrated.test_done_when" name="test_an_on_demand_backup_completes_to_seaweedfs" time="3.476"><failure message="AssertionError: listing ticketscope-db/base/20261107T212124: curl: (22) The requested URL returned error: 404&#10;  command terminated with exit code 22&#10;  &#10;assert 22 == 0&#10; +  where 22 = CompletedProcess(args=['kubectl', '-n', 'platform', 'exec', 'deploy/seaweedfs-all-in-one', '--', 'curl', '-sSf', '-H',...ncode=22, stdout='', stderr='curl: (22) The requested URL returned error: 404\ncommand terminated with exit code 22\n').returncode">def test_an_on_demand_backup_completes_to_seaweedfs() -&gt; None:
+&gt;       _assert_on_demand_backup_completes("integrated")
+
+tests/integrated/test_done_when.py:220: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/smoke/test_gateway.py:584: in _assert_on_demand_backup_completes
+    listing = _bucket_listing(f"{server}/base/{backup_id}")
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+path = 'ticketscope-db/base/20261107T212124'
+
+    def _bucket_listing(path: str) -&gt; list[str]:
+        """Entry names under `path` in the backup bucket, from the SeaweedFS filer's JSON
+        listing, read inside the all-in-one pod (SeaweedFS is never exposed, AD-14)."""
+        result = subprocess.run(
+            [
+                "kubectl",
+                "-n",
+                PLATFORM_NAMESPACE,
+                "exec",
+                "deploy/seaweedfs-all-in-one",
+                "--",
+                "curl",
+                "-sSf",
+                "-H",
+                "Accept: application/json",
+                f"http://localhost:8888/buckets/{BACKUP_BUCKET}/{path.strip('/')}/?limit=1000",
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+&gt;       assert result.returncode == 0, f"listing {path}: {result.stdout}{result.stderr}"
+E       AssertionError: listing ticketscope-db/base/20261107T212124: curl: (22) The requested URL returned error: 404
+E         command terminated with exit code 22
+E         
+E       assert 22 == 0
+E        +  where 22 = CompletedProcess(args=['kubectl', '-n', 'platform', 'exec', 'deploy/seaweedfs-all-in-one', '--', 'curl', '-sSf', '-H',...ncode=22, stdout='', stderr='curl: (22) The requested URL returned error: 404\ncommand terminated with exit code 22\n').returncode
+
+tests/smoke/test_gateway.py:526: AssertionError</failure></testcase></testsuite></testsuites>

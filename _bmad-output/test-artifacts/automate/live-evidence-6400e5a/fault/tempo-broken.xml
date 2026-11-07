@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="5" time="67.164" timestamp="2026-11-07T16:19:16.621104-05:00" hostname="Dillons-Mac-mini.local"><testcase classname="tests.integrated.test_done_when" name="test_loaded_corpus_is_the_pinned_asset_valid_against_schema_v2" time="2.936" /><testcase classname="tests.integrated.test_done_when" name="test_every_loaded_issue_has_a_valid_kind_and_outcome" time="0.360" /><testcase classname="tests.integrated.test_done_when" name="test_golden_queries_return_their_twins_with_outcomes_via_v1_and_page" time="0.114" /><testcase classname="tests.integrated.test_done_when" name="test_one_search_reaches_tempo_as_the_ad10_tree" time="60.066"><failure message="AssertionError: trace not complete: last 0: Error from server (ServiceUnavailable): no endpoints available for service &quot;tempo&quot;&#10;  &#10;assert 0 == 200">def test_one_search_reaches_tempo_as_the_ad10_tree() -&gt; None:
+        trace_id = _search_with_traceparent()
+&gt;       _poll_trace(lambda: _tempo(trace_id))
+
+tests/integrated/test_done_when.py:213: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/smoke/test_gateway.py:689: in _poll_trace
+    return eventually(complete_trace, timeout=TRACE_TIMEOUT_SECONDS, interval=3)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/waiting.py:31: in eventually
+    return check()
+           ^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    def complete_trace() -&gt; dict[str, Any]:
+        status, body = fetch()
+&gt;       assert status == 200, f"trace not complete: last {status}: {body[:2000]}"
+E       AssertionError: trace not complete: last 0: Error from server (ServiceUnavailable): no endpoints available for service "tempo"
+E         
+E       assert 0 == 200
+
+tests/smoke/test_gateway.py:681: AssertionError</failure></testcase><testcase classname="tests.integrated.test_done_when" name="test_an_on_demand_backup_completes_to_seaweedfs" time="3.553" /></testsuite></testsuites>

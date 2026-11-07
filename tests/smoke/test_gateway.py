@@ -3,15 +3,18 @@
 Needs `TICKETSCOPE_GATEWAY_URL` (e.g. `http://172.18.0.5`) and
 `TICKETSCOPE_GATEWAY_HOST` (the route hostname), plus `kubectl` and `helm` on the cluster.
 Run with `uv run pytest -m kind tests/smoke`. The tests run in file order: (1) search
-through the Gateway, (1b) the rest of the /v1 contract through the Gateway, (2) SQL on
-the CNPG primary, (3) the load report, (4) a same-pin upgrade is a no-op, (5) a stale
-preprocessing version reloads, (6) two ready instances.
+through the Gateway, (1b) the rest of the /v1 contract through the Gateway, (1c) the
+search page through the Gateway, (2) SQL on the CNPG primary, (3) the load report, (4) a
+same-pin upgrade is a no-op, (5) a stale preprocessing version reloads, (6) two ready
+instances.
 """
 
 import json
 import os
 import re
 import subprocess
+from html.parser import HTMLParser
+from urllib.parse import urlencode
 
 import httpx2
 import pytest
@@ -25,6 +28,7 @@ pytestmark = pytest.mark.kind
 NAMESPACE = os.environ.get("TICKETSCOPE_NAMESPACE", "ticketscope")
 CLUSTER = os.environ.get("TICKETSCOPE_CLUSTER_NAME", "ticketscope-db")
 PIN = snapshot_pin()["version"]
+GOLDEN = json.loads((REPO / "eval" / "golden-queries.json").read_text(encoding="utf-8"))
 ISSUE_COUNT = 32153  # issues in snapshot 2026.11.1
 RESULTS_QUERY = "launcher crash"
 OUTCOMES = ("fixed", "duplicate", "not_planned", "stale", "answered", "unknown")
@@ -201,6 +205,88 @@ def test_a_pasted_stack_trace_of_4kb_ranks() -> None:
     assert len(trace.encode()) >= 4096
     body = _search("Game crashed on launch\n" + trace)
     assert body.results, "no results"
+
+
+# (1c) --------------------------------------------------------------------------------------
+
+
+class _Rows(HTMLParser):
+    """`(rank, data-outcome, title href, kind text, outcome text)` per result row, plus
+    whether the page has the `q` textarea in a post form."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.rows: list[dict[str, str]] = []
+        self.has_form = False
+        self._capture: str | None = None
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        a = {k: v or "" for k, v in attrs}
+        css = a.get("class", "").split()
+        if tag == "textarea" and a.get("name") == "q":
+            self.has_form = True
+        elif tag == "li" and "result" in css:
+            self.rows.append(
+                {"rank": a["data-rank"], "data-outcome": a["data-outcome"], "href": ""}
+            )
+        elif self.rows and {"title", "kind", "outcome"} & set(css):
+            name = ({"title", "kind", "outcome"} & set(css)).pop()
+            if name == "title":
+                self.rows[-1]["href"] = a.get("href", "")
+            self.rows[-1].setdefault(name, "")
+            self._capture = name
+
+    def handle_endtag(self, tag: str) -> None:
+        self._capture = None
+
+    def handle_data(self, data: str) -> None:
+        if self._capture:
+            self.rows[-1][self._capture] += data
+
+
+def _page(query: str) -> tuple[httpx2.Response, _Rows]:
+    url, host = _gateway()
+    response = httpx2.post(
+        f"{url}/",
+        content=urlencode({"q": query}),
+        headers={"Host": host, "content-type": "application/x-www-form-urlencoded"},
+        timeout=30,
+    )
+    assert response.status_code == 200, response.text
+    assert response.headers["content-type"].startswith("text/html")
+    parsed = _Rows()
+    parsed.feed(response.text)
+    return response, parsed
+
+
+def test_page_serves_the_form() -> None:
+    url, host = _gateway()
+    response = httpx2.get(f"{url}/", headers={"Host": host}, timeout=30)
+    assert response.status_code == 200, response.text
+    assert response.headers["content-type"].startswith("text/html")
+    parsed = _Rows()
+    parsed.feed(response.text)
+    assert parsed.has_form
+    assert '<form method="post" action="/">' in response.text
+
+
+@pytest.mark.parametrize("entry", GOLDEN["queries"], ids=[q["id"] for q in GOLDEN["queries"]])
+def test_page_renders_each_golden_query(entry: dict[str, object]) -> None:
+    _, parsed = _page(str(entry["query"]))
+    assert parsed.rows, "no rows"
+    assert [int(r["rank"]) for r in parsed.rows] == list(range(1, len(parsed.rows) + 1))
+    for row in parsed.rows:
+        assert row["href"].startswith("https://"), row
+        assert row.get("title", "").strip(), row
+        assert row.get("kind") in ("short", "log-heavy"), row
+        assert row["data-outcome"] in OUTCOMES, row
+        assert row.get("outcome", "").strip() == row["data-outcome"], row
+
+
+def test_page_escapes_a_script_query() -> None:
+    response, _ = _page("<script>alert(1)</script> launcher crash")
+    assert "<script" not in response.text
+    assert "&lt;script&gt;" in response.text
 
 
 # (2) ---------------------------------------------------------------------------------------

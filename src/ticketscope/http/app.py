@@ -7,11 +7,13 @@ import logging
 from collections.abc import Mapping, Sequence
 from http import HTTPStatus
 from typing import Any
+from urllib.parse import parse_qs
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
+from starlette.concurrency import run_in_threadpool
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from ticketscope.contract.search import (
@@ -23,9 +25,10 @@ from ticketscope.contract.search import (
     SearchResponse,
     SearchResult,
 )
-from ticketscope.core.model import IssueRecord
+from ticketscope.core.model import IssueRecord, Scored
 from ticketscope.core.modes import REGISTRY
 from ticketscope.core.ports import CorpusStore
+from ticketscope.http import page
 from ticketscope.settings import Settings
 
 log = logging.getLogger(__name__)
@@ -94,6 +97,29 @@ def _outcome(issue: IssueRecord) -> Outcome:
     )
 
 
+def _results(hits: list[Scored]) -> list[SearchResult]:
+    """Ranked hits as `/v1` results: the one result shape for the API and the page (AD-4)."""
+    return [
+        SearchResult(
+            rank=rank,
+            score=hit.score,
+            issue=Issue(
+                number=hit.issue.number,
+                title=hit.issue.title,
+                url=hit.issue.url,
+                kind=hit.issue.kind,
+                state=hit.issue.state,
+            ),
+            outcome=_outcome(hit.issue),
+        )
+        for rank, hit in enumerate(hits, start=1)
+    ]
+
+
+PAGE_MODE = "keyword"
+PAGE_K = 10
+
+
 def create_app(store: CorpusStore | None = None, settings: Settings | None = None) -> FastAPI:
     """Build the app. Without a `store`, wire the Postgres adapter as `ticketscope_ro`."""
     settings = settings or Settings()
@@ -149,22 +175,40 @@ def create_app(store: CorpusStore | None = None, settings: Settings | None = Non
             mode=mode.name,  # pyright: ignore[reportArgumentType]
             score_kind=mode.score_kind,
             corpus_version=version,
-            results=[
-                SearchResult(
-                    rank=rank,
-                    score=hit.score,
-                    issue=Issue(
-                        number=hit.issue.number,
-                        title=hit.issue.title,
-                        url=hit.issue.url,
-                        kind=hit.issue.kind,
-                        state=hit.issue.state,
-                    ),
-                    outcome=_outcome(hit.issue),
-                )
-                for rank, hit in enumerate(hits, start=1)
-            ],
+            results=_results(hits),
         )
+
+    def render_page(query: str) -> HTMLResponse:
+        # The page answers its own errors in HTML; the global handler's problem+json
+        # is for /v1, not a browser.
+        if not query.strip():
+            return HTMLResponse(page.render(query, message=page.BLANK_MESSAGE))
+        try:
+            if corpus.corpus_version() is None:
+                return HTMLResponse(
+                    page.render(query, message=page.NOT_LOADED_MESSAGE, error=True),
+                    status_code=503,
+                )
+            hits = REGISTRY[PAGE_MODE].build(corpus).search(query, PAGE_K)
+            if not hits:
+                return HTMLResponse(page.render(query, message=page.NO_MATCH_MESSAGE))
+            return HTMLResponse(page.render(query, _results(hits)))
+        except Exception:
+            log.exception("search page failed")
+            return HTMLResponse(
+                page.render(query, message=page.ERROR_MESSAGE, error=True), status_code=500
+            )
+
+    @app.get("/", response_class=HTMLResponse)
+    def page_get(q: str = "") -> HTMLResponse:  # pyright: ignore[reportUnusedFunction]
+        return render_page(q)
+
+    @app.post("/", response_class=HTMLResponse)
+    async def page_post(request: Request) -> HTMLResponse:  # pyright: ignore[reportUnusedFunction]
+        # Form-encoded by hand: FastAPI's Form needs python-multipart for one field.
+        form = parse_qs((await request.body()).decode("utf-8", errors="replace"))
+        # The store call blocks: keep it off the event loop, as FastAPI does for sync routes.
+        return await run_in_threadpool(render_page, form.get("q", [""])[-1])
 
     @app.get("/v1/issues/{number}")
     def get_issue(number: int) -> IssueResponse:  # pyright: ignore[reportUnusedFunction]

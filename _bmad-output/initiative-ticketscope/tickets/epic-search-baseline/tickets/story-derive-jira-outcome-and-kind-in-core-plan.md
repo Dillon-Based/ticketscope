@@ -88,9 +88,9 @@ deferred:
 - [x] `tests/unit/test_derive_jira.py` -- one named test per matrix row and test-design case, plus order independence of comments/links and the version differing from `kind1-t3.outcome2` -- R2 verify
 
 **Acceptance Criteria:**
-- Given the unit suite, when `uv run pytest tests/unit/test_derive_jira.py -v` runs, then one passing case exists per outcome class from a Jira resolution, an unmapped resolution reading unknown, an answered and a not-answered Question case, and kind cases with `{code}` and `{noformat}` blocks on either side of the threshold.
+- Given the unit suite, when `uv run pytest tests/unit/test_derive_jira.py -v` runs, then one passing case exists per outcome class from a Jira resolution, an unmapped resolution reading unknown, an answered and a not-answered Question case, and kind cases with `{code}` and `{noformat}` blocks on either side of the threshold. (R2)
 - Given story 4's suite, when `uv run pytest tests/unit/test_derive.py` runs, then every GitHub-rule case still passes.
-- Given the defaults, when `derivation_version()` is called, then it returns `kind2-t3.outcome3`, not story 4's `kind1-t3.outcome2`.
+- Given the defaults, when `derivation_version()` is called, then it returns `kind2-t3.outcome3`, not story 4's `kind1-t3.outcome2`. (R2)
 
 ## Implementation Notes
 

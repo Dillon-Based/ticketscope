@@ -62,11 +62,11 @@ A subset closer to support tickets breaks ties between candidates; it is not a r
 
 ## Acceptance Criteria
 
-1. **The instances and leading projects are compared on the decision rule**
+1. **The instances and leading projects are compared on the decision rule** (R1)
    Verify: a findings note beside this ticket holds a table per instance and per leading project. Each table gives the issue count, in-subset duplicate pairs by kind, the outcome shares under the proposed mapping, the issue-type mix, and the text-hygiene counts. The CSVs it was built from sit with it.
-2. **The recommended subset is shown to work**
+2. **The recommended subset is shown to work** (R1)
    Verify: the findings note names the subset and its expected duplicate-pair count by kind. It shows the subset's measured load time through story 3's timed-load script within 600 s, and 20 sampled issues per leading candidate with the author's judgement of each.
-3. **The answer and its consequences are recorded where the waiting tickets read them**
+3. **The answer and its consequences are recorded where the waiting tickets read them** (R1)
    Verify: the epic's Notes holds a dated Decision line: switch, stay, or switch with named conditions. On switch, the line names:
 
 - the subset;
@@ -75,7 +75,7 @@ A subset closer to support tickets breaks ties between candidates; it is not a r
 - the attribution line.
 
 It also amends the epic's Corpus scope (the 20,000 cap and the source) and Corpus terms for the new source, and says the data lane and epic-eval-gate are to be replanned.
-4. **The author accepts it**
+4. **The author accepts it** (R1)
    Verify: the Decision line is attributed to the author (user) and dated.
 
 ## References

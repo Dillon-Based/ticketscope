@@ -12,6 +12,7 @@ from urllib.parse import urlencode
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.factories import form_payload
 from tests.target import REPO, TARGET_QUERY
 from tests.unit.test_page import FORM, OUTCOMES, Parsed, parse
 from ticketscope.contract.search import Issue, Outcome, SearchResult
@@ -203,13 +204,13 @@ def test_invalid_utf8_in_the_body_does_not_fail(client: TestClient) -> None:
 
 def test_non_ascii_query_echoes_exactly(client: TestClient) -> None:
     query = "zephyrcache — éviction 驱逐 🚀"
-    parsed = _post_raw(client, urlencode({"q": query}))
+    parsed = _post_raw(client, urlencode(form_payload(query)))
     assert parsed.textarea == query
 
 
 def test_crlf_in_a_pasted_log_echoes_exactly(client: TestClient) -> None:
     query = "zephyrcache eviction\r\n\tat a.b(C.java:1)\r\n"
-    response = client.post("/", content=urlencode({"q": query}), headers=FORM)
+    response = client.post("/", content=urlencode(form_payload(query)), headers=FORM)
     # Browsers normalise CRLF in a textarea; the body carries it as written.
     assert "zephyrcache eviction\r\n\tat a.b(C.java:1)\r\n</textarea>" in response.text
 
@@ -221,7 +222,7 @@ def test_page_lists_at_most_k_rows_in_score_order() -> None:
     assert PAGE_K == 10
     docs = [(_record(n), "quokka " * n) for n in range(1, 14)]
     client = _client(*docs)
-    rows = _post_raw(client, urlencode({"q": "quokka"})).rows
+    rows = _post_raw(client, urlencode(form_payload("quokka"))).rows
     assert len(rows) == PAGE_K
     assert [r.rank for r in rows] == list(range(1, PAGE_K + 1))
     # Highest term count ranks first: issue 13 down to issue 4.
@@ -246,7 +247,7 @@ def test_page_rows_carry_ref_and_null_summary_from_the_store() -> None:
 def test_page_ignores_the_settings_default_mode(fixture_store: InMemoryCorpusStore) -> None:
     # The page always uses keyword retrieval, whatever the API default is.
     client = TestClient(create_app(store=fixture_store, settings=Settings(default_mode="nope")))
-    assert _post_raw(client, urlencode({"q": TARGET_QUERY})).rows
+    assert _post_raw(client, urlencode(form_payload(TARGET_QUERY))).rows
 
 
 # --- routing boundaries -------------------------------------------------------------------
@@ -265,13 +266,10 @@ def test_other_methods_on_the_page_are_405(client: TestClient) -> None:
     assert "GET" in response.headers["allow"]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="product defect: GET / and POST / are separate routes, so a 405 on / lists only"
-    " GET in Allow (RFC 9110 15.5.6 says Allow lists the supported methods)",
-)
-def test_405_on_the_page_lists_both_page_methods(client: TestClient) -> None:
-    response = client.put("/", content="q=x", headers=FORM)
+@pytest.mark.parametrize("method", ["PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"])
+def test_405_on_the_page_lists_both_page_methods(client: TestClient, method: str) -> None:
+    response = client.request(method, "/", content="q=x", headers=FORM)
+    assert response.status_code == 405
     assert set(response.headers["allow"].replace(" ", "").split(",")) == {"GET", "POST"}
 
 

@@ -91,10 +91,10 @@ Greenfield: no code exists. Follow the spine's Structural Seed layout.
 - [ ] `tests/smoke/test_gateway.py` (marker `kind`) -- reads `TICKETSCOPE_GATEWAY_URL` and `TICKETSCOPE_GATEWAY_HOST`, posts the target query, asserts the Best-match row and that the response parses as `SearchResponse`, and checks the Cluster through `kubectl`: `readyInstances == 2`
 
 **Acceptance Criteria:**
-- Given a PR, when `ci.yml` runs, then ruff, pyright, pytest and lint-imports pass, and `_kind-deploy` brings up both releases and passes the smoke test.
-- Given a PR that changes `images/`, when `ci.yml` runs, then both images build for `linux/amd64` and `linux/arm64`.
-- Given a one-line change that makes a `core` module import `ticketscope.adapters.postgres`, when `lint-imports` runs, then it fails.
-- Given a `_kind-deploy` run, when it finishes, then its job summary shows peak memory, free disk, and the wall-clock time from kind-up to api Ready.
+- Given a PR, when `ci.yml` runs, then ruff, pyright, pytest and lint-imports pass, and `_kind-deploy` brings up both releases and passes the smoke test. (R7)
+- Given a PR that changes `images/`, when `ci.yml` runs, then both images build for `linux/amd64` and `linux/arm64`. (R7)
+- Given a one-line change that makes a `core` module import `ticketscope.adapters.postgres`, when `lint-imports` runs, then it fails. (R7)
+- Given a `_kind-deploy` run, when it finishes, then its job summary shows peak memory, free disk, and the wall-clock time from kind-up to api Ready. (R7)
 
 ## Implementation Notes
 

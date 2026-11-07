@@ -1,14 +1,45 @@
 import gzip
 import hashlib
+import logging
+import os
 import shutil
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
+from opentelemetry import trace
+from opentelemetry.instrumentation.psycopg import PsycopgInstrumentor
 
 from tests.target import SNAPSHOT_DIR
+from ticketscope import telemetry
 from ticketscope.core.fakes import InMemoryCorpusStore
 from ticketscope.core.model import IssueRecord
 from ticketscope.jobs.load.main import build_rows, read_snapshot
+
+
+@pytest.fixture(autouse=True)
+def _isolate_process_bootstrap(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """Job mains run in-process here; real provider registration is tested in a child.
+
+    Do not consume OpenTelemetry's write-once global provider. Undo instrumentation,
+    environment and logger changes even when a job assertion fails.
+    """
+    monkeypatch.setattr(trace, "set_tracer_provider", lambda provider: None)
+    opt_in = telemetry.SEMCONV_OPT_IN_VAR
+    if opt_in in os.environ:
+        monkeypatch.setenv(opt_in, os.environ[opt_in])
+    else:
+        monkeypatch.delenv(opt_in, raising=False)
+    logger = logging.getLogger("httpx2")
+    level = logger.level
+    instrumentor = PsycopgInstrumentor()
+    was_instrumented = instrumentor.is_instrumented_by_opentelemetry
+    try:
+        yield
+    finally:
+        logger.setLevel(level)
+        if not was_instrumented and instrumentor.is_instrumented_by_opentelemetry:
+            instrumentor.uninstrument()
 
 
 @pytest.fixture

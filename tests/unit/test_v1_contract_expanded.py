@@ -13,6 +13,7 @@ import httpx2
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.factories import search_payload
 from tests.target import TARGET_NUMBER, TARGET_QUERY
 from ticketscope.contract.search import IssueResponse, Problem, SearchRequest, SearchResponse
 from ticketscope.core.fakes import InMemoryCorpusStore
@@ -73,7 +74,7 @@ def test_search_store_failure_is_a_500_problem_without_the_error_text() -> None:
     client = TestClient(
         create_app(store=_BrokenStore(), settings=Settings()), raise_server_exceptions=False
     )
-    response = client.post("/v1/search", json={"query": "x", "mode": "keyword"})
+    response = client.post("/v1/search", json=search_payload("x", mode="keyword"))
     problem = _problem(response, 500)
     assert problem.detail == "internal server error"
     assert "10.0.0.5" not in response.text
@@ -88,7 +89,7 @@ class _SearchFailsStore(InMemoryCorpusStore):
 def test_failure_after_the_version_check_is_a_500_problem() -> None:
     store = _SearchFailsStore([(_issue(1), "alpha")], corpus_version="v")
     client = TestClient(create_app(store=store, settings=Settings()), raise_server_exceptions=False)
-    response = client.post("/v1/search", json={"query": "alpha", "mode": "keyword"})
+    response = client.post("/v1/search", json=search_payload("alpha", mode="keyword"))
     _problem(response, 500)
     assert "bm25" not in response.text
 
@@ -112,14 +113,14 @@ def test_two_invalid_fields_give_two_errors_and_one_joined_detail(client: TestCl
 
 @pytest.mark.parametrize("k", ["ten", 1.5, None])
 def test_non_integer_k_is_422(client: TestClient, k: object) -> None:
-    response = client.post("/v1/search", json={"query": TARGET_QUERY, "mode": "keyword", "k": k})
+    response = client.post("/v1/search", json=search_payload(TARGET_QUERY, mode="keyword", k=k))
     problem = _problem(response, 422)
     assert problem.errors
     assert problem.errors[0].loc == ["body", "k"]
 
 
 def test_a_json_array_body_is_422(client: TestClient) -> None:
-    response = client.post("/v1/search", json=[{"query": TARGET_QUERY}])
+    response = client.post("/v1/search", json=[search_payload(TARGET_QUERY)])
     problem = _problem(response, 422)
     assert problem.errors
 
@@ -127,15 +128,15 @@ def test_a_json_array_body_is_422(client: TestClient) -> None:
 def test_unknown_mode_is_checked_before_the_corpus() -> None:
     # An empty store is not loaded (503), but an invalid request is still the caller's 422.
     client = TestClient(create_app(store=InMemoryCorpusStore(), settings=Settings()))
-    _problem(client.post("/v1/search", json={"query": "x", "mode": "dense"}), 422)
-    _problem(client.post("/v1/search", json={"query": "x", "k": 51}), 422)
+    _problem(client.post("/v1/search", json=search_payload("x", mode="dense")), 422)
+    _problem(client.post("/v1/search", json=search_payload("x", k=51)), 422)
 
 
 def test_a_server_default_outside_the_registry_is_a_422_problem(
     fixture_store: InMemoryCorpusStore,
 ) -> None:
     client = TestClient(create_app(store=fixture_store, settings=Settings(default_mode="dense")))
-    problem = _problem(client.post("/v1/search", json={"query": TARGET_QUERY}), 422)
+    problem = _problem(client.post("/v1/search", json=search_payload(TARGET_QUERY)), 422)
     assert problem.detail == "mode: unknown mode: dense"
 
 
@@ -174,10 +175,10 @@ def test_health_bodies_are_unchanged(client: TestClient) -> None:
 def test_unknown_request_fields_are_accepted_and_do_not_change_the_response(
     client: TestClient,
 ) -> None:
-    plain = client.post("/v1/search", json={"query": TARGET_QUERY, "mode": "keyword"})
+    plain = client.post("/v1/search", json=search_payload(TARGET_QUERY, mode="keyword"))
     extra = client.post(
         "/v1/search",
-        json={"query": TARGET_QUERY, "mode": "keyword", "client": "mcp", "trace": {"x": 1}},
+        json=search_payload(TARGET_QUERY, mode="keyword", client="mcp", trace={"x": 1}),
     )
     assert extra.status_code == 200
     assert extra.content == plain.content
@@ -186,7 +187,7 @@ def test_unknown_request_fields_are_accepted_and_do_not_change_the_response(
 def test_exclude_is_not_on_the_http_surface(client: TestClient) -> None:
     response = client.post(
         "/v1/search",
-        json={"query": TARGET_QUERY, "mode": "keyword", "exclude": [TARGET_NUMBER]},
+        json=search_payload(TARGET_QUERY, mode="keyword", exclude=[TARGET_NUMBER]),
     )
     assert response.status_code == 200
     numbers = [r["issue"]["number"] for r in response.json()["results"]]
@@ -198,7 +199,7 @@ def test_default_k_is_ten() -> None:
     store = InMemoryCorpusStore([(_issue(n), "alpha") for n in range(1, 21)], corpus_version="v")
     client = TestClient(create_app(store=store, settings=Settings(default_mode="keyword")))
     results = SearchResponse.model_validate(
-        client.post("/v1/search", json={"query": "alpha"}).json()
+        client.post("/v1/search", json=search_payload("alpha")).json()
     ).results
     assert len(results) == 10
 
@@ -206,7 +207,7 @@ def test_default_k_is_ten() -> None:
 def test_k_50_returns_50_when_the_corpus_has_them() -> None:
     store = InMemoryCorpusStore([(_issue(n), "alpha") for n in range(1, 61)], corpus_version="v")
     client = TestClient(create_app(store=store, settings=Settings(default_mode="keyword")))
-    response = client.post("/v1/search", json={"query": "alpha", "k": 50})
+    response = client.post("/v1/search", json=search_payload("alpha", k=50))
     assert response.status_code == 200
     assert len(response.json()["results"]) == 50
 

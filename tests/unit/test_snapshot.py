@@ -136,10 +136,11 @@ def test_fixture_records_kinds_outside_the_schema_and_they_hold() -> None:
 
 def test_fixture_log_heavy_issues_use_jira_blocks() -> None:
     kinds = fixture_kinds()
-    for line in _lines():
-        if kinds[line["number"]] == "log_heavy":
-            assert "{code" in line["body"] or "{noformat}" in line["body"]
-            assert "```" not in line["body"]
+    heavy = [line for line in _lines() if kinds[line["number"]] == "log_heavy"]
+    assert heavy, "fixture holds no log-heavy issue"
+    for line in heavy:
+        assert "{code" in line["body"] or "{noformat}" in line["body"]
+        assert "```" not in line["body"]
 
 
 # --- load reads v2 (case 2) --------------------------------------------------------------

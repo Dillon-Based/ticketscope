@@ -66,9 +66,13 @@ def _field(loc: Sequence[Any]) -> str:
     return ".".join(str(p) for p in parts)
 
 
-async def _http_problem(_request: Request, exc: Exception) -> JSONResponse:
+async def _http_problem(request: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, StarletteHTTPException)
-    return _problem(exc.status_code, exc.detail, headers=exc.headers)
+    headers = exc.headers
+    if exc.status_code == 405 and request.url.path == "/":
+        # Separate GET/POST routes otherwise report only the first partial match.
+        headers = {**(headers or {}), "Allow": "GET, POST"}
+    return _problem(exc.status_code, exc.detail, headers=headers)
 
 
 async def _validation_problem(_request: Request, exc: Exception) -> JSONResponse:

@@ -241,6 +241,7 @@ def test_whitespace_only_pin_exits_1(
 @pytest.mark.usefixtures("env")
 def test_main_silences_httpx2_request_logging() -> None:
     db = _Db(CorpusMeta("fixture", None, PRE))
+    logging.getLogger("httpx2").setLevel(logging.INFO)
     with pytest.MonkeyPatch.context() as mp:
         _use(db, mp)
         assert load.main() == 0

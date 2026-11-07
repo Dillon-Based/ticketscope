@@ -93,11 +93,11 @@ deferred: []
 - [x] Evidence file -- 20 short issues with score 2 and 20 log-heavy issues with score 3–4 from 2026.11.1 (seeded random), each with the key linked to bugs.mojang.com, the score and the title. Exclude issues whose text has an OS user-name path. Linked from the PR body.
 
 **Acceptance Criteria:**
-- Given the kind CI run, when `uv run pytest -m kind tests/smoke` runs after `kind-up.sh`, then checks (1)–(6) pass on snapshot 2026.11.1.
-- Given an asset whose checksum differs from the pin, when `load` runs against a DB already holding a corpus, then it exits 1 and the corpus and `corpus_meta` are unchanged (unit test with fakes, plus the adapter test).
-- Given the fixture, when the unit suite runs, then every fixture issue's computed kind equals `fixture-kinds.json`, and `test_app`/`test_modes` still find `TARGET_NUMBER` at rank 1.
-- Given `eval/golden-queries.json`, when `test_golden_queries.py` runs, then each source and expected issue exists in the pinned asset, and each expected issue differs from its source.
-- Given `scripts/time-load.sh <dir> 2026.11.1` with only the asset in `<dir>`, when it runs, then it exits 0 and prints a time under 600.
+- Given the kind CI run, when `uv run pytest -m kind tests/smoke` runs after `kind-up.sh`, then checks (1)–(6) pass on snapshot 2026.11.1. (R2, R3, R5, R7)
+- Given an asset whose checksum differs from the pin, when `load` runs against a DB already holding a corpus, then it exits 1 and the corpus and `corpus_meta` are unchanged (unit test with fakes, plus the adapter test). (R2)
+- Given the fixture, when the unit suite runs, then every fixture issue's computed kind equals `fixture-kinds.json`, and `test_app`/`test_modes` still find `TARGET_NUMBER` at rank 1. (R2, R3)
+- Given `eval/golden-queries.json`, when `test_golden_queries.py` runs, then each source and expected issue exists in the pinned asset, and each expected issue differs from its source. (R3, R4)
+- Given `scripts/time-load.sh <dir> 2026.11.1` with only the asset in `<dir>`, when it runs, then it exits 0 and prints a time under 600. (R2)
 
 ## Implementation Notes
 

@@ -18,7 +18,11 @@ def test_registry_holds_keyword_only() -> None:
 
 
 def test_registry_builds_a_keyword_retriever() -> None:
-    assert isinstance(REGISTRY["keyword"].build(InMemoryCorpusStore()), KeywordRetriever)
+    store = InMemoryCorpusStore([(_issue(7), "alpha beta"), (_issue(9), "unrelated")])
+    retriever = REGISTRY["keyword"].build(store)
+    assert isinstance(retriever, KeywordRetriever)
+    hits = retriever.search("alpha beta", k=10)
+    assert [(hit.issue.number, hit.score) for hit in hits] == [(7, 2.0)]
 
 
 def test_keyword_ranks_by_overlap_then_number() -> None:

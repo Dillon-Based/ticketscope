@@ -62,7 +62,9 @@ def test_checksum_mismatch_deletes_the_download(tmp_path: Path) -> None:
 
 def test_pin_is_compared_case_insensitively(tmp_path: Path) -> None:
     transport = _transport(lambda r: httpx2.Response(200, content=BODY))
-    fetch_snapshot(BASE, VERSION, tmp_path, SHA.upper(), timeout=5, transport=transport)
+    path = fetch_snapshot(BASE, VERSION, tmp_path, SHA.upper(), timeout=5, transport=transport)
+    assert path == tmp_path / f"{VERSION}.jsonl.gz"
+    assert path.read_bytes() == BODY
 
 
 def test_http_error_leaves_no_partial_file(tmp_path: Path) -> None:

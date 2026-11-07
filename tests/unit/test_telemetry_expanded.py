@@ -20,6 +20,7 @@ from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 from opentelemetry.trace import SpanKind, StatusCode
 
+from tests.factories import form_payload, search_payload
 from tests.target import TARGET_QUERY
 from ticketscope import telemetry
 from ticketscope.core.fakes import InMemoryCorpusStore
@@ -89,7 +90,7 @@ def test_incoming_traceparent_is_continued_by_the_server_span(
     parent_id = "00f067aa0ba902b7"
     response = _client(fixture_store, provider).post(
         "/v1/search",
-        json={"query": TARGET_QUERY, "mode": "keyword"},
+        json=search_payload(TARGET_QUERY, mode="keyword"),
         headers={"traceparent": f"00-{trace_id}-{parent_id}-01"},
     )
     assert response.status_code == 200
@@ -110,7 +111,7 @@ def test_each_request_without_traceparent_is_its_own_trace(
 ) -> None:
     client = _client(fixture_store, provider)
     for _ in range(2):
-        assert client.post("/v1/search", json={"query": TARGET_QUERY}).status_code == 200
+        assert client.post("/v1/search", json=search_payload(TARGET_QUERY)).status_code == 200
     servers = [s for s in exporter.get_finished_spans() if s.kind == SpanKind.SERVER]
     assert len(servers) == 2
     assert all(s.parent is None for s in servers)
@@ -124,7 +125,7 @@ def test_zero_results_reports_a_count_of_zero(
     fixture_store: InMemoryCorpusStore, provider: TracerProvider, exporter: InMemorySpanExporter
 ) -> None:
     response = _client(fixture_store, provider).post(
-        "/v1/search", json={"query": "zzqxjvnomatchtoken", "mode": "keyword"}
+        "/v1/search", json=search_payload("zzqxjvnomatchtoken", mode="keyword")
     )
     assert response.status_code == 200
     assert response.json()["results"] == []
@@ -138,8 +139,8 @@ def test_no_retrieval_span_when_the_corpus_is_not_loaded(
 ) -> None:
     empty = InMemoryCorpusStore([], corpus_version=None)
     client = _client(empty, provider)
-    assert client.post("/v1/search", json={"query": TARGET_QUERY}).status_code == 503
-    assert client.get("/", params={"q": TARGET_QUERY}).status_code == 503
+    assert client.post("/v1/search", json=search_payload(TARGET_QUERY)).status_code == 503
+    assert client.get("/", params=form_payload(TARGET_QUERY)).status_code == 503
     spans = exporter.get_finished_spans()
     assert len([s for s in spans if s.kind == SpanKind.SERVER]) == 2
     assert _retrievals(spans) == []
@@ -149,9 +150,9 @@ def test_no_retrieval_span_for_a_blank_page_query_or_an_invalid_request(
     fixture_store: InMemoryCorpusStore, provider: TracerProvider, exporter: InMemorySpanExporter
 ) -> None:
     client = _client(fixture_store, provider)
-    assert client.get("/", params={"q": "   "}).status_code == 200
-    assert client.post("/v1/search", json={"query": TARGET_QUERY, "k": 0}).status_code == 422
-    assert client.post("/v1/search", json={"query": TARGET_QUERY, "mode": "x"}).status_code == 422
+    assert client.get("/", params=form_payload("   ")).status_code == 200
+    assert client.post("/v1/search", json=search_payload(TARGET_QUERY, k=0)).status_code == 422
+    assert client.post("/v1/search", json=search_payload(TARGET_QUERY, mode="x")).status_code == 422
     assert _retrievals(exporter.get_finished_spans()) == []
 
 
@@ -159,7 +160,7 @@ def test_issue_detail_is_traced_without_a_retrieval_span(
     fixture_store: InMemoryCorpusStore, provider: TracerProvider, exporter: InMemorySpanExporter
 ) -> None:
     response = _client(fixture_store, provider).post(
-        "/v1/search", json={"query": TARGET_QUERY, "k": 1}
+        "/v1/search", json=search_payload(TARGET_QUERY, k=1)
     )
     number = response.json()["results"][0]["issue"]["number"]
     exporter.clear()
@@ -198,9 +199,19 @@ def test_only_ticketscope_and_gen_ai_attributes_on_the_retrieval_span(
     fixture_store: InMemoryCorpusStore, provider: TracerProvider, exporter: InMemorySpanExporter
 ) -> None:
     client = _client(fixture_store, provider, trace_query_text=True)
-    assert client.post("/v1/search", json={"query": TARGET_QUERY}).status_code == 200
+    assert client.post("/v1/search", json=search_payload(TARGET_QUERY)).status_code == 200
     [retrieval] = _retrievals(exporter.get_finished_spans())
-    for key in retrieval.attributes or {}:
+    attributes = dict(retrieval.attributes or {})
+    assert set(attributes) >= {
+        "gen_ai.operation.name",
+        "gen_ai.data_source.id",
+        "ticketscope.retrieval.mode",
+        "ticketscope.retrieval.k",
+        "ticketscope.corpus.version",
+        "ticketscope.result.count",
+        "ticketscope.query.text",
+    }
+    for key in attributes:
         assert key.startswith(("ticketscope.", "gen_ai.")), key
 
 
@@ -209,7 +220,7 @@ def test_opt_in_query_text_is_also_on_the_page_retrieval_span(
 ) -> None:
     response = _client(fixture_store, provider, trace_query_text=True).post(
         "/",
-        content=urlencode({"q": SECRET}),
+        content=urlencode(form_payload(SECRET)),
         headers={"content-type": "application/x-www-form-urlencoded"},
     )
     assert response.status_code == 200
@@ -224,7 +235,7 @@ def test_url_query_is_kept_when_query_text_is_opted_in(
     fixture_store: InMemoryCorpusStore, provider: TracerProvider, exporter: InMemorySpanExporter
 ) -> None:
     client = _client(fixture_store, provider, trace_query_text=True)
-    assert client.get("/", params={"q": SECRET}).status_code == 200
+    assert client.get("/", params=form_payload(SECRET)).status_code == 200
     server = _server(exporter.get_finished_spans())
     assert (server.attributes or {}).get("url.query") == f"q={SECRET}"
 
@@ -241,7 +252,7 @@ def test_url_query_redacted_on_v1_search_too(
     fixture_store: InMemoryCorpusStore, provider: TracerProvider, exporter: InMemorySpanExporter
 ) -> None:
     client = _client(fixture_store, provider)
-    response = client.post(f"/v1/search?debug={SECRET}", json={"query": TARGET_QUERY})
+    response = client.post(f"/v1/search?debug={SECRET}", json=search_payload(TARGET_QUERY))
     assert response.status_code == 200
     server = _server(exporter.get_finished_spans())
     assert (server.attributes or {})["url.query"] == telemetry.REDACTED
@@ -252,7 +263,7 @@ def test_server_span_uses_stable_http_semconv(
 ) -> None:
     assert (
         _client(fixture_store, provider)
-        .post("/v1/search", json={"query": TARGET_QUERY})
+        .post("/v1/search", json=search_payload(TARGET_QUERY))
         .status_code
         == 200
     )
@@ -319,7 +330,7 @@ def json_lines() -> Iterator[_JsonLines]:
 def test_a_log_line_during_a_request_carries_the_request_trace(
     provider: TracerProvider, exporter: InMemorySpanExporter, json_lines: _JsonLines
 ) -> None:
-    response = _client(_SearchBrokenStore(), provider).get("/", params={"q": TARGET_QUERY})
+    response = _client(_SearchBrokenStore(), provider).get("/", params=form_payload(TARGET_QUERY))
     assert response.status_code == 500
     [line] = [x for x in json_lines.lines if x["message"] == "search page failed"]
     server = _server(exporter.get_finished_spans())

@@ -67,9 +67,9 @@ deferred: []
 - [x] `.github/workflows/ci.yml` -- rename the kind job to `integrated-check` and run integrated then smoke -- one job on every PR
 
 **Acceptance Criteria:**
-- Given the local kind cluster on the pinned snapshot, when `uv run pytest -m kind tests/integrated -v` runs, then exactly five tests run and pass, and the output reports each golden entry's verdict and rank.
-- Given each of the five checks broken on purpose by hand, one at a time (e.g. a stricter schema copy, a NULLed kind via SQL, a golden expected number swapped in a scratch copy, Tempo scaled to 0, the backup ObjectStore pointed at a missing bucket), when the suite runs, then that check fails; the break is then reverted and the suite passes again.
-- Given the change, when `uv run pytest` runs without a cluster, then the integrated module is deselected and the new unit tests pass.
+- Given the local kind cluster on the pinned snapshot, when `uv run pytest -m kind tests/integrated -v` runs, then exactly five tests run and pass, and the output reports each golden entry's verdict and rank. (R1, R2, R3, R4, R5, R6, R7)
+- Given each of the five checks broken on purpose by hand, one at a time (e.g. a stricter schema copy, a NULLed kind via SQL, a golden expected number swapped in a scratch copy, Tempo scaled to 0, the backup ObjectStore pointed at a missing bucket), when the suite runs, then that check fails; the break is then reverted and the suite passes again. (R1, R2, R3, R4, R5, R6, R7)
+- Given the change, when `uv run pytest` runs without a cluster, then the integrated module is deselected and the new unit tests pass. (R7)
 
 ## Design Notes
 

@@ -77,9 +77,9 @@ deferred: []
 - [x] `tests/smoke/test_gateway.py` -- (1c) through the Gateway: `GET /` is 200 HTML with the form. For each golden query, a POST to `/` (form-encoded, `Host` header) renders at least one row, with ranks 1..n and every row's `data-outcome` in `OUTCOMES` with a non-empty outcome element. A `<script>` query comes back escaped.
 
 **Acceptance Criteria:**
-- Given the kind cluster running this branch's image, when the vague and the log-heavy query from `eval/golden-queries.json` are each submitted to the page through the Gateway, then each response renders a ranked list where every row shows a title link, a kind and an outcome.
-- Given `uv run pytest -m kind tests/smoke` on that cluster, when it runs, then every smoke test passes, including section (1c).
-- Given a `POST /v1/search` body saved before this change, when the same request runs after it, then the body is identical.
+- Given the kind cluster running this branch's image, when the vague and the log-heavy query from `eval/golden-queries.json` are each submitted to the page through the Gateway, then each response renders a ranked list where every row shows a title link, a kind and an outcome. (R4)
+- Given `uv run pytest -m kind tests/smoke` on that cluster, when it runs, then every smoke test passes, including section (1c). (R4, R7)
+- Given a `POST /v1/search` body saved before this change, when the same request runs after it, then the body is identical. (R3)
 
 ## Implementation Notes
 

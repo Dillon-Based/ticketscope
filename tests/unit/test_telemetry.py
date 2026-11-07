@@ -2,7 +2,7 @@
 
 import json
 import logging
-import os
+import subprocess
 import sys
 from collections.abc import Iterator
 from pathlib import Path
@@ -10,11 +10,13 @@ from urllib.parse import urlencode
 
 import pytest
 from fastapi.testclient import TestClient
+from opentelemetry import trace
 from opentelemetry.sdk.trace import ReadableSpan, TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 from opentelemetry.trace import SpanContext, SpanKind, StatusCode
 
+from tests.factories import form_payload, search_payload
 from tests.target import TARGET_QUERY
 from ticketscope import telemetry
 from ticketscope.core.fakes import InMemoryCorpusStore
@@ -87,7 +89,7 @@ def test_search_is_a_server_span_over_a_retrieval_span(
     fixture_store: InMemoryCorpusStore, provider: TracerProvider, exporter: InMemorySpanExporter
 ) -> None:
     response = _client(fixture_store, provider).post(
-        "/v1/search", json={"query": TARGET_QUERY, "mode": "keyword", "k": 5}
+        "/v1/search", json=search_payload(TARGET_QUERY, mode="keyword", k=5)
     )
     assert response.status_code == 200
     results = response.json()["results"]
@@ -118,7 +120,7 @@ def test_page_post_is_traced_with_k_10(
 ) -> None:
     response = _client(fixture_store, provider).post(
         "/",
-        content=urlencode({"q": TARGET_QUERY}),
+        content=urlencode(form_payload(TARGET_QUERY)),
         headers={"content-type": "application/x-www-form-urlencoded"},
     )
     assert response.status_code == 200
@@ -134,8 +136,8 @@ def test_no_query_text_on_any_span_by_default(
     fixture_store: InMemoryCorpusStore, provider: TracerProvider, exporter: InMemorySpanExporter
 ) -> None:
     client = _client(fixture_store, provider)
-    assert client.post("/v1/search", json={"query": SECRET}).status_code == 200
-    assert client.get("/", params={"q": SECRET}).status_code == 200
+    assert client.post("/v1/search", json=search_payload(SECRET)).status_code == 200
+    assert client.get("/", params=form_payload(SECRET)).status_code == 200
     spans = exporter.get_finished_spans()
     assert len([s for s in spans if s.kind == SpanKind.SERVER]) == 2
     assert not [v for v in _all_attribute_values(spans) if SECRET in v]
@@ -147,7 +149,7 @@ def test_query_text_is_recorded_when_opted_in(
     fixture_store: InMemoryCorpusStore, provider: TracerProvider, exporter: InMemorySpanExporter
 ) -> None:
     client = _client(fixture_store, provider, trace_query_text=True)
-    assert client.post("/v1/search", json={"query": SECRET}).status_code == 200
+    assert client.post("/v1/search", json=search_payload(SECRET)).status_code == 200
     retrieval = _named(exporter.get_finished_spans(), "retrieval keyword")
     assert (retrieval.attributes or {})["ticketscope.query.text"] == SECRET
 
@@ -175,7 +177,7 @@ def test_store_failure_sets_error_and_keeps_the_problem_response(
     provider: TracerProvider, exporter: InMemorySpanExporter
 ) -> None:
     response = _client(_SearchBrokenStore(), provider).post(
-        "/v1/search", json={"query": TARGET_QUERY}
+        "/v1/search", json=search_payload(TARGET_QUERY)
     )
     assert response.status_code == 500
     assert response.headers["content-type"].startswith("application/problem+json")
@@ -186,7 +188,7 @@ def test_store_failure_sets_error_and_keeps_the_problem_response(
 def test_store_failure_on_the_page_sets_error_and_keeps_the_html_500(
     provider: TracerProvider, exporter: InMemorySpanExporter
 ) -> None:
-    response = _client(_SearchBrokenStore(), provider).get("/", params={"q": TARGET_QUERY})
+    response = _client(_SearchBrokenStore(), provider).get("/", params=form_payload(TARGET_QUERY))
     assert response.status_code == 500
     assert response.headers["content-type"].startswith("text/html")
     _assert_error_retrieval(exporter)
@@ -200,7 +202,7 @@ def test_probes_are_not_traced(
     assert client.get("/readyz").status_code == 200
     assert exporter.get_finished_spans() == ()
     # A search for the probe's name is still traced: exclusion matches the path only.
-    assert client.get("/", params={"q": "healthz"}).status_code == 200
+    assert client.get("/", params=form_payload("healthz")).status_code == 200
     assert exporter.get_finished_spans()
 
 
@@ -282,20 +284,37 @@ def test_configure_logging_installs_json_on_a_bare_root(
 # --- setup and jobs ------------------------------------------------------------------------
 
 
-def test_setup_sets_the_opt_in_and_creates_no_exporter_without_an_endpoint(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.delenv(telemetry.SEMCONV_OPT_IN_VAR, raising=False)
-    monkeypatch.setattr(telemetry, "instrument_psycopg", lambda provider: None)
-    provider = telemetry.setup(telemetry.SERVICE_JOBS, "")
-    try:
-        assert os.environ["OTEL_SEMCONV_STABILITY_OPT_IN"] == (
-            "gen_ai_latest_experimental,database,http"
-        )
-        assert provider.resource.attributes["service.name"] == "ticketscope-jobs"
-        assert provider._active_span_processor._span_processors == ()  # pyright: ignore[reportPrivateUsage]
-    finally:
-        provider.shutdown()
+def test_setup_sets_the_opt_in_and_creates_no_exporter_without_an_endpoint() -> None:
+    # setup registers a write-once global provider: verify bootstrap in its own process.
+    before = trace.get_tracer_provider()
+    code = """
+import json
+import os
+from opentelemetry import trace
+from ticketscope import telemetry
+
+os.environ.pop(telemetry.SEMCONV_OPT_IN_VAR, None)
+provider = telemetry.setup(telemetry.SERVICE_JOBS, "")
+try:
+    print(json.dumps({
+        "opt_in": os.environ[telemetry.SEMCONV_OPT_IN_VAR],
+        "service": provider.resource.attributes["service.name"],
+        "processors": len(provider._active_span_processor._span_processors),
+        "registered": trace.get_tracer_provider() is provider,
+    }))
+finally:
+    provider.shutdown()
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", code], capture_output=True, text=True, check=True, timeout=30
+    )
+    assert json.loads(result.stdout) == {
+        "opt_in": "gen_ai_latest_experimental,database,http",
+        "service": "ticketscope-jobs",
+        "processors": 0,
+        "registered": True,
+    }
+    assert trace.get_tracer_provider() is before
 
 
 def test_an_endpoint_adds_one_batch_exporter_to_the_collector() -> None:

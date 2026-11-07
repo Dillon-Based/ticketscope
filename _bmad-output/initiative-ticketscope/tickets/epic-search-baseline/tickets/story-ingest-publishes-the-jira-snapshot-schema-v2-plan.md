@@ -92,10 +92,10 @@ context:
 - [x] `tests/unit/ingest/slice.json` + `tests/unit/test_ingest_jira.py`, `test_ingest_notes.py`, `test_snapshot.py`, `test_load_main.py` -- every matrix row and test-design rows for story 13 (P2 "valid Jira snapshot" 1–8, "no identities" 1–5, "fixture and load move to v2" 1–2, "Release notes report" 1–2)
 
 **Acceptance Criteria:**
-- Given the recorded slice, when ingest runs through `jira.select` and `main.write_outputs`, then every line validates against `schema-v2.json` and parses as `SnapshotIssueV2`, and `sha256sum -c` passes.
-- Given `SnapshotIssueV2` changes, when tests run, then the schema drift test fails until `python -m ticketscope.jobs.ingest.schema --write` is rerun.
-- Given the v2 fixture, when `scripts/time-load.sh` runs on it, then it prints a load time and exits 0.
-- Given a restored dump on the person's machine after merge, when `scripts/publish-snapshot.sh` runs, then a `snapshot-YYYY.MM.N` Release holds the asset and checksum, with notes stating subset, count, pairs by kind, kind split, load seconds ≤ 600 and the attribution line.
+- Given the recorded slice, when ingest runs through `jira.select` and `main.write_outputs`, then every line validates against `schema-v2.json` and parses as `SnapshotIssueV2`, and `sha256sum -c` passes. (R1)
+- Given `SnapshotIssueV2` changes, when tests run, then the schema drift test fails until `python -m ticketscope.jobs.ingest.schema --write` is rerun. (R1)
+- Given the v2 fixture, when `scripts/time-load.sh` runs on it, then it prints a load time and exits 0. (R1, R2)
+- Given a restored dump on the person's machine after merge, when `scripts/publish-snapshot.sh` runs, then a `snapshot-YYYY.MM.N` Release holds the asset and checksum, with notes stating subset, count, pairs by kind, kind split, load seconds ≤ 600 and the attribution line. (R1)
 
 ## Implementation Notes
 

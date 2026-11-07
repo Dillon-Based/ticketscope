@@ -1,0 +1,1807 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="16" skipped="0" tests="28" time="93.676" timestamp="2026-11-07T13:21:24.003627-05:00" hostname="Dillons-Mac-mini.local"><testcase classname="tests.integrated.test_done_when" name="test_loaded_corpus_is_the_pinned_asset_valid_against_schema_v2" time="3.710" /><testcase classname="tests.integrated.test_done_when" name="test_every_loaded_issue_has_a_valid_kind_and_outcome" time="0.659" /><testcase classname="tests.integrated.test_done_when" name="test_golden_queries_return_their_twins_with_outcomes_via_v1_and_page" time="0.041"><failure message="httpx2.ConnectError: [Errno 61] Connection refused">@contextlib.contextmanager
+    def map_httpcore_exceptions() -&gt; Generator[None]:
+        global HTTPCORE_EXC_MAP
+        if len(HTTPCORE_EXC_MAP) == 0:
+            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()
+        try:
+&gt;           yield
+
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:98: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:245: in handle_request
+    resp = self._pool.handle_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection_pool.py:242: in handle_request
+    raise exc from None
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection_pool.py:224: in handle_request
+    response = connection.handle_request(pool_request.request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:94: in handle_request
+    raise exc
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:74: in handle_request
+    stream = self._connect(request)
+             ^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:117: in _connect
+    stream = self._network_backend.connect_tcp(**kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_backends/sync.py:203: in connect_tcp
+    with map_exceptions(exc_map):
+         ^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.14.10-macos-aarch64-none/lib/python3.14/contextlib.py:162: in __exit__
+    self.gen.throw(value)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+map = {&lt;class 'TimeoutError'&gt;: &lt;class 'httpcore2.ConnectTimeout'&gt;, &lt;class 'OSError'&gt;: &lt;class 'httpcore2.ConnectError'&gt;}
+
+    @contextlib.contextmanager
+    def map_exceptions(map: ExceptionMapping) -&gt; Generator[None]:
+        try:
+            yield
+        except Exception as exc:  # noqa: PIE786
+            for from_exc, to_exc in map.items():
+                if isinstance(exc, from_exc):
+&gt;                   raise to_exc(exc) from exc
+E                   httpcore2.ConnectError: [Errno 61] Connection refused
+
+.venv/lib/python3.14/site-packages/httpcore2/_exceptions.py:17: ConnectError
+
+The above exception was the direct cause of the following exception:
+
+capsys = &lt;_pytest.capture.CaptureFixture object at 0x10a9781a0&gt;
+
+    def test_golden_queries_return_their_twins_with_outcomes_via_v1_and_page(
+        capsys: pytest.CaptureFixture[str],
+    ) -&gt; None:
+        k, mode = int(GOLDEN["k"]), str(GOLDEN["mode"])
+        assert GOLDEN["snapshot_version"] == PIN
+        url, host = _gateway()
+        rows: list[GoldenRow] = []
+        failures: list[str] = []
+        try:
+            for entry in GOLDEN["queries"]:
+                entry_id = str(entry["id"])
+                expected = entry["expected_issue"]
+                gated = not entry["known_keyword_miss"]
+    
+&gt;               response = httpx2.post(
+                    f"{url}/v1/search",
+                    json={"query": entry["query"], "mode": mode, "k": k},
+                    headers={"Host": host},
+                    timeout=30,
+                )
+
+tests/integrated/test_done_when.py:160: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.14/site-packages/httpx2/_api.py:303: in post
+    return request(
+.venv/lib/python3.14/site-packages/httpx2/_api.py:108: in request
+    return client.request(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:796: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_client.py:979: in send
+    response = self._send_handling_auth(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1007: in _send_handling_auth
+    response = self._send_handling_redirects(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1042: in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1075: in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:244: in handle_request
+    with map_httpcore_exceptions():
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.14.10-macos-aarch64-none/lib/python3.14/contextlib.py:162: in __exit__
+    self.gen.throw(value)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    @contextlib.contextmanager
+    def map_httpcore_exceptions() -&gt; Generator[None]:
+        global HTTPCORE_EXC_MAP
+        if len(HTTPCORE_EXC_MAP) == 0:
+            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()
+        try:
+            yield
+        except Exception as exc:
+            mapped_exc = None
+    
+            for from_exc, to_exc in HTTPCORE_EXC_MAP.items():
+                if not isinstance(exc, from_exc):
+                    continue
+                # We want to map to the most specific exception we can find.
+                # Eg if `exc` is an `httpcore2.ReadTimeout`, we want to map to
+                # `httpx2.ReadTimeout`, not just `httpx2.TimeoutException`.
+                if mapped_exc is None or issubclass(to_exc, mapped_exc):
+                    mapped_exc = to_exc
+    
+            if mapped_exc is None:  # pragma: no cover
+                raise
+    
+            message = str(exc)
+&gt;           raise mapped_exc(message) from exc
+E           httpx2.ConnectError: [Errno 61] Connection refused
+
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:115: ConnectError</failure></testcase><testcase classname="tests.integrated.test_done_when" name="test_one_search_reaches_tempo_as_the_ad10_tree" time="0.001"><failure message="httpx2.ConnectError: [Errno 61] Connection refused">@contextlib.contextmanager
+    def map_httpcore_exceptions() -&gt; Generator[None]:
+        global HTTPCORE_EXC_MAP
+        if len(HTTPCORE_EXC_MAP) == 0:
+            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()
+        try:
+&gt;           yield
+
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:98: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:245: in handle_request
+    resp = self._pool.handle_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection_pool.py:242: in handle_request
+    raise exc from None
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection_pool.py:224: in handle_request
+    response = connection.handle_request(pool_request.request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:94: in handle_request
+    raise exc
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:74: in handle_request
+    stream = self._connect(request)
+             ^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:117: in _connect
+    stream = self._network_backend.connect_tcp(**kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_backends/sync.py:203: in connect_tcp
+    with map_exceptions(exc_map):
+         ^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.14.10-macos-aarch64-none/lib/python3.14/contextlib.py:162: in __exit__
+    self.gen.throw(value)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+map = {&lt;class 'TimeoutError'&gt;: &lt;class 'httpcore2.ConnectTimeout'&gt;, &lt;class 'OSError'&gt;: &lt;class 'httpcore2.ConnectError'&gt;}
+
+    @contextlib.contextmanager
+    def map_exceptions(map: ExceptionMapping) -&gt; Generator[None]:
+        try:
+            yield
+        except Exception as exc:  # noqa: PIE786
+            for from_exc, to_exc in map.items():
+                if isinstance(exc, from_exc):
+&gt;                   raise to_exc(exc) from exc
+E                   httpcore2.ConnectError: [Errno 61] Connection refused
+
+.venv/lib/python3.14/site-packages/httpcore2/_exceptions.py:17: ConnectError
+
+The above exception was the direct cause of the following exception:
+
+    def test_one_search_reaches_tempo_as_the_ad10_tree() -&gt; None:
+&gt;       trace_id = _search_with_traceparent()
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/integrated/test_done_when.py:211: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/smoke/test_gateway.py:687: in _search_with_traceparent
+    response = httpx2.post(
+.venv/lib/python3.14/site-packages/httpx2/_api.py:303: in post
+    return request(
+.venv/lib/python3.14/site-packages/httpx2/_api.py:108: in request
+    return client.request(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:796: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_client.py:979: in send
+    response = self._send_handling_auth(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1007: in _send_handling_auth
+    response = self._send_handling_redirects(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1042: in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1075: in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:244: in handle_request
+    with map_httpcore_exceptions():
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.14.10-macos-aarch64-none/lib/python3.14/contextlib.py:162: in __exit__
+    self.gen.throw(value)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    @contextlib.contextmanager
+    def map_httpcore_exceptions() -&gt; Generator[None]:
+        global HTTPCORE_EXC_MAP
+        if len(HTTPCORE_EXC_MAP) == 0:
+            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()
+        try:
+            yield
+        except Exception as exc:
+            mapped_exc = None
+    
+            for from_exc, to_exc in HTTPCORE_EXC_MAP.items():
+                if not isinstance(exc, from_exc):
+                    continue
+                # We want to map to the most specific exception we can find.
+                # Eg if `exc` is an `httpcore2.ReadTimeout`, we want to map to
+                # `httpx2.ReadTimeout`, not just `httpx2.TimeoutException`.
+                if mapped_exc is None or issubclass(to_exc, mapped_exc):
+                    mapped_exc = to_exc
+    
+            if mapped_exc is None:  # pragma: no cover
+                raise
+    
+            message = str(exc)
+&gt;           raise mapped_exc(message) from exc
+E           httpx2.ConnectError: [Errno 61] Connection refused
+
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:115: ConnectError</failure></testcase><testcase classname="tests.integrated.test_done_when" name="test_an_on_demand_backup_completes_to_seaweedfs" time="7.414" /><testcase classname="tests.smoke.test_gateway" name="test_search_serves_the_pinned_snapshot_with_outcomes" time="0.008"><failure message="httpx2.ConnectError: [Errno 61] Connection refused">@contextlib.contextmanager
+    def map_httpcore_exceptions() -&gt; Generator[None]:
+        global HTTPCORE_EXC_MAP
+        if len(HTTPCORE_EXC_MAP) == 0:
+            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()
+        try:
+&gt;           yield
+
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:98: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:245: in handle_request
+    resp = self._pool.handle_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection_pool.py:242: in handle_request
+    raise exc from None
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection_pool.py:224: in handle_request
+    response = connection.handle_request(pool_request.request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:94: in handle_request
+    raise exc
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:74: in handle_request
+    stream = self._connect(request)
+             ^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:117: in _connect
+    stream = self._network_backend.connect_tcp(**kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_backends/sync.py:203: in connect_tcp
+    with map_exceptions(exc_map):
+         ^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.14.10-macos-aarch64-none/lib/python3.14/contextlib.py:162: in __exit__
+    self.gen.throw(value)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+map = {&lt;class 'TimeoutError'&gt;: &lt;class 'httpcore2.ConnectTimeout'&gt;, &lt;class 'OSError'&gt;: &lt;class 'httpcore2.ConnectError'&gt;}
+
+    @contextlib.contextmanager
+    def map_exceptions(map: ExceptionMapping) -&gt; Generator[None]:
+        try:
+            yield
+        except Exception as exc:  # noqa: PIE786
+            for from_exc, to_exc in map.items():
+                if isinstance(exc, from_exc):
+&gt;                   raise to_exc(exc) from exc
+E                   httpcore2.ConnectError: [Errno 61] Connection refused
+
+.venv/lib/python3.14/site-packages/httpcore2/_exceptions.py:17: ConnectError
+
+The above exception was the direct cause of the following exception:
+
+    def test_search_serves_the_pinned_snapshot_with_outcomes() -&gt; None:
+&gt;       body = _search(RESULTS_QUERY)
+               ^^^^^^^^^^^^^^^^^^^^^^
+
+tests/smoke/test_gateway.py:172: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/smoke/test_gateway.py:66: in _search
+    response = _post_search(search_payload(query, mode="keyword"))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/smoke/test_gateway.py:62: in _post_search
+    return httpx2.post(f"{url}/v1/search", json=payload, headers={"Host": host}, timeout=30)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_api.py:303: in post
+    return request(
+.venv/lib/python3.14/site-packages/httpx2/_api.py:108: in request
+    return client.request(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:796: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_client.py:979: in send
+    response = self._send_handling_auth(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1007: in _send_handling_auth
+    response = self._send_handling_redirects(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1042: in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1075: in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:244: in handle_request
+    with map_httpcore_exceptions():
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.14.10-macos-aarch64-none/lib/python3.14/contextlib.py:162: in __exit__
+    self.gen.throw(value)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    @contextlib.contextmanager
+    def map_httpcore_exceptions() -&gt; Generator[None]:
+        global HTTPCORE_EXC_MAP
+        if len(HTTPCORE_EXC_MAP) == 0:
+            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()
+        try:
+            yield
+        except Exception as exc:
+            mapped_exc = None
+    
+            for from_exc, to_exc in HTTPCORE_EXC_MAP.items():
+                if not isinstance(exc, from_exc):
+                    continue
+                # We want to map to the most specific exception we can find.
+                # Eg if `exc` is an `httpcore2.ReadTimeout`, we want to map to
+                # `httpx2.ReadTimeout`, not just `httpx2.TimeoutException`.
+                if mapped_exc is None or issubclass(to_exc, mapped_exc):
+                    mapped_exc = to_exc
+    
+            if mapped_exc is None:  # pragma: no cover
+                raise
+    
+            message = str(exc)
+&gt;           raise mapped_exc(message) from exc
+E           httpx2.ConnectError: [Errno 61] Connection refused
+
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:115: ConnectError</failure></testcase><testcase classname="tests.smoke.test_gateway" name="test_no_match_is_empty_through_the_gateway" time="0.001"><failure message="httpx2.ConnectError: [Errno 61] Connection refused">@contextlib.contextmanager
+    def map_httpcore_exceptions() -&gt; Generator[None]:
+        global HTTPCORE_EXC_MAP
+        if len(HTTPCORE_EXC_MAP) == 0:
+            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()
+        try:
+&gt;           yield
+
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:98: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:245: in handle_request
+    resp = self._pool.handle_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection_pool.py:242: in handle_request
+    raise exc from None
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection_pool.py:224: in handle_request
+    response = connection.handle_request(pool_request.request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:94: in handle_request
+    raise exc
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:74: in handle_request
+    stream = self._connect(request)
+             ^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:117: in _connect
+    stream = self._network_backend.connect_tcp(**kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_backends/sync.py:203: in connect_tcp
+    with map_exceptions(exc_map):
+         ^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.14.10-macos-aarch64-none/lib/python3.14/contextlib.py:162: in __exit__
+    self.gen.throw(value)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+map = {&lt;class 'TimeoutError'&gt;: &lt;class 'httpcore2.ConnectTimeout'&gt;, &lt;class 'OSError'&gt;: &lt;class 'httpcore2.ConnectError'&gt;}
+
+    @contextlib.contextmanager
+    def map_exceptions(map: ExceptionMapping) -&gt; Generator[None]:
+        try:
+            yield
+        except Exception as exc:  # noqa: PIE786
+            for from_exc, to_exc in map.items():
+                if isinstance(exc, from_exc):
+&gt;                   raise to_exc(exc) from exc
+E                   httpcore2.ConnectError: [Errno 61] Connection refused
+
+.venv/lib/python3.14/site-packages/httpcore2/_exceptions.py:17: ConnectError
+
+The above exception was the direct cause of the following exception:
+
+    def test_no_match_is_empty_through_the_gateway() -&gt; None:
+&gt;       body = _search(NO_MATCH_QUERY)
+               ^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/smoke/test_gateway.py:185: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/smoke/test_gateway.py:66: in _search
+    response = _post_search(search_payload(query, mode="keyword"))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/smoke/test_gateway.py:62: in _post_search
+    return httpx2.post(f"{url}/v1/search", json=payload, headers={"Host": host}, timeout=30)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_api.py:303: in post
+    return request(
+.venv/lib/python3.14/site-packages/httpx2/_api.py:108: in request
+    return client.request(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:796: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_client.py:979: in send
+    response = self._send_handling_auth(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1007: in _send_handling_auth
+    response = self._send_handling_redirects(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1042: in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1075: in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:244: in handle_request
+    with map_httpcore_exceptions():
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.14.10-macos-aarch64-none/lib/python3.14/contextlib.py:162: in __exit__
+    self.gen.throw(value)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    @contextlib.contextmanager
+    def map_httpcore_exceptions() -&gt; Generator[None]:
+        global HTTPCORE_EXC_MAP
+        if len(HTTPCORE_EXC_MAP) == 0:
+            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()
+        try:
+            yield
+        except Exception as exc:
+            mapped_exc = None
+    
+            for from_exc, to_exc in HTTPCORE_EXC_MAP.items():
+                if not isinstance(exc, from_exc):
+                    continue
+                # We want to map to the most specific exception we can find.
+                # Eg if `exc` is an `httpcore2.ReadTimeout`, we want to map to
+                # `httpx2.ReadTimeout`, not just `httpx2.TimeoutException`.
+                if mapped_exc is None or issubclass(to_exc, mapped_exc):
+                    mapped_exc = to_exc
+    
+            if mapped_exc is None:  # pragma: no cover
+                raise
+    
+            message = str(exc)
+&gt;           raise mapped_exc(message) from exc
+E           httpx2.ConnectError: [Errno 61] Connection refused
+
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:115: ConnectError</failure></testcase><testcase classname="tests.smoke.test_gateway" name="test_issue_detail_matches_the_search_hit" time="0.001"><failure message="httpx2.ConnectError: [Errno 61] Connection refused">@contextlib.contextmanager
+    def map_httpcore_exceptions() -&gt; Generator[None]:
+        global HTTPCORE_EXC_MAP
+        if len(HTTPCORE_EXC_MAP) == 0:
+            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()
+        try:
+&gt;           yield
+
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:98: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:245: in handle_request
+    resp = self._pool.handle_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection_pool.py:242: in handle_request
+    raise exc from None
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection_pool.py:224: in handle_request
+    response = connection.handle_request(pool_request.request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:94: in handle_request
+    raise exc
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:74: in handle_request
+    stream = self._connect(request)
+             ^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:117: in _connect
+    stream = self._network_backend.connect_tcp(**kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_backends/sync.py:203: in connect_tcp
+    with map_exceptions(exc_map):
+         ^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.14.10-macos-aarch64-none/lib/python3.14/contextlib.py:162: in __exit__
+    self.gen.throw(value)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+map = {&lt;class 'TimeoutError'&gt;: &lt;class 'httpcore2.ConnectTimeout'&gt;, &lt;class 'OSError'&gt;: &lt;class 'httpcore2.ConnectError'&gt;}
+
+    @contextlib.contextmanager
+    def map_exceptions(map: ExceptionMapping) -&gt; Generator[None]:
+        try:
+            yield
+        except Exception as exc:  # noqa: PIE786
+            for from_exc, to_exc in map.items():
+                if isinstance(exc, from_exc):
+&gt;                   raise to_exc(exc) from exc
+E                   httpcore2.ConnectError: [Errno 61] Connection refused
+
+.venv/lib/python3.14/site-packages/httpcore2/_exceptions.py:17: ConnectError
+
+The above exception was the direct cause of the following exception:
+
+    def test_issue_detail_matches_the_search_hit() -&gt; None:
+&gt;       top = _search(RESULTS_QUERY).results[0]
+              ^^^^^^^^^^^^^^^^^^^^^^
+
+tests/smoke/test_gateway.py:194: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/smoke/test_gateway.py:66: in _search
+    response = _post_search(search_payload(query, mode="keyword"))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/smoke/test_gateway.py:62: in _post_search
+    return httpx2.post(f"{url}/v1/search", json=payload, headers={"Host": host}, timeout=30)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_api.py:303: in post
+    return request(
+.venv/lib/python3.14/site-packages/httpx2/_api.py:108: in request
+    return client.request(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:796: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_client.py:979: in send
+    response = self._send_handling_auth(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1007: in _send_handling_auth
+    response = self._send_handling_redirects(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1042: in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1075: in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:244: in handle_request
+    with map_httpcore_exceptions():
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.14.10-macos-aarch64-none/lib/python3.14/contextlib.py:162: in __exit__
+    self.gen.throw(value)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    @contextlib.contextmanager
+    def map_httpcore_exceptions() -&gt; Generator[None]:
+        global HTTPCORE_EXC_MAP
+        if len(HTTPCORE_EXC_MAP) == 0:
+            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()
+        try:
+            yield
+        except Exception as exc:
+            mapped_exc = None
+    
+            for from_exc, to_exc in HTTPCORE_EXC_MAP.items():
+                if not isinstance(exc, from_exc):
+                    continue
+                # We want to map to the most specific exception we can find.
+                # Eg if `exc` is an `httpcore2.ReadTimeout`, we want to map to
+                # `httpx2.ReadTimeout`, not just `httpx2.TimeoutException`.
+                if mapped_exc is None or issubclass(to_exc, mapped_exc):
+                    mapped_exc = to_exc
+    
+            if mapped_exc is None:  # pragma: no cover
+                raise
+    
+            message = str(exc)
+&gt;           raise mapped_exc(message) from exc
+E           httpx2.ConnectError: [Errno 61] Connection refused
+
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:115: ConnectError</failure></testcase><testcase classname="tests.smoke.test_gateway" name="test_unknown_issue_is_a_404_problem" time="0.002"><failure message="httpx2.ConnectError: [Errno 61] Connection refused">@contextlib.contextmanager
+    def map_httpcore_exceptions() -&gt; Generator[None]:
+        global HTTPCORE_EXC_MAP
+        if len(HTTPCORE_EXC_MAP) == 0:
+            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()
+        try:
+&gt;           yield
+
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:98: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:245: in handle_request
+    resp = self._pool.handle_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection_pool.py:242: in handle_request
+    raise exc from None
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection_pool.py:224: in handle_request
+    response = connection.handle_request(pool_request.request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:94: in handle_request
+    raise exc
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:74: in handle_request
+    stream = self._connect(request)
+             ^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:117: in _connect
+    stream = self._network_backend.connect_tcp(**kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_backends/sync.py:203: in connect_tcp
+    with map_exceptions(exc_map):
+         ^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.14.10-macos-aarch64-none/lib/python3.14/contextlib.py:162: in __exit__
+    self.gen.throw(value)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+map = {&lt;class 'TimeoutError'&gt;: &lt;class 'httpcore2.ConnectTimeout'&gt;, &lt;class 'OSError'&gt;: &lt;class 'httpcore2.ConnectError'&gt;}
+
+    @contextlib.contextmanager
+    def map_exceptions(map: ExceptionMapping) -&gt; Generator[None]:
+        try:
+            yield
+        except Exception as exc:  # noqa: PIE786
+            for from_exc, to_exc in map.items():
+                if isinstance(exc, from_exc):
+&gt;                   raise to_exc(exc) from exc
+E                   httpcore2.ConnectError: [Errno 61] Connection refused
+
+.venv/lib/python3.14/site-packages/httpcore2/_exceptions.py:17: ConnectError
+
+The above exception was the direct cause of the following exception:
+
+    def test_unknown_issue_is_a_404_problem() -&gt; None:
+&gt;       problem = _assert_problem(_get_issue(1), 404)
+                                  ^^^^^^^^^^^^^
+
+tests/smoke/test_gateway.py:204: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/smoke/test_gateway.py:73: in _get_issue
+    return httpx2.get(f"{url}/v1/issues/{number}", headers={"Host": host}, timeout=30)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_api.py:194: in get
+    return request(
+.venv/lib/python3.14/site-packages/httpx2/_api.py:108: in request
+    return client.request(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:796: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_client.py:979: in send
+    response = self._send_handling_auth(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1007: in _send_handling_auth
+    response = self._send_handling_redirects(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1042: in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1075: in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:244: in handle_request
+    with map_httpcore_exceptions():
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.14.10-macos-aarch64-none/lib/python3.14/contextlib.py:162: in __exit__
+    self.gen.throw(value)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    @contextlib.contextmanager
+    def map_httpcore_exceptions() -&gt; Generator[None]:
+        global HTTPCORE_EXC_MAP
+        if len(HTTPCORE_EXC_MAP) == 0:
+            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()
+        try:
+            yield
+        except Exception as exc:
+            mapped_exc = None
+    
+            for from_exc, to_exc in HTTPCORE_EXC_MAP.items():
+                if not isinstance(exc, from_exc):
+                    continue
+                # We want to map to the most specific exception we can find.
+                # Eg if `exc` is an `httpcore2.ReadTimeout`, we want to map to
+                # `httpx2.ReadTimeout`, not just `httpx2.TimeoutException`.
+                if mapped_exc is None or issubclass(to_exc, mapped_exc):
+                    mapped_exc = to_exc
+    
+            if mapped_exc is None:  # pragma: no cover
+                raise
+    
+            message = str(exc)
+&gt;           raise mapped_exc(message) from exc
+E           httpx2.ConnectError: [Errno 61] Connection refused
+
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:115: ConnectError</failure></testcase><testcase classname="tests.smoke.test_gateway" name="test_invalid_search_is_a_422_problem[k=0]" time="0.001"><failure message="httpx2.ConnectError: [Errno 61] Connection refused">@contextlib.contextmanager
+    def map_httpcore_exceptions() -&gt; Generator[None]:
+        global HTTPCORE_EXC_MAP
+        if len(HTTPCORE_EXC_MAP) == 0:
+            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()
+        try:
+&gt;           yield
+
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:98: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:245: in handle_request
+    resp = self._pool.handle_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection_pool.py:242: in handle_request
+    raise exc from None
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection_pool.py:224: in handle_request
+    response = connection.handle_request(pool_request.request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:94: in handle_request
+    raise exc
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:74: in handle_request
+    stream = self._connect(request)
+             ^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:117: in _connect
+    stream = self._network_backend.connect_tcp(**kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_backends/sync.py:203: in connect_tcp
+    with map_exceptions(exc_map):
+         ^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.14.10-macos-aarch64-none/lib/python3.14/contextlib.py:162: in __exit__
+    self.gen.throw(value)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+map = {&lt;class 'TimeoutError'&gt;: &lt;class 'httpcore2.ConnectTimeout'&gt;, &lt;class 'OSError'&gt;: &lt;class 'httpcore2.ConnectError'&gt;}
+
+    @contextlib.contextmanager
+    def map_exceptions(map: ExceptionMapping) -&gt; Generator[None]:
+        try:
+            yield
+        except Exception as exc:  # noqa: PIE786
+            for from_exc, to_exc in map.items():
+                if isinstance(exc, from_exc):
+&gt;                   raise to_exc(exc) from exc
+E                   httpcore2.ConnectError: [Errno 61] Connection refused
+
+.venv/lib/python3.14/site-packages/httpcore2/_exceptions.py:17: ConnectError
+
+The above exception was the direct cause of the following exception:
+
+payload = {'query': 'launcher crash', 'mode': 'keyword', 'k': 0}
+
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            search_payload(RESULTS_QUERY, mode="keyword", k=0),
+            search_payload(RESULTS_QUERY, mode="keyword", k=51),
+            search_payload(RESULTS_QUERY, mode="nope"),
+        ],
+        ids=["k=0", "k=51", "mode=nope"],
+    )
+    def test_invalid_search_is_a_422_problem(payload: dict[str, object]) -&gt; None:
+&gt;       problem = _assert_problem(_post_search(payload), 422)
+                                  ^^^^^^^^^^^^^^^^^^^^^
+
+tests/smoke/test_gateway.py:218: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/smoke/test_gateway.py:62: in _post_search
+    return httpx2.post(f"{url}/v1/search", json=payload, headers={"Host": host}, timeout=30)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_api.py:303: in post
+    return request(
+.venv/lib/python3.14/site-packages/httpx2/_api.py:108: in request
+    return client.request(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:796: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_client.py:979: in send
+    response = self._send_handling_auth(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1007: in _send_handling_auth
+    response = self._send_handling_redirects(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1042: in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1075: in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:244: in handle_request
+    with map_httpcore_exceptions():
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.14.10-macos-aarch64-none/lib/python3.14/contextlib.py:162: in __exit__
+    self.gen.throw(value)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    @contextlib.contextmanager
+    def map_httpcore_exceptions() -&gt; Generator[None]:
+        global HTTPCORE_EXC_MAP
+        if len(HTTPCORE_EXC_MAP) == 0:
+            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()
+        try:
+            yield
+        except Exception as exc:
+            mapped_exc = None
+    
+            for from_exc, to_exc in HTTPCORE_EXC_MAP.items():
+                if not isinstance(exc, from_exc):
+                    continue
+                # We want to map to the most specific exception we can find.
+                # Eg if `exc` is an `httpcore2.ReadTimeout`, we want to map to
+                # `httpx2.ReadTimeout`, not just `httpx2.TimeoutException`.
+                if mapped_exc is None or issubclass(to_exc, mapped_exc):
+                    mapped_exc = to_exc
+    
+            if mapped_exc is None:  # pragma: no cover
+                raise
+    
+            message = str(exc)
+&gt;           raise mapped_exc(message) from exc
+E           httpx2.ConnectError: [Errno 61] Connection refused
+
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:115: ConnectError</failure></testcase><testcase classname="tests.smoke.test_gateway" name="test_invalid_search_is_a_422_problem[k=51]" time="0.001"><failure message="httpx2.ConnectError: [Errno 61] Connection refused">@contextlib.contextmanager
+    def map_httpcore_exceptions() -&gt; Generator[None]:
+        global HTTPCORE_EXC_MAP
+        if len(HTTPCORE_EXC_MAP) == 0:
+            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()
+        try:
+&gt;           yield
+
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:98: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:245: in handle_request
+    resp = self._pool.handle_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection_pool.py:242: in handle_request
+    raise exc from None
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection_pool.py:224: in handle_request
+    response = connection.handle_request(pool_request.request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:94: in handle_request
+    raise exc
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:74: in handle_request
+    stream = self._connect(request)
+             ^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:117: in _connect
+    stream = self._network_backend.connect_tcp(**kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_backends/sync.py:203: in connect_tcp
+    with map_exceptions(exc_map):
+         ^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.14.10-macos-aarch64-none/lib/python3.14/contextlib.py:162: in __exit__
+    self.gen.throw(value)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+map = {&lt;class 'TimeoutError'&gt;: &lt;class 'httpcore2.ConnectTimeout'&gt;, &lt;class 'OSError'&gt;: &lt;class 'httpcore2.ConnectError'&gt;}
+
+    @contextlib.contextmanager
+    def map_exceptions(map: ExceptionMapping) -&gt; Generator[None]:
+        try:
+            yield
+        except Exception as exc:  # noqa: PIE786
+            for from_exc, to_exc in map.items():
+                if isinstance(exc, from_exc):
+&gt;                   raise to_exc(exc) from exc
+E                   httpcore2.ConnectError: [Errno 61] Connection refused
+
+.venv/lib/python3.14/site-packages/httpcore2/_exceptions.py:17: ConnectError
+
+The above exception was the direct cause of the following exception:
+
+payload = {'query': 'launcher crash', 'mode': 'keyword', 'k': 51}
+
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            search_payload(RESULTS_QUERY, mode="keyword", k=0),
+            search_payload(RESULTS_QUERY, mode="keyword", k=51),
+            search_payload(RESULTS_QUERY, mode="nope"),
+        ],
+        ids=["k=0", "k=51", "mode=nope"],
+    )
+    def test_invalid_search_is_a_422_problem(payload: dict[str, object]) -&gt; None:
+&gt;       problem = _assert_problem(_post_search(payload), 422)
+                                  ^^^^^^^^^^^^^^^^^^^^^
+
+tests/smoke/test_gateway.py:218: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/smoke/test_gateway.py:62: in _post_search
+    return httpx2.post(f"{url}/v1/search", json=payload, headers={"Host": host}, timeout=30)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_api.py:303: in post
+    return request(
+.venv/lib/python3.14/site-packages/httpx2/_api.py:108: in request
+    return client.request(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:796: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_client.py:979: in send
+    response = self._send_handling_auth(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1007: in _send_handling_auth
+    response = self._send_handling_redirects(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1042: in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1075: in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:244: in handle_request
+    with map_httpcore_exceptions():
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.14.10-macos-aarch64-none/lib/python3.14/contextlib.py:162: in __exit__
+    self.gen.throw(value)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    @contextlib.contextmanager
+    def map_httpcore_exceptions() -&gt; Generator[None]:
+        global HTTPCORE_EXC_MAP
+        if len(HTTPCORE_EXC_MAP) == 0:
+            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()
+        try:
+            yield
+        except Exception as exc:
+            mapped_exc = None
+    
+            for from_exc, to_exc in HTTPCORE_EXC_MAP.items():
+                if not isinstance(exc, from_exc):
+                    continue
+                # We want to map to the most specific exception we can find.
+                # Eg if `exc` is an `httpcore2.ReadTimeout`, we want to map to
+                # `httpx2.ReadTimeout`, not just `httpx2.TimeoutException`.
+                if mapped_exc is None or issubclass(to_exc, mapped_exc):
+                    mapped_exc = to_exc
+    
+            if mapped_exc is None:  # pragma: no cover
+                raise
+    
+            message = str(exc)
+&gt;           raise mapped_exc(message) from exc
+E           httpx2.ConnectError: [Errno 61] Connection refused
+
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:115: ConnectError</failure></testcase><testcase classname="tests.smoke.test_gateway" name="test_invalid_search_is_a_422_problem[mode=nope]" time="0.001"><failure message="httpx2.ConnectError: [Errno 61] Connection refused">@contextlib.contextmanager
+    def map_httpcore_exceptions() -&gt; Generator[None]:
+        global HTTPCORE_EXC_MAP
+        if len(HTTPCORE_EXC_MAP) == 0:
+            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()
+        try:
+&gt;           yield
+
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:98: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:245: in handle_request
+    resp = self._pool.handle_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection_pool.py:242: in handle_request
+    raise exc from None
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection_pool.py:224: in handle_request
+    response = connection.handle_request(pool_request.request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:94: in handle_request
+    raise exc
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:74: in handle_request
+    stream = self._connect(request)
+             ^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:117: in _connect
+    stream = self._network_backend.connect_tcp(**kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_backends/sync.py:203: in connect_tcp
+    with map_exceptions(exc_map):
+         ^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.14.10-macos-aarch64-none/lib/python3.14/contextlib.py:162: in __exit__
+    self.gen.throw(value)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+map = {&lt;class 'TimeoutError'&gt;: &lt;class 'httpcore2.ConnectTimeout'&gt;, &lt;class 'OSError'&gt;: &lt;class 'httpcore2.ConnectError'&gt;}
+
+    @contextlib.contextmanager
+    def map_exceptions(map: ExceptionMapping) -&gt; Generator[None]:
+        try:
+            yield
+        except Exception as exc:  # noqa: PIE786
+            for from_exc, to_exc in map.items():
+                if isinstance(exc, from_exc):
+&gt;                   raise to_exc(exc) from exc
+E                   httpcore2.ConnectError: [Errno 61] Connection refused
+
+.venv/lib/python3.14/site-packages/httpcore2/_exceptions.py:17: ConnectError
+
+The above exception was the direct cause of the following exception:
+
+payload = {'query': 'launcher crash', 'mode': 'nope'}
+
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            search_payload(RESULTS_QUERY, mode="keyword", k=0),
+            search_payload(RESULTS_QUERY, mode="keyword", k=51),
+            search_payload(RESULTS_QUERY, mode="nope"),
+        ],
+        ids=["k=0", "k=51", "mode=nope"],
+    )
+    def test_invalid_search_is_a_422_problem(payload: dict[str, object]) -&gt; None:
+&gt;       problem = _assert_problem(_post_search(payload), 422)
+                                  ^^^^^^^^^^^^^^^^^^^^^
+
+tests/smoke/test_gateway.py:218: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/smoke/test_gateway.py:62: in _post_search
+    return httpx2.post(f"{url}/v1/search", json=payload, headers={"Host": host}, timeout=30)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_api.py:303: in post
+    return request(
+.venv/lib/python3.14/site-packages/httpx2/_api.py:108: in request
+    return client.request(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:796: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_client.py:979: in send
+    response = self._send_handling_auth(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1007: in _send_handling_auth
+    response = self._send_handling_redirects(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1042: in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1075: in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:244: in handle_request
+    with map_httpcore_exceptions():
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.14.10-macos-aarch64-none/lib/python3.14/contextlib.py:162: in __exit__
+    self.gen.throw(value)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    @contextlib.contextmanager
+    def map_httpcore_exceptions() -&gt; Generator[None]:
+        global HTTPCORE_EXC_MAP
+        if len(HTTPCORE_EXC_MAP) == 0:
+            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()
+        try:
+            yield
+        except Exception as exc:
+            mapped_exc = None
+    
+            for from_exc, to_exc in HTTPCORE_EXC_MAP.items():
+                if not isinstance(exc, from_exc):
+                    continue
+                # We want to map to the most specific exception we can find.
+                # Eg if `exc` is an `httpcore2.ReadTimeout`, we want to map to
+                # `httpx2.ReadTimeout`, not just `httpx2.TimeoutException`.
+                if mapped_exc is None or issubclass(to_exc, mapped_exc):
+                    mapped_exc = to_exc
+    
+            if mapped_exc is None:  # pragma: no cover
+                raise
+    
+            message = str(exc)
+&gt;           raise mapped_exc(message) from exc
+E           httpx2.ConnectError: [Errno 61] Connection refused
+
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:115: ConnectError</failure></testcase><testcase classname="tests.smoke.test_gateway" name="test_operator_characters_rank" time="0.001"><failure message="httpx2.ConnectError: [Errno 61] Connection refused">@contextlib.contextmanager
+    def map_httpcore_exceptions() -&gt; Generator[None]:
+        global HTTPCORE_EXC_MAP
+        if len(HTTPCORE_EXC_MAP) == 0:
+            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()
+        try:
+&gt;           yield
+
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:98: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:245: in handle_request
+    resp = self._pool.handle_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection_pool.py:242: in handle_request
+    raise exc from None
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection_pool.py:224: in handle_request
+    response = connection.handle_request(pool_request.request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:94: in handle_request
+    raise exc
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:74: in handle_request
+    stream = self._connect(request)
+             ^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:117: in _connect
+    stream = self._network_backend.connect_tcp(**kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_backends/sync.py:203: in connect_tcp
+    with map_exceptions(exc_map):
+         ^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.14.10-macos-aarch64-none/lib/python3.14/contextlib.py:162: in __exit__
+    self.gen.throw(value)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+map = {&lt;class 'TimeoutError'&gt;: &lt;class 'httpcore2.ConnectTimeout'&gt;, &lt;class 'OSError'&gt;: &lt;class 'httpcore2.ConnectError'&gt;}
+
+    @contextlib.contextmanager
+    def map_exceptions(map: ExceptionMapping) -&gt; Generator[None]:
+        try:
+            yield
+        except Exception as exc:  # noqa: PIE786
+            for from_exc, to_exc in map.items():
+                if isinstance(exc, from_exc):
+&gt;                   raise to_exc(exc) from exc
+E                   httpcore2.ConnectError: [Errno 61] Connection refused
+
+.venv/lib/python3.14/site-packages/httpcore2/_exceptions.py:17: ConnectError
+
+The above exception was the direct cause of the following exception:
+
+    def test_operator_characters_rank() -&gt; None:
+        # Golden's independently recorded vague twin is rank 5 on this pinned corpus.
+        entry = next(q for q in GOLDEN["queries"] if q["id"] == "vague")
+&gt;       body = _search(str(entry["query"]) + ' &amp; | (:!) !! "')
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/smoke/test_gateway.py:225: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/smoke/test_gateway.py:66: in _search
+    response = _post_search(search_payload(query, mode="keyword"))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/smoke/test_gateway.py:62: in _post_search
+    return httpx2.post(f"{url}/v1/search", json=payload, headers={"Host": host}, timeout=30)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_api.py:303: in post
+    return request(
+.venv/lib/python3.14/site-packages/httpx2/_api.py:108: in request
+    return client.request(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:796: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_client.py:979: in send
+    response = self._send_handling_auth(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1007: in _send_handling_auth
+    response = self._send_handling_redirects(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1042: in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1075: in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:244: in handle_request
+    with map_httpcore_exceptions():
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.14.10-macos-aarch64-none/lib/python3.14/contextlib.py:162: in __exit__
+    self.gen.throw(value)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    @contextlib.contextmanager
+    def map_httpcore_exceptions() -&gt; Generator[None]:
+        global HTTPCORE_EXC_MAP
+        if len(HTTPCORE_EXC_MAP) == 0:
+            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()
+        try:
+            yield
+        except Exception as exc:
+            mapped_exc = None
+    
+            for from_exc, to_exc in HTTPCORE_EXC_MAP.items():
+                if not isinstance(exc, from_exc):
+                    continue
+                # We want to map to the most specific exception we can find.
+                # Eg if `exc` is an `httpcore2.ReadTimeout`, we want to map to
+                # `httpx2.ReadTimeout`, not just `httpx2.TimeoutException`.
+                if mapped_exc is None or issubclass(to_exc, mapped_exc):
+                    mapped_exc = to_exc
+    
+            if mapped_exc is None:  # pragma: no cover
+                raise
+    
+            message = str(exc)
+&gt;           raise mapped_exc(message) from exc
+E           httpx2.ConnectError: [Errno 61] Connection refused
+
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:115: ConnectError</failure></testcase><testcase classname="tests.smoke.test_gateway" name="test_a_pasted_log_in_a_4kb_request_ranks" time="0.001"><failure message="httpx2.ConnectError: [Errno 61] Connection refused">@contextlib.contextmanager
+    def map_httpcore_exceptions() -&gt; Generator[None]:
+        global HTTPCORE_EXC_MAP
+        if len(HTTPCORE_EXC_MAP) == 0:
+            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()
+        try:
+&gt;           yield
+
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:98: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:245: in handle_request
+    resp = self._pool.handle_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection_pool.py:242: in handle_request
+    raise exc from None
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection_pool.py:224: in handle_request
+    response = connection.handle_request(pool_request.request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:94: in handle_request
+    raise exc
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:74: in handle_request
+    stream = self._connect(request)
+             ^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:117: in _connect
+    stream = self._network_backend.connect_tcp(**kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_backends/sync.py:203: in connect_tcp
+    with map_exceptions(exc_map):
+         ^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.14.10-macos-aarch64-none/lib/python3.14/contextlib.py:162: in __exit__
+    self.gen.throw(value)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+map = {&lt;class 'TimeoutError'&gt;: &lt;class 'httpcore2.ConnectTimeout'&gt;, &lt;class 'OSError'&gt;: &lt;class 'httpcore2.ConnectError'&gt;}
+
+    @contextlib.contextmanager
+    def map_exceptions(map: ExceptionMapping) -&gt; Generator[None]:
+        try:
+            yield
+        except Exception as exc:  # noqa: PIE786
+            for from_exc, to_exc in map.items():
+                if isinstance(exc, from_exc):
+&gt;                   raise to_exc(exc) from exc
+E                   httpcore2.ConnectError: [Errno 61] Connection refused
+
+.venv/lib/python3.14/site-packages/httpcore2/_exceptions.py:17: ConnectError
+
+The above exception was the direct cause of the following exception:
+
+    def test_a_pasted_log_in_a_4kb_request_ranks() -&gt; None:
+        entry = next(q for q in GOLDEN["queries"] if q["id"] == "log-heavy")
+        # Preserve the independently recorded log/twin oracle (rank 9) while exercising
+        # a &gt;=4KB wire input. Whitespace padding introduces no extra ranking tokens.
+        query = str(entry["query"]).ljust(4096)
+        assert len(query.encode()) &gt;= 4096
+&gt;       body = _search(query)
+               ^^^^^^^^^^^^^^
+
+tests/smoke/test_gateway.py:235: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/smoke/test_gateway.py:66: in _search
+    response = _post_search(search_payload(query, mode="keyword"))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/smoke/test_gateway.py:62: in _post_search
+    return httpx2.post(f"{url}/v1/search", json=payload, headers={"Host": host}, timeout=30)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_api.py:303: in post
+    return request(
+.venv/lib/python3.14/site-packages/httpx2/_api.py:108: in request
+    return client.request(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:796: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_client.py:979: in send
+    response = self._send_handling_auth(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1007: in _send_handling_auth
+    response = self._send_handling_redirects(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1042: in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1075: in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:244: in handle_request
+    with map_httpcore_exceptions():
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.14.10-macos-aarch64-none/lib/python3.14/contextlib.py:162: in __exit__
+    self.gen.throw(value)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    @contextlib.contextmanager
+    def map_httpcore_exceptions() -&gt; Generator[None]:
+        global HTTPCORE_EXC_MAP
+        if len(HTTPCORE_EXC_MAP) == 0:
+            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()
+        try:
+            yield
+        except Exception as exc:
+            mapped_exc = None
+    
+            for from_exc, to_exc in HTTPCORE_EXC_MAP.items():
+                if not isinstance(exc, from_exc):
+                    continue
+                # We want to map to the most specific exception we can find.
+                # Eg if `exc` is an `httpcore2.ReadTimeout`, we want to map to
+                # `httpx2.ReadTimeout`, not just `httpx2.TimeoutException`.
+                if mapped_exc is None or issubclass(to_exc, mapped_exc):
+                    mapped_exc = to_exc
+    
+            if mapped_exc is None:  # pragma: no cover
+                raise
+    
+            message = str(exc)
+&gt;           raise mapped_exc(message) from exc
+E           httpx2.ConnectError: [Errno 61] Connection refused
+
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:115: ConnectError</failure></testcase><testcase classname="tests.smoke.test_gateway" name="test_page_serves_the_form" time="0.001"><failure message="httpx2.ConnectError: [Errno 61] Connection refused">@contextlib.contextmanager
+    def map_httpcore_exceptions() -&gt; Generator[None]:
+        global HTTPCORE_EXC_MAP
+        if len(HTTPCORE_EXC_MAP) == 0:
+            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()
+        try:
+&gt;           yield
+
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:98: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:245: in handle_request
+    resp = self._pool.handle_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection_pool.py:242: in handle_request
+    raise exc from None
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection_pool.py:224: in handle_request
+    response = connection.handle_request(pool_request.request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:94: in handle_request
+    raise exc
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:74: in handle_request
+    stream = self._connect(request)
+             ^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:117: in _connect
+    stream = self._network_backend.connect_tcp(**kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_backends/sync.py:203: in connect_tcp
+    with map_exceptions(exc_map):
+         ^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.14.10-macos-aarch64-none/lib/python3.14/contextlib.py:162: in __exit__
+    self.gen.throw(value)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+map = {&lt;class 'TimeoutError'&gt;: &lt;class 'httpcore2.ConnectTimeout'&gt;, &lt;class 'OSError'&gt;: &lt;class 'httpcore2.ConnectError'&gt;}
+
+    @contextlib.contextmanager
+    def map_exceptions(map: ExceptionMapping) -&gt; Generator[None]:
+        try:
+            yield
+        except Exception as exc:  # noqa: PIE786
+            for from_exc, to_exc in map.items():
+                if isinstance(exc, from_exc):
+&gt;                   raise to_exc(exc) from exc
+E                   httpcore2.ConnectError: [Errno 61] Connection refused
+
+.venv/lib/python3.14/site-packages/httpcore2/_exceptions.py:17: ConnectError
+
+The above exception was the direct cause of the following exception:
+
+    def test_page_serves_the_form() -&gt; None:
+        url, host = _gateway()
+&gt;       response = httpx2.get(f"{url}/", headers={"Host": host}, timeout=30)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/smoke/test_gateway.py:293: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.14/site-packages/httpx2/_api.py:194: in get
+    return request(
+.venv/lib/python3.14/site-packages/httpx2/_api.py:108: in request
+    return client.request(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:796: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_client.py:979: in send
+    response = self._send_handling_auth(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1007: in _send_handling_auth
+    response = self._send_handling_redirects(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1042: in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1075: in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:244: in handle_request
+    with map_httpcore_exceptions():
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.14.10-macos-aarch64-none/lib/python3.14/contextlib.py:162: in __exit__
+    self.gen.throw(value)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    @contextlib.contextmanager
+    def map_httpcore_exceptions() -&gt; Generator[None]:
+        global HTTPCORE_EXC_MAP
+        if len(HTTPCORE_EXC_MAP) == 0:
+            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()
+        try:
+            yield
+        except Exception as exc:
+            mapped_exc = None
+    
+            for from_exc, to_exc in HTTPCORE_EXC_MAP.items():
+                if not isinstance(exc, from_exc):
+                    continue
+                # We want to map to the most specific exception we can find.
+                # Eg if `exc` is an `httpcore2.ReadTimeout`, we want to map to
+                # `httpx2.ReadTimeout`, not just `httpx2.TimeoutException`.
+                if mapped_exc is None or issubclass(to_exc, mapped_exc):
+                    mapped_exc = to_exc
+    
+            if mapped_exc is None:  # pragma: no cover
+                raise
+    
+            message = str(exc)
+&gt;           raise mapped_exc(message) from exc
+E           httpx2.ConnectError: [Errno 61] Connection refused
+
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:115: ConnectError</failure></testcase><testcase classname="tests.smoke.test_gateway" name="test_page_renders_each_golden_query[vague]" time="0.001"><failure message="httpx2.ConnectError: [Errno 61] Connection refused">@contextlib.contextmanager
+    def map_httpcore_exceptions() -&gt; Generator[None]:
+        global HTTPCORE_EXC_MAP
+        if len(HTTPCORE_EXC_MAP) == 0:
+            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()
+        try:
+&gt;           yield
+
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:98: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:245: in handle_request
+    resp = self._pool.handle_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection_pool.py:242: in handle_request
+    raise exc from None
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection_pool.py:224: in handle_request
+    response = connection.handle_request(pool_request.request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:94: in handle_request
+    raise exc
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:74: in handle_request
+    stream = self._connect(request)
+             ^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:117: in _connect
+    stream = self._network_backend.connect_tcp(**kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_backends/sync.py:203: in connect_tcp
+    with map_exceptions(exc_map):
+         ^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.14.10-macos-aarch64-none/lib/python3.14/contextlib.py:162: in __exit__
+    self.gen.throw(value)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+map = {&lt;class 'TimeoutError'&gt;: &lt;class 'httpcore2.ConnectTimeout'&gt;, &lt;class 'OSError'&gt;: &lt;class 'httpcore2.ConnectError'&gt;}
+
+    @contextlib.contextmanager
+    def map_exceptions(map: ExceptionMapping) -&gt; Generator[None]:
+        try:
+            yield
+        except Exception as exc:  # noqa: PIE786
+            for from_exc, to_exc in map.items():
+                if isinstance(exc, from_exc):
+&gt;                   raise to_exc(exc) from exc
+E                   httpcore2.ConnectError: [Errno 61] Connection refused
+
+.venv/lib/python3.14/site-packages/httpcore2/_exceptions.py:17: ConnectError
+
+The above exception was the direct cause of the following exception:
+
+entry = {'id': 'vague', 'kind': 'short', 'query': 'Item Level Drops', 'chosen_by': 'Drawn with random.Random(5) from 150 sorte...han 2 characters) with no OS user-name path in its text; the query is the source title verbatim, twin at rank 5.', ...}
+
+    @pytest.mark.parametrize("entry", GOLDEN["queries"], ids=[q["id"] for q in GOLDEN["queries"]])
+    def test_page_renders_each_golden_query(entry: dict[str, object]) -&gt; None:
+&gt;       _, parsed = _page(str(entry["query"]))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/smoke/test_gateway.py:304: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/smoke/test_gateway.py:278: in _page
+    response = httpx2.post(
+.venv/lib/python3.14/site-packages/httpx2/_api.py:303: in post
+    return request(
+.venv/lib/python3.14/site-packages/httpx2/_api.py:108: in request
+    return client.request(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:796: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_client.py:979: in send
+    response = self._send_handling_auth(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1007: in _send_handling_auth
+    response = self._send_handling_redirects(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1042: in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1075: in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:244: in handle_request
+    with map_httpcore_exceptions():
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.14.10-macos-aarch64-none/lib/python3.14/contextlib.py:162: in __exit__
+    self.gen.throw(value)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    @contextlib.contextmanager
+    def map_httpcore_exceptions() -&gt; Generator[None]:
+        global HTTPCORE_EXC_MAP
+        if len(HTTPCORE_EXC_MAP) == 0:
+            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()
+        try:
+            yield
+        except Exception as exc:
+            mapped_exc = None
+    
+            for from_exc, to_exc in HTTPCORE_EXC_MAP.items():
+                if not isinstance(exc, from_exc):
+                    continue
+                # We want to map to the most specific exception we can find.
+                # Eg if `exc` is an `httpcore2.ReadTimeout`, we want to map to
+                # `httpx2.ReadTimeout`, not just `httpx2.TimeoutException`.
+                if mapped_exc is None or issubclass(to_exc, mapped_exc):
+                    mapped_exc = to_exc
+    
+            if mapped_exc is None:  # pragma: no cover
+                raise
+    
+            message = str(exc)
+&gt;           raise mapped_exc(message) from exc
+E           httpx2.ConnectError: [Errno 61] Connection refused
+
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:115: ConnectError</failure></testcase><testcase classname="tests.smoke.test_gateway" name="test_page_renders_each_golden_query[log-heavy]" time="0.001"><failure message="httpx2.ConnectError: [Errno 61] Connection refused">@contextlib.contextmanager
+    def map_httpcore_exceptions() -&gt; Generator[None]:
+        global HTTPCORE_EXC_MAP
+        if len(HTTPCORE_EXC_MAP) == 0:
+            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()
+        try:
+&gt;           yield
+
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:98: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:245: in handle_request
+    resp = self._pool.handle_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection_pool.py:242: in handle_request
+    raise exc from None
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection_pool.py:224: in handle_request
+    response = connection.handle_request(pool_request.request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:94: in handle_request
+    raise exc
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:74: in handle_request
+    stream = self._connect(request)
+             ^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:117: in _connect
+    stream = self._network_backend.connect_tcp(**kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_backends/sync.py:203: in connect_tcp
+    with map_exceptions(exc_map):
+         ^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.14.10-macos-aarch64-none/lib/python3.14/contextlib.py:162: in __exit__
+    self.gen.throw(value)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+map = {&lt;class 'TimeoutError'&gt;: &lt;class 'httpcore2.ConnectTimeout'&gt;, &lt;class 'OSError'&gt;: &lt;class 'httpcore2.ConnectError'&gt;}
+
+    @contextlib.contextmanager
+    def map_exceptions(map: ExceptionMapping) -&gt; Generator[None]:
+        try:
+            yield
+        except Exception as exc:  # noqa: PIE786
+            for from_exc, to_exc in map.items():
+                if isinstance(exc, from_exc):
+&gt;                   raise to_exc(exc) from exc
+E                   httpcore2.ConnectError: [Errno 61] Connection refused
+
+.venv/lib/python3.14/site-packages/httpcore2/_exceptions.py:17: ConnectError
+
+The above exception was the direct cause of the following exception:
+
+entry = {'id': 'log-heavy', 'kind': 'log_heavy', 'query': "Offline bug in launcher\n\nif you have multiple profiles always one...s the source title, a blank line and the body as pasted with one player name replaced by [user], twin at rank 9.', ...}
+
+    @pytest.mark.parametrize("entry", GOLDEN["queries"], ids=[q["id"] for q in GOLDEN["queries"]])
+    def test_page_renders_each_golden_query(entry: dict[str, object]) -&gt; None:
+&gt;       _, parsed = _page(str(entry["query"]))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/smoke/test_gateway.py:304: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/smoke/test_gateway.py:278: in _page
+    response = httpx2.post(
+.venv/lib/python3.14/site-packages/httpx2/_api.py:303: in post
+    return request(
+.venv/lib/python3.14/site-packages/httpx2/_api.py:108: in request
+    return client.request(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:796: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_client.py:979: in send
+    response = self._send_handling_auth(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1007: in _send_handling_auth
+    response = self._send_handling_redirects(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1042: in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1075: in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:244: in handle_request
+    with map_httpcore_exceptions():
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.14.10-macos-aarch64-none/lib/python3.14/contextlib.py:162: in __exit__
+    self.gen.throw(value)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    @contextlib.contextmanager
+    def map_httpcore_exceptions() -&gt; Generator[None]:
+        global HTTPCORE_EXC_MAP
+        if len(HTTPCORE_EXC_MAP) == 0:
+            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()
+        try:
+            yield
+        except Exception as exc:
+            mapped_exc = None
+    
+            for from_exc, to_exc in HTTPCORE_EXC_MAP.items():
+                if not isinstance(exc, from_exc):
+                    continue
+                # We want to map to the most specific exception we can find.
+                # Eg if `exc` is an `httpcore2.ReadTimeout`, we want to map to
+                # `httpx2.ReadTimeout`, not just `httpx2.TimeoutException`.
+                if mapped_exc is None or issubclass(to_exc, mapped_exc):
+                    mapped_exc = to_exc
+    
+            if mapped_exc is None:  # pragma: no cover
+                raise
+    
+            message = str(exc)
+&gt;           raise mapped_exc(message) from exc
+E           httpx2.ConnectError: [Errno 61] Connection refused
+
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:115: ConnectError</failure></testcase><testcase classname="tests.smoke.test_gateway" name="test_page_escapes_a_script_query" time="0.001"><failure message="httpx2.ConnectError: [Errno 61] Connection refused">@contextlib.contextmanager
+    def map_httpcore_exceptions() -&gt; Generator[None]:
+        global HTTPCORE_EXC_MAP
+        if len(HTTPCORE_EXC_MAP) == 0:
+            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()
+        try:
+&gt;           yield
+
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:98: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:245: in handle_request
+    resp = self._pool.handle_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection_pool.py:242: in handle_request
+    raise exc from None
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection_pool.py:224: in handle_request
+    response = connection.handle_request(pool_request.request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:94: in handle_request
+    raise exc
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:74: in handle_request
+    stream = self._connect(request)
+             ^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:117: in _connect
+    stream = self._network_backend.connect_tcp(**kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_backends/sync.py:203: in connect_tcp
+    with map_exceptions(exc_map):
+         ^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.14.10-macos-aarch64-none/lib/python3.14/contextlib.py:162: in __exit__
+    self.gen.throw(value)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+map = {&lt;class 'TimeoutError'&gt;: &lt;class 'httpcore2.ConnectTimeout'&gt;, &lt;class 'OSError'&gt;: &lt;class 'httpcore2.ConnectError'&gt;}
+
+    @contextlib.contextmanager
+    def map_exceptions(map: ExceptionMapping) -&gt; Generator[None]:
+        try:
+            yield
+        except Exception as exc:  # noqa: PIE786
+            for from_exc, to_exc in map.items():
+                if isinstance(exc, from_exc):
+&gt;                   raise to_exc(exc) from exc
+E                   httpcore2.ConnectError: [Errno 61] Connection refused
+
+.venv/lib/python3.14/site-packages/httpcore2/_exceptions.py:17: ConnectError
+
+The above exception was the direct cause of the following exception:
+
+    def test_page_escapes_a_script_query() -&gt; None:
+&gt;       response, _ = _page("&lt;script&gt;alert(1)&lt;/script&gt; launcher crash")
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/smoke/test_gateway.py:316: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/smoke/test_gateway.py:278: in _page
+    response = httpx2.post(
+.venv/lib/python3.14/site-packages/httpx2/_api.py:303: in post
+    return request(
+.venv/lib/python3.14/site-packages/httpx2/_api.py:108: in request
+    return client.request(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:796: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_client.py:979: in send
+    response = self._send_handling_auth(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1007: in _send_handling_auth
+    response = self._send_handling_redirects(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1042: in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1075: in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:244: in handle_request
+    with map_httpcore_exceptions():
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.14.10-macos-aarch64-none/lib/python3.14/contextlib.py:162: in __exit__
+    self.gen.throw(value)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    @contextlib.contextmanager
+    def map_httpcore_exceptions() -&gt; Generator[None]:
+        global HTTPCORE_EXC_MAP
+        if len(HTTPCORE_EXC_MAP) == 0:
+            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()
+        try:
+            yield
+        except Exception as exc:
+            mapped_exc = None
+    
+            for from_exc, to_exc in HTTPCORE_EXC_MAP.items():
+                if not isinstance(exc, from_exc):
+                    continue
+                # We want to map to the most specific exception we can find.
+                # Eg if `exc` is an `httpcore2.ReadTimeout`, we want to map to
+                # `httpx2.ReadTimeout`, not just `httpx2.TimeoutException`.
+                if mapped_exc is None or issubclass(to_exc, mapped_exc):
+                    mapped_exc = to_exc
+    
+            if mapped_exc is None:  # pragma: no cover
+                raise
+    
+            message = str(exc)
+&gt;           raise mapped_exc(message) from exc
+E           httpx2.ConnectError: [Errno 61] Connection refused
+
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:115: ConnectError</failure></testcase><testcase classname="tests.smoke.test_gateway" name="test_every_issue_is_loaded_with_a_kind_and_an_outcome" time="0.717" /><testcase classname="tests.smoke.test_gateway" name="test_api_database_role_can_read_but_cannot_write" time="0.676" /><testcase classname="tests.smoke.test_gateway" name="test_load_log_has_the_report" time="21.884" /><testcase classname="tests.smoke.test_gateway" name="test_upgrade_with_the_same_pin_is_a_no_op" time="7.893"><failure message="httpx2.ConnectError: [Errno 61] Connection refused">@contextlib.contextmanager
+    def map_httpcore_exceptions() -&gt; Generator[None]:
+        global HTTPCORE_EXC_MAP
+        if len(HTTPCORE_EXC_MAP) == 0:
+            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()
+        try:
+&gt;           yield
+
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:98: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:245: in handle_request
+    resp = self._pool.handle_request(req)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection_pool.py:242: in handle_request
+    raise exc from None
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection_pool.py:224: in handle_request
+    response = connection.handle_request(pool_request.request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:94: in handle_request
+    raise exc
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:74: in handle_request
+    stream = self._connect(request)
+             ^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_sync/connection.py:117: in _connect
+    stream = self._network_backend.connect_tcp(**kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpcore2/_backends/sync.py:203: in connect_tcp
+    with map_exceptions(exc_map):
+         ^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.14.10-macos-aarch64-none/lib/python3.14/contextlib.py:162: in __exit__
+    self.gen.throw(value)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+map = {&lt;class 'TimeoutError'&gt;: &lt;class 'httpcore2.ConnectTimeout'&gt;, &lt;class 'OSError'&gt;: &lt;class 'httpcore2.ConnectError'&gt;}
+
+    @contextlib.contextmanager
+    def map_exceptions(map: ExceptionMapping) -&gt; Generator[None]:
+        try:
+            yield
+        except Exception as exc:  # noqa: PIE786
+            for from_exc, to_exc in map.items():
+                if isinstance(exc, from_exc):
+&gt;                   raise to_exc(exc) from exc
+E                   httpcore2.ConnectError: [Errno 61] Connection refused
+
+.venv/lib/python3.14/site-packages/httpcore2/_exceptions.py:17: ConnectError
+
+The above exception was the direct cause of the following exception:
+
+    def test_upgrade_with_the_same_pin_is_a_no_op() -&gt; None:
+        _upgrade()
+        log = _load_log()
+        assert "no-op" in log, log
+        assert "load report:" not in log
+&gt;       assert _search(RESULTS_QUERY).corpus_version == PIN
+               ^^^^^^^^^^^^^^^^^^^^^^
+
+tests/smoke/test_gateway.py:419: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/smoke/test_gateway.py:66: in _search
+    response = _post_search(search_payload(query, mode="keyword"))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/smoke/test_gateway.py:62: in _post_search
+    return httpx2.post(f"{url}/v1/search", json=payload, headers={"Host": host}, timeout=30)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_api.py:303: in post
+    return request(
+.venv/lib/python3.14/site-packages/httpx2/_api.py:108: in request
+    return client.request(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:796: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_client.py:979: in send
+    response = self._send_handling_auth(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1007: in _send_handling_auth
+    response = self._send_handling_redirects(
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1042: in _send_handling_redirects
+    response = self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_client.py:1075: in _send_single_request
+    response = transport.handle_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:244: in handle_request
+    with map_httpcore_exceptions():
+         ^^^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.14.10-macos-aarch64-none/lib/python3.14/contextlib.py:162: in __exit__
+    self.gen.throw(value)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    @contextlib.contextmanager
+    def map_httpcore_exceptions() -&gt; Generator[None]:
+        global HTTPCORE_EXC_MAP
+        if len(HTTPCORE_EXC_MAP) == 0:
+            HTTPCORE_EXC_MAP = _load_httpcore_exceptions()
+        try:
+            yield
+        except Exception as exc:
+            mapped_exc = None
+    
+            for from_exc, to_exc in HTTPCORE_EXC_MAP.items():
+                if not isinstance(exc, from_exc):
+                    continue
+                # We want to map to the most specific exception we can find.
+                # Eg if `exc` is an `httpcore2.ReadTimeout`, we want to map to
+                # `httpx2.ReadTimeout`, not just `httpx2.TimeoutException`.
+                if mapped_exc is None or issubclass(to_exc, mapped_exc):
+                    mapped_exc = to_exc
+    
+            if mapped_exc is None:  # pragma: no cover
+                raise
+    
+            message = str(exc)
+&gt;           raise mapped_exc(message) from exc
+E           httpx2.ConnectError: [Errno 61] Connection refused
+
+.venv/lib/python3.14/site-packages/httpx2/_transports/default.py:115: ConnectError</failure></testcase><testcase classname="tests.smoke.test_gateway" name="test_stale_preprocessing_version_reloads" time="16.234" /><testcase classname="tests.smoke.test_gateway" name="test_cluster_has_two_ready_instances" time="0.054" /><testcase classname="tests.smoke.test_gateway" name="test_upgrades_keep_the_backup_tls_and_credentials" time="22.964" /><testcase classname="tests.smoke.test_gateway" name="test_on_demand_backup_completes_to_seaweedfs" time="7.051" /><testcase classname="tests.smoke.test_gateway" name="test_one_search_yields_one_trace_in_tempo" time="3.376" /><testcase classname="tests.smoke.test_gateway" name="test_the_trace_is_served_by_grafanas_tempo_datasource" time="0.270" /></testsuite></testsuites>

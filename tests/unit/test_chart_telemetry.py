@@ -83,13 +83,15 @@ def test_nothing_of_the_traces_pipeline_is_exposed() -> None:
     for doc in _docs(docs, "HTTPRoute") + _docs(docs, "Ingress"):
         assert not any(f"name: {n}" in doc for n in TELEMETRY_NAMES), doc
     for name in TELEMETRY_NAMES:
-        for service in _docs(docs, "Service", name):
-            assert "type: LoadBalancer" not in service
-            assert "type: NodePort" not in service
+        [service] = _docs(docs, "Service", name)
+        assert "type: LoadBalancer" not in service
+        assert "type: NodePort" not in service
     # And on the defaults, not just kind's facts.
-    for doc in _render(PLATFORM):
-        if any(f"  name: {n}\n" in doc for n in TELEMETRY_NAMES):
-            assert "type: LoadBalancer" not in doc
+    defaults = _render(PLATFORM)
+    for name in TELEMETRY_NAMES:
+        [service] = _docs(defaults, "Service", name)
+        assert "type: LoadBalancer" not in service
+        assert "type: NodePort" not in service
 
 
 @needs_platform_deps

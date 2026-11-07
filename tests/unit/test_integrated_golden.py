@@ -1,5 +1,6 @@
 """The integrated check's golden verdict and report (story 11), without a cluster."""
 
+from tests.factories import issue_outcome_payload
 from tests.integrated.golden import (
     KNOWN_MISS_FOUND,
     GoldenRow,
@@ -37,9 +38,9 @@ def test_known_miss_now_found_passes_with_a_note() -> None:
 
 def test_results_without_outcome_are_named() -> None:
     results: list[dict[str, object]] = [
-        {"issue": {"number": 1}, "outcome": {"status": "fixed"}},
-        {"issue": {"number": 2}, "outcome": {"status": ""}},
-        {"issue": {"number": 3}, "outcome": {"status": "wontfix"}},
+        issue_outcome_payload(1, status="fixed"),
+        issue_outcome_payload(2, status=""),
+        issue_outcome_payload(3, status="wontfix"),
         {"issue": {"number": 4}, "outcome": None},
         {"issue": {"number": 5}},
     ]

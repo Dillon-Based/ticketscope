@@ -29,7 +29,9 @@ from urllib.parse import urlencode
 import httpx2
 import pytest
 
+from tests.factories import form_payload, search_payload
 from tests.target import NO_MATCH_QUERY, REPO, snapshot_pin
+from tests.waiting import eventually, wait_for_output
 from ticketscope.contract.search import IssueResponse, Problem, SearchResponse
 from ticketscope.core.derive import preprocessing_version
 
@@ -61,7 +63,7 @@ def _post_search(payload: dict[str, object]) -> httpx2.Response:
 
 
 def _search(query: str) -> SearchResponse:
-    response = _post_search({"query": query, "mode": "keyword"})
+    response = _post_search(search_payload(query, mode="keyword"))
     assert response.status_code == 200, response.text
     return SearchResponse.model_validate(response.json())
 
@@ -206,9 +208,9 @@ def test_unknown_issue_is_a_404_problem() -> None:
 @pytest.mark.parametrize(
     "payload",
     [
-        {"query": RESULTS_QUERY, "mode": "keyword", "k": 0},
-        {"query": RESULTS_QUERY, "mode": "keyword", "k": 51},
-        {"query": RESULTS_QUERY, "mode": "nope"},
+        search_payload(RESULTS_QUERY, mode="keyword", k=0),
+        search_payload(RESULTS_QUERY, mode="keyword", k=51),
+        search_payload(RESULTS_QUERY, mode="nope"),
     ],
     ids=["k=0", "k=51", "mode=nope"],
 )
@@ -218,22 +220,20 @@ def test_invalid_search_is_a_422_problem(payload: dict[str, object]) -> None:
 
 
 def test_operator_characters_rank() -> None:
-    body = _search('crash & launcher | (java:!) !! "x')
-    assert body.results, "no results"
+    # Golden's independently recorded vague twin is rank 5 on this pinned corpus.
+    entry = next(q for q in GOLDEN["queries"] if q["id"] == "vague")
+    body = _search(str(entry["query"]) + ' & | (:!) !! "')
+    assert int(entry["expected_issue"]["number"]) in [r.issue.number for r in body.results]
 
 
-def test_a_pasted_stack_trace_of_4kb_ranks() -> None:
-    frames = [
-        "\tat net.minecraft.client.renderer.GameRenderer.render(GameRenderer.java:{n})",
-        "\tat net.minecraft.client.Minecraft.runTick(Minecraft.java:{n})",
-        "\tat com.mojang.blaze3d.systems.RenderSystem.flipFrame(RenderSystem.java:{n})",
-    ]
-    trace = 'java.lang.NullPointerException: Cannot invoke "Object.toString()"\n' + "\n".join(
-        frames[i % len(frames)].format(n=100 + i) for i in range(60)
-    )
-    assert len(trace.encode()) >= 4096
-    body = _search("Game crashed on launch\n" + trace)
-    assert body.results, "no results"
+def test_a_pasted_log_in_a_4kb_request_ranks() -> None:
+    entry = next(q for q in GOLDEN["queries"] if q["id"] == "log-heavy")
+    # Preserve the independently recorded log/twin oracle (rank 9) while exercising
+    # a >=4KB wire input. Whitespace padding introduces no extra ranking tokens.
+    query = str(entry["query"]).ljust(4096)
+    assert len(query.encode()) >= 4096
+    body = _search(query)
+    assert int(entry["expected_issue"]["number"]) in [r.issue.number for r in body.results]
 
 
 # (1c) --------------------------------------------------------------------------------------
@@ -277,7 +277,7 @@ def _page(query: str) -> tuple[httpx2.Response, _Rows]:
     url, host = _gateway()
     response = httpx2.post(
         f"{url}/",
-        content=urlencode({"q": query}),
+        content=urlencode(form_payload(query)),
         headers={"Host": host, "content-type": "application/x-www-form-urlencoded"},
         timeout=30,
     )
@@ -330,6 +330,59 @@ def test_every_issue_is_loaded_with_a_kind_and_an_outcome() -> None:
     assert int(missing) == 0
     assert int(_sql("SELECT count(DISTINCT outcome_status) FROM issue")) > 1
     assert _corpus_meta() == (PIN, "", preprocessing_version())
+
+
+def test_api_database_role_can_read_but_cannot_write() -> None:
+    """[P1] Exercise AD-7 using the API container's actual configured credentials.
+
+    No secret leaves the pod. Zero-row statements and rollback make an unexpected
+    grant safe to diagnose without changing the pinned corpus.
+    """
+    script = """
+import psycopg
+from ticketscope.settings import Settings
+
+with psycopg.connect(Settings().conninfo()) as conn:
+    user, count = conn.execute("SELECT current_user, count(*) FROM issue").fetchone()
+    assert user == "ticketscope_ro", "API is not connected as ticketscope_ro"
+    assert count > 0, "API role cannot read the loaded corpus"
+    conn.rollback()
+    for operation, statement in (
+        ("INSERT", "INSERT INTO issue SELECT * FROM issue WHERE false"),
+        ("UPDATE", "UPDATE issue SET title = title WHERE false"),
+        ("DELETE", "DELETE FROM issue WHERE false"),
+    ):
+        try:
+            conn.execute(statement)
+        except psycopg.errors.InsufficientPrivilege as error:
+            assert error.sqlstate == "42501"
+            conn.rollback()
+        else:
+            conn.rollback()
+            raise AssertionError(operation + " unexpectedly permitted")
+print("ticketscope_ro: SELECT allowed; INSERT UPDATE DELETE denied")
+"""
+    result = subprocess.run(
+        [
+            "kubectl",
+            "-n",
+            NAMESPACE,
+            "exec",
+            "deploy/ticketscope-api",
+            "-c",
+            "api",
+            "--",
+            "python",
+            "-c",
+            script,
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    assert result.returncode == 0, f"API role privilege check failed: {result.stderr}"
+    assert result.stdout.strip() == "ticketscope_ro: SELECT allowed; INSERT UPDATE DELETE denied"
 
 
 # (3) ---------------------------------------------------------------------------------------
@@ -487,13 +540,33 @@ def _assert_on_demand_backup_completes(label: str = "smoke") -> None:
         text=True,
     )
     assert applied.returncode == 0, f"apply Backup: {applied.stdout}{applied.stderr}"
-    deadline = time.monotonic() + BACKUP_TIMEOUT_SECONDS
-    status = _backup_status(name)
-    while status.get("phase") != "completed":
-        assert status.get("phase") != "failed", f"backup failed: {status}"
-        assert time.monotonic() < deadline, f"backup not completed in time: {status}"
-        time.sleep(5)
+    # Watch emits the current object and subsequent changes; failed backups fail
+    # immediately rather than waiting for a completion-only condition to time out.
+    watch = subprocess.Popen(
+        [
+            "kubectl",
+            "-n",
+            NAMESPACE,
+            "get",
+            "backups.postgresql.cnpg.io",
+            name,
+            "--watch",
+            "-o",
+            'jsonpath={.status.phase}{"\\n"}',
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+    try:
+        phase = wait_for_output(
+            watch, lambda line: line in {"completed", "failed"}, timeout=BACKUP_TIMEOUT_SECONDS
+        )
         status = _backup_status(name)
+        assert phase == "completed", f"backup failed: {status}"
+        assert status.get("phase") == "completed", status
+    finally:
+        watch.terminate()
+        watch.wait(timeout=10)
     backup_id = str(status.get("backupId") or "")
     assert backup_id, status
     # The ObjectStore's serverName defaults to the Cluster's name.
@@ -592,24 +665,18 @@ def _assert_ad10_tree(trace: dict[str, Any]) -> None:
 
 def _poll_trace(fetch: Callable[[], tuple[int, str]]) -> dict[str, Any]:
     """Poll `fetch` (status, body) until the trace has the full AD-10 tree."""
-    deadline = time.monotonic() + TRACE_TIMEOUT_SECONDS
-    last: tuple[int, str] = (0, "")
-    while True:
-        last = fetch()
-        if last[0] == 200:
-            try:
-                trace: dict[str, Any] = json.loads(last[1])
-                _assert_ad10_tree(trace)
-                return trace
-            except AssertionError, KeyError, ValueError:
-                pass
-        if time.monotonic() > deadline:
-            break
-        time.sleep(3)
-    status, body = last
-    if status == 200:
-        _assert_ad10_tree(json.loads(body))  # fail with the real assertion
-    pytest.fail(f"trace not complete in {TRACE_TIMEOUT_SECONDS}s: last {status}: {body[:2000]}")
+
+    def complete_trace() -> dict[str, Any]:
+        status, body = fetch()
+        assert status == 200, f"trace not complete: last {status}: {body[:2000]}"
+        try:
+            trace: dict[str, Any] = json.loads(body)
+            _assert_ad10_tree(trace)
+        except (KeyError, ValueError) as error:
+            raise AssertionError(f"incomplete trace: {body[:2000]}") from error
+        return trace
+
+    return eventually(complete_trace, timeout=TRACE_TIMEOUT_SECONDS, interval=3)
 
 
 def _search_with_traceparent() -> str:
@@ -619,7 +686,7 @@ def _search_with_traceparent() -> str:
     url, host = _gateway()
     response = httpx2.post(
         f"{url}/v1/search",
-        json={"query": TRACE_QUERY, "mode": "keyword", "k": 10},
+        json=search_payload(TRACE_QUERY, mode="keyword", k=10),
         headers={"Host": host, "traceparent": f"00-{trace_id}-{parent_id}-01"},
         timeout=30,
     )
@@ -684,24 +751,22 @@ def _grafana() -> Iterator[str]:
             "svc/grafana",
             f"{port}:80",
         ],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.PIPE,
-        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
     )
     base = f"http://127.0.0.1:{port}"
     try:
-        deadline = time.monotonic() + 30
-        while True:
+        wait_for_output(forward, lambda line: line.startswith("Forwarding from "), timeout=30)
+
+        def healthy() -> None:
+            assert forward.poll() is None, "Grafana port-forward exited"
             try:
-                if httpx2.get(f"{base}/api/health", timeout=5).status_code == 200:
-                    break
-            except httpx2.HTTPError:
-                pass
-            if forward.poll() is not None or time.monotonic() > deadline:
-                forward.terminate()  # an unterminated read would block until EOF
-                _, stderr = forward.communicate(timeout=10)
-                pytest.fail(f"Grafana port-forward not ready: {stderr}")
-            time.sleep(1)
+                response = httpx2.get(f"{base}/api/health", timeout=5)
+            except httpx2.HTTPError as error:
+                raise AssertionError("Grafana health endpoint unavailable") from error
+            assert response.status_code == 200, response.text
+
+        eventually(healthy, timeout=30, interval=1)
         yield base
     finally:
         forward.terminate()

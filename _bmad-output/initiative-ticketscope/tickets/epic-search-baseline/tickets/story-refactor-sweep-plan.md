@@ -66,10 +66,10 @@ deferred: []
 - [x] `_bmad-output/initiative-ticketscope/deferred-work.md` -- close the Chart.lock entry, DW-1 and DW-2 -- ledger hygiene
 
 **Acceptance Criteria:**
-- Given the change, when `grep -rnE "SnapshotIssue([^V]|$)|TimelineEvent|_github_outcome|MAINTAINER_ASSOCIATIONS" src tests` runs, then it finds nothing.
-- Given the change, when ruff, pyright, lint-imports and pytest run, then all pass, and `preprocessing_version()` still returns `pre1.kind2-t3.outcome3`.
-- Given a kind cluster that ran the baseline and then `kind-up.sh` on the sweep commit, when the golden queries are posted before and after, then the two sets of responses are identical.
-- Given a cluster that was just upgraded in place, when `uv run pytest -m kind tests/smoke` runs once, then (3) passes on the first run.
+- Given the change, when `grep -rnE "SnapshotIssue([^V]|$)|TimelineEvent|_github_outcome|MAINTAINER_ASSOCIATIONS" src tests` runs, then it finds nothing. (R7)
+- Given the change, when ruff, pyright, lint-imports and pytest run, then all pass, and `preprocessing_version()` still returns `pre1.kind2-t3.outcome3`. (R2, R7)
+- Given a kind cluster that ran the baseline and then `kind-up.sh` on the sweep commit, when the golden queries are posted before and after, then the two sets of responses are identical. (R3, R4)
+- Given a cluster that was just upgraded in place, when `uv run pytest -m kind tests/smoke` runs once, then (3) passes on the first run. (R2, R7)
 
 ## Implementation Notes
 

@@ -6,12 +6,15 @@ import httpx2
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.factories import search_payload
 from tests.target import NO_MATCH_QUERY, SNAPSHOT_DIR, TARGET_NUMBER, TARGET_QUERY
 from ticketscope.contract.search import IssueResponse, Problem, SearchResponse
 from ticketscope.core.fakes import InMemoryCorpusStore
 from ticketscope.core.model import IssueDetail, Scored
 from ticketscope.http.app import create_app
 from ticketscope.settings import Settings
+
+FIXTURE_NUMBER_FLOOR = 900_000  # Synthetic issues sit above real Mojang ids.
 
 
 @pytest.fixture
@@ -20,7 +23,7 @@ def client(fixture_store: InMemoryCorpusStore) -> TestClient:
 
 
 def test_best_match(client: TestClient) -> None:
-    response = client.post("/v1/search", json={"query": TARGET_QUERY, "mode": "keyword"})
+    response = client.post("/v1/search", json=search_payload(TARGET_QUERY, mode="keyword"))
     assert response.status_code == 200
     body = SearchResponse.model_validate(response.json())
     assert body.mode == "keyword"
@@ -31,7 +34,7 @@ def test_best_match(client: TestClient) -> None:
     scores = [r.score for r in body.results]
     assert scores == sorted(scores, reverse=True)
     for result in body.results:
-        assert result.issue.number >= 900000
+        assert result.issue.number >= FIXTURE_NUMBER_FLOOR
     # Outcomes are derived by core at load (story 5); the target is resolved Fixed.
     assert body.results[0].outcome.status == "fixed"
     raw = response.json()["results"][0]
@@ -42,7 +45,7 @@ def test_best_match(client: TestClient) -> None:
 
 def test_mode_omitted_uses_the_settings_default(fixture_store: InMemoryCorpusStore) -> None:
     client = TestClient(create_app(store=fixture_store, settings=Settings(default_mode="keyword")))
-    response = client.post("/v1/search", json={"query": TARGET_QUERY})
+    response = client.post("/v1/search", json=search_payload(TARGET_QUERY))
     assert response.status_code == 200
     assert response.json()["mode"] == "keyword"
 
@@ -60,7 +63,7 @@ def _problem(response: httpx2.Response, status: int) -> Problem:
 
 
 def test_unknown_mode_is_422(client: TestClient) -> None:
-    response = client.post("/v1/search", json={"query": TARGET_QUERY, "mode": "nope"})
+    response = client.post("/v1/search", json=search_payload(TARGET_QUERY, mode="nope"))
     problem = _problem(response, 422)
     assert problem.title == "Unprocessable Content"
     assert problem.errors
@@ -68,7 +71,7 @@ def test_unknown_mode_is_422(client: TestClient) -> None:
 
 
 def test_mode_outside_the_registry_is_422(client: TestClient) -> None:
-    response = client.post("/v1/search", json={"query": TARGET_QUERY, "mode": "dense"})
+    response = client.post("/v1/search", json=search_payload(TARGET_QUERY, mode="dense"))
     problem = _problem(response, 422)
     assert problem.detail == "mode: unknown mode: dense"
     assert problem.errors
@@ -89,7 +92,7 @@ def test_malformed_json_body_is_422_naming_the_body(client: TestClient) -> None:
 
 @pytest.mark.parametrize("k", [0, 51, -1])
 def test_k_out_of_bounds_is_422(client: TestClient, k: int) -> None:
-    response = client.post("/v1/search", json={"query": TARGET_QUERY, "mode": "keyword", "k": k})
+    response = client.post("/v1/search", json=search_payload(TARGET_QUERY, mode="keyword", k=k))
     problem = _problem(response, 422)
     assert problem.errors
     assert [e.loc for e in problem.errors] == [["body", "k"]]
@@ -99,7 +102,7 @@ def test_k_out_of_bounds_is_422(client: TestClient, k: int) -> None:
 
 @pytest.mark.parametrize("k", [1, 50])
 def test_k_edges_return_at_most_k(client: TestClient, k: int) -> None:
-    response = client.post("/v1/search", json={"query": TARGET_QUERY, "mode": "keyword", "k": k})
+    response = client.post("/v1/search", json=search_payload(TARGET_QUERY, mode="keyword", k=k))
     assert response.status_code == 200
     results = SearchResponse.model_validate(response.json()).results
     assert 1 <= len(results) <= k
@@ -108,7 +111,7 @@ def test_k_edges_return_at_most_k(client: TestClient, k: int) -> None:
 
 def test_operator_characters_are_searched_as_text(client: TestClient) -> None:
     query = 'zephyrcache & eviction | (stalls:!) !! "node drain'
-    response = client.post("/v1/search", json={"query": query, "mode": "keyword"})
+    response = client.post("/v1/search", json=search_payload(query, mode="keyword"))
     assert response.status_code == 200
     assert response.json()["results"][0]["issue"]["number"] == TARGET_NUMBER
 
@@ -117,14 +120,14 @@ def test_a_pasted_log_of_4kb_ranks(client: TestClient) -> None:
     frame = "\tat net.minecraft.zephyrcache.Eviction.stall(Eviction.java:42)\n"
     query = "java.lang.IllegalStateException: node drain\n" + frame * 80
     assert len(query.encode()) >= 4096
-    response = client.post("/v1/search", json={"query": query, "mode": "keyword"})
+    response = client.post("/v1/search", json=search_payload(query, mode="keyword"))
     assert response.status_code == 200
-    assert response.json()["results"]
+    assert response.json()["results"][0]["issue"]["number"] == TARGET_NUMBER
 
 
 def test_search_is_503_when_corpus_not_loaded() -> None:
     client = TestClient(create_app(store=InMemoryCorpusStore(), settings=Settings()))
-    response = client.post("/v1/search", json={"query": TARGET_QUERY, "mode": "keyword"})
+    response = client.post("/v1/search", json=search_payload(TARGET_QUERY, mode="keyword"))
     assert _problem(response, 503).detail == "corpus not loaded"
 
 
@@ -148,7 +151,7 @@ def test_issue_detail(client: TestClient) -> None:
     assert body.issue.number == TARGET_NUMBER
     assert body.issue.body == _fixture_body(TARGET_NUMBER)
     assert body.issue.body
-    hit = client.post("/v1/search", json={"query": TARGET_QUERY, "mode": "keyword"}).json()
+    hit = client.post("/v1/search", json=search_payload(TARGET_QUERY, mode="keyword")).json()
     top = hit["results"][0]
     assert raw["outcome"] == top["outcome"]
     assert {k: v for k, v in raw["issue"].items() if k != "body"} == top["issue"]
@@ -177,7 +180,7 @@ def test_unknown_route_is_a_problem(client: TestClient) -> None:
 
 
 def test_no_match_is_empty(client: TestClient) -> None:
-    response = client.post("/v1/search", json={"query": NO_MATCH_QUERY, "mode": "keyword"})
+    response = client.post("/v1/search", json=search_payload(NO_MATCH_QUERY, mode="keyword"))
     assert response.status_code == 200
     assert response.json()["results"] == []
 

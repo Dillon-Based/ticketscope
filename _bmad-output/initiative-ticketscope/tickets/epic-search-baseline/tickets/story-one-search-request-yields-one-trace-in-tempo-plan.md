@@ -93,10 +93,10 @@ operator_actions:
 - [x] `tests/smoke/test_gateway.py` -- (8) `test_one_search_yields_one_trace_in_tempo`: POST `/v1/search` (keyword, a golden query) with a fresh `traceparent`; poll Tempo for that trace id (≤ 60 s); assert a `ticketscope-api` SERVER span named `POST /v1/search`, an INTERNAL `retrieval keyword` child of it with the AD-10 attributes (`ticketscope.corpus.version` == pin, `ticketscope.result.count` ≥ 1) and no attribute containing the query, and a CLIENT span with `db.system.name=postgresql` whose parent is the retrieval span. (8b) the same trace id is returned through Grafana's Tempo datasource proxy.
 
 **Acceptance Criteria:**
-- Given the kind cluster from `scripts/kind-up.sh` on this branch, when `uv run pytest -m kind tests/smoke` runs, then every test passes, including (8) and (8b).
-- Given the repo, when `uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run lint-imports && uv run pytest` runs, then all pass, including `test_telemetry.py`.
-- Given the api pod on kind, when `kubectl -n ticketscope logs deploy/ticketscope-api` is read after a search, then each line is a JSON object, and the lines logged during the request carry the trace's `trace_id`.
-- Given Grafana port-forwarded (`kubectl -n platform port-forward svc/grafana 3000:80`), when the trace id from (8) is opened in Explore on the Tempo datasource, then the same span tree is shown (manual, human-visual).
+- Given the kind cluster from `scripts/kind-up.sh` on this branch, when `uv run pytest -m kind tests/smoke` runs, then every test passes, including (8) and (8b). (R6)
+- Given the repo, when `uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run lint-imports && uv run pytest` runs, then all pass, including `test_telemetry.py`. (R6, R7)
+- Given the api pod on kind, when `kubectl -n ticketscope logs deploy/ticketscope-api` is read after a search, then each line is a JSON object, and the lines logged during the request carry the trace's `trace_id`. (R6)
+- Given Grafana port-forwarded (`kubectl -n platform port-forward svc/grafana 3000:80`), when the trace id from (8) is opened in Explore on the Tempo datasource, then the same span tree is shown (manual, human-visual). (R6)
 
 ## Implementation Notes
 

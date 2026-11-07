@@ -188,13 +188,16 @@ def test_golden_queries_return_their_twins_with_outcomes_via_v1_and_page(
             bad_rows = [r["rank"] for r in page.rows if r["data-outcome"] not in OUTCOMES]
             assert not bad_rows, f"{entry_id}: page rows without a contract outcome: {bad_rows}"
             # A gated twin found through /v1 must be on the page too, whatever its row count.
-            if gated and verdict.rank is not None:
-                hrefs = [r["href"] for r in page.rows]
-                if page_rank(hrefs, str(expected["key"])) is None:
-                    failures.append(
-                        f"{entry_id}: the page has no row for {expected['key']}"
-                        f" (/v1 rank {verdict.rank}); hrefs {hrefs}"
-                    )
+            hrefs = [r["href"] for r in page.rows]
+            if (
+                gated
+                and verdict.rank is not None
+                and page_rank(hrefs, str(expected["key"])) is None
+            ):
+                failures.append(
+                    f"{entry_id}: the page has no row for {expected['key']}"
+                    f" (/v1 rank {verdict.rank}); hrefs {hrefs}"
+                )
     finally:
         # Whatever rows were collected, even when an assert above stopped the loop.
         _report(summary_table(rows, k=k, mode=mode), capsys)

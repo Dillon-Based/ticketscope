@@ -13,6 +13,7 @@ import httpx2
 import pytest
 from fastapi.testclient import TestClient
 
+from tests.factories import form_payload, search_payload
 from tests.target import NO_MATCH_QUERY, REPO, TARGET_NUMBER, TARGET_QUERY
 from tests.unit.test_app import _BrokenStore  # pyright: ignore[reportPrivateUsage]
 from ticketscope.contract.search import OutcomeStatus, SearchResponse
@@ -112,7 +113,7 @@ def client(fixture_store: InMemoryCorpusStore) -> TestClient:
 
 
 def _post(client: TestClient, query: str) -> httpx2.Response:
-    return client.post("/", content=urlencode({"q": query}), headers=FORM)
+    return client.post("/", content=urlencode(form_payload(query)), headers=FORM)
 
 
 def test_open_page_is_the_form_with_no_results(client: TestClient) -> None:
@@ -133,7 +134,7 @@ def test_results_match_v1_search(client: TestClient) -> None:
     assert body.rows
     assert [r.rank for r in body.rows] == list(range(1, len(body.rows) + 1))
     api = SearchResponse.model_validate(
-        client.post("/v1/search", json={"query": TARGET_QUERY, "mode": "keyword"}).json()
+        client.post("/v1/search", json=search_payload(TARGET_QUERY, mode="keyword")).json()
     )
     assert len(body.rows) == len(api.results)
     for row, result in zip(body.rows, api.results, strict=True):
@@ -149,14 +150,14 @@ def test_results_match_v1_search(client: TestClient) -> None:
 
 def test_v1_search_still_answers_json(client: TestClient) -> None:
     _post(client, TARGET_QUERY)
-    response = client.post("/v1/search", json={"query": TARGET_QUERY, "mode": "keyword"})
+    response = client.post("/v1/search", json=search_payload(TARGET_QUERY, mode="keyword"))
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/json"
     assert response.json()["results"][0]["issue"]["number"] == TARGET_NUMBER
 
 
 def test_get_link_gives_the_same_rows_as_post(client: TestClient) -> None:
-    by_get = _html(client.get("/", params={"q": TARGET_QUERY}))
+    by_get = _html(client.get("/", params=form_payload(TARGET_QUERY)))
     by_post = _html(_post(client, TARGET_QUERY))
     assert by_get.rows
     assert by_get.rows == by_post.rows
@@ -184,7 +185,7 @@ def test_no_match_is_the_empty_state(client: TestClient) -> None:
 def test_corpus_not_loaded_is_a_503_page(method: str) -> None:
     client = TestClient(create_app(store=InMemoryCorpusStore(), settings=Settings()))
     response = (
-        client.get("/", params={"q": TARGET_QUERY})
+        client.get("/", params=form_payload(TARGET_QUERY))
         if method == "get"
         else _post(client, TARGET_QUERY)
     )
@@ -202,7 +203,7 @@ def test_store_failure_is_a_generic_500_page(method: str, caplog: pytest.LogCapt
     )
     with caplog.at_level(logging.ERROR, logger="ticketscope.http.app"):
         response = (
-            client.get("/", params={"q": TARGET_QUERY})
+            client.get("/", params=form_payload(TARGET_QUERY))
             if method == "get"
             else _post(client, TARGET_QUERY)
         )

@@ -1,6 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
+from tests.factories import outcome_payload
 from ticketscope.contract.search import IssueResponse, SearchRequest, SearchResponse
 
 
@@ -75,7 +76,7 @@ def test_response_enums_are_closed(path: tuple[str | int, ...], value: str) -> N
                     "kind": "short",
                     "state": "closed",
                 },
-                "outcome": {"status": "unknown", "summary": None, "source": None, "ref": None},
+                "outcome": outcome_payload(),
             }
         ],
     }
@@ -109,7 +110,7 @@ def test_issue_response_round_trips_an_unknown_field() -> None:
             "body": "a body",
             "key": "MCD-9003",
         },
-        "outcome": {"status": "fixed", "summary": "Fixed", "source": None, "ref": None},
+        "outcome": outcome_payload(status="fixed", summary="Fixed"),
         "added_later": [1, 2],
     }
     assert IssueResponse.model_validate(body).model_dump() == body
@@ -118,7 +119,7 @@ def test_issue_response_round_trips_an_unknown_field() -> None:
 def test_issue_response_body_may_be_null_but_not_missing() -> None:
     body: dict[str, object] = {
         "issue": {"number": 1, "title": "t", "url": "u", "kind": "short", "state": "open"},
-        "outcome": {"status": "unknown", "summary": None, "source": None, "ref": None},
+        "outcome": outcome_payload(),
     }
     with pytest.raises(ValidationError):
         IssueResponse.model_validate(body)

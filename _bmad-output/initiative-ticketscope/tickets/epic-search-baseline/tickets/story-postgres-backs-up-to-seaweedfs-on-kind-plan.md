@@ -89,9 +89,9 @@ deferred: []
   - delete the Backup CR at the end.
 
 **Acceptance Criteria:**
-- Given a PR, when `ci.yml` runs, then the `checks` and `charts` jobs pass, and `_kind-deploy` passes every `kind` smoke test, including test (7).
-- Given `scripts/kind-up.sh` on the local kind cluster, when it finishes and test (7) runs, then the Backup reaches `completed` and its objects are listed in the `ticketscope-backups` bucket.
-- Given a second `scripts/kind-up.sh` run on the same cluster, when it finishes, then the plugin TLS Secrets and `ticketscope-backup-s3` carry the same data as before the run.
+- Given a PR, when `ci.yml` runs, then the `checks` and `charts` jobs pass, and `_kind-deploy` passes every `kind` smoke test, including test (7). (R5, R7)
+- Given `scripts/kind-up.sh` on the local kind cluster, when it finishes and test (7) runs, then the Backup reaches `completed` and its objects are listed in the `ticketscope-backups` bucket. (R5)
+- Given a second `scripts/kind-up.sh` run on the same cluster, when it finishes, then the plugin TLS Secrets and `ticketscope-backup-s3` carry the same data as before the run. (R5)
 
 ## Implementation Notes
 

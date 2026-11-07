@@ -38,6 +38,14 @@ _MAINTAINERS = "MAINTAINER" + "_ASSOCIATIONS"
 _RETIRED = re.compile(rf"{_V1_ISSUE}([^V]|$)|{_V1_EVENT}|{_GH_OUTCOME}|{_MAINTAINERS}")
 
 
+def _retired_symbols_in(path: Path) -> list[str]:
+    return [
+        f"{path.relative_to(REPO)}:{n}: {line.strip()}"
+        for n, line in enumerate(path.read_text("utf-8").splitlines(), 1)
+        if _RETIRED.search(line)
+    ]
+
+
 def test_no_source_or_test_names_a_retired_v1_symbol() -> None:
     """The plan's AC grep, as a regression guard, over every file it would read."""
     hits = []
@@ -45,9 +53,7 @@ def test_no_source_or_test_names_a_retired_v1_symbol() -> None:
         for path in root.rglob("*"):
             if not path.is_file() or "__pycache__" in path.parts:
                 continue
-            for n, line in enumerate(path.read_text("utf-8").splitlines(), 1):
-                if _RETIRED.search(line):
-                    hits.append(f"{path.relative_to(REPO)}:{n}: {line.strip()}")
+            hits.extend(_retired_symbols_in(path))
     assert not hits, "\n".join(hits)
 
 

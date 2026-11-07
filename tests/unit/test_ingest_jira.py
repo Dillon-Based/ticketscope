@@ -329,7 +329,8 @@ def test_malformed_exclusion_line_is_refused_with_its_line(tmp_path: Path, junk:
 
 
 def test_committed_exclusions_file_parses() -> None:
-    ingest.read_exclusions(SNAPSHOT_DIR / "exclusions.txt")
+    # The committed takedown list currently contains comments only.
+    assert ingest.read_exclusions(SNAPSHOT_DIR / "exclusions.txt") == frozenset()
 
 
 # --- report (test design P2 "Release notes report", case 1) ----------------------------

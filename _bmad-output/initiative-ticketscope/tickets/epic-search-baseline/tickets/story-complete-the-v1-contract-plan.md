@@ -93,9 +93,9 @@ deferred:
 - [x] `tests/smoke/test_gateway.py` -- through the Gateway: `GET /v1/issues/{n}` for the top hit of `RESULTS_QUERY` returns its number with a non-empty body and the same outcome as the search row; an unknown number is 404 problem+json; `k=0`, `k=51`, `mode=nope` are 422 problem+json; an operator-character query and a 4 KB or larger pasted Java-style stack trace each return 200 with results
 
 **Acceptance Criteria:**
-- Given the kind cluster with this branch's image, when `uv run pytest -m kind tests/smoke` runs, then every smoke test passes, the new `/v1` checks included.
-- Given `src/ticketscope/core/modes.py` imports `ticketscope.adapters.postgres`, when `uv run lint-imports` runs, then it fails (the layering is unchanged).
-- Given a `POST /v1/search` response saved before this change, when the same request runs after it, then the body is identical.
+- Given the kind cluster with this branch's image, when `uv run pytest -m kind tests/smoke` runs, then every smoke test passes, the new `/v1` checks included. (R3)
+- Given `src/ticketscope/core/modes.py` imports `ticketscope.adapters.postgres`, when `uv run lint-imports` runs, then it fails (the layering is unchanged). (R7)
+- Given a `POST /v1/search` response saved before this change, when the same request runs after it, then the body is identical. (R3)
 
 ## Implementation Notes
 

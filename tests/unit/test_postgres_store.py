@@ -90,3 +90,10 @@ def test_get_issue_sends_the_number_as_a_parameter(conn: _Conn) -> None:
     assert "42" not in sql
     assert "%(number)s" in sql
     assert "body" in sql
+
+
+def test_keyword_top_k_breaks_score_ties_on_issue_number_in_the_inner_limit() -> None:
+    """The inner `LIMIT` must see a total order, or which tied issue makes the top k varies."""
+    inner = postgres._KEYWORD_SQL.split("FROM issue", 1)[1].split("LIMIT", 1)[0]
+    assert "ORDER BY score, number" in inner
+    assert postgres._KEYWORD_SQL.rstrip().endswith("ORDER BY score, number")

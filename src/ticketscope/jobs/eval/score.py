@@ -1,33 +1,54 @@
 """Score every available retrieval mode on the labelled pairs (AD-19, AD-26).
 
-Story 2.1's relevance is the linked target only: Recall@10 is the share of pairs whose
-target is in the mode's top 10, and MRR@10 is the mean of 1/rank of that target, 0 past
-rank 10. Each query is the query issue's title and description (no comments), searched
-with `k=10` and the query issue excluded. The registry is read when `score` is called,
-so a newly registered mode is scored with no change here.
+Relevance is the query's duplicate cluster (`Pair.relevant`): a query is a hit at k when any
+cluster member is in the mode's top k. Recall@1/5/10 are hit rates, MRR@10 uses the first
+member's rank (0 past rank 10), and each is tallied per kind and over all queries (never as
+the mean of the kind means). Each query is the query issue's title and description (no
+comments), searched with `k=10` and the query issue excluded; each search is timed. The
+registry is read when `score` is called, so a newly registered mode is scored with no change
+here.
 """
 
+import math
+import time
 from collections.abc import Iterable, Mapping
 from fractions import Fraction
-from typing import TypedDict
+from typing import Any, TypedDict
 
 from ticketscope.core import modes
 from ticketscope.core.pairs import Pair, as_pair
 from ticketscope.core.ports import CorpusStore, Retriever
 
 K = 10
-RELEVANCE = "target"
+RELEVANCE = "cluster"
+KINDS = ("short", "log_heavy")
+CUTOFFS = (1, 5, 10)
 
-ModeScores = TypedDict(
-    "ModeScores",
-    {"recall@10": float, "mrr@10": float, "pairs_scored": int},
+KindScores = TypedDict(
+    "KindScores",
+    {
+        "recall@1": float,
+        "recall@5": float,
+        "recall@10": float,
+        "mrr@10": float,
+        "p95_latency_ms": float,
+        "pairs_scored": int,
+    },
 )
+
+
+class ModeResults(TypedDict):
+    short: KindScores
+    log_heavy: KindScores
+    overall: KindScores
+    first_member_ranks: list[list[int | None]]
 
 
 class Results(TypedDict):
     k: int
     relevance: str
-    modes: dict[str, ModeScores]
+    modes: dict[str, ModeResults]
+    skipped_modes: list[str]
 
 
 def query_text(store: CorpusStore, number: int) -> str:
@@ -38,42 +59,101 @@ def query_text(store: CorpusStore, number: int) -> str:
     return f"{detail.issue.title}\n\n{detail.body or ''}"
 
 
+def first_member_rank(relevant: Iterable[int], ranked: list[int]) -> int | None:
+    """The 1-based rank of the first cluster member in the top `K` of `ranked`, else None."""
+    members = set(relevant)
+    for rank, number in enumerate(ranked[:K], start=1):
+        if number in members:
+            return rank
+    return None
+
+
+def p95(latencies_ms: list[float]) -> float:
+    """Nearest-rank 95th percentile; 0.0 for no searches."""
+    if not latencies_ms:
+        return 0.0
+    ordered = sorted(latencies_ms)
+    return ordered[math.ceil(0.95 * len(ordered)) - 1]
+
+
 class _Tally:
     def __init__(self) -> None:
-        self.hits = 0
+        self.scored = 0
+        self.hits = {cutoff: 0 for cutoff in CUTOFFS}
         self.reciprocal_ranks = Fraction(0)
+        self.latencies_ms: list[float] = []
 
-    def add(self, target: int, ranked: list[int]) -> None:
-        top = ranked[:K]
-        if target in top:
-            self.hits += 1
-            self.reciprocal_ranks += Fraction(1, top.index(target) + 1)
+    def add(self, rank: int | None, latency_ms: float) -> None:
+        self.scored += 1
+        self.latencies_ms.append(latency_ms)
+        if rank is None:
+            return
+        self.reciprocal_ranks += Fraction(1, rank)
+        for cutoff in CUTOFFS:
+            if rank <= cutoff:
+                self.hits[cutoff] += 1
 
-    def scores(self, scored: int) -> ModeScores:
-        if scored == 0:
-            return {"recall@10": 0.0, "mrr@10": 0.0, "pairs_scored": 0}
+    def scores(self) -> KindScores:
+        n = self.scored
+
+        def rate(count: int | Fraction) -> float:
+            return float(Fraction(count) / n) if n else 0.0
+
         return {
-            "recall@10": float(Fraction(self.hits, scored)),
-            "mrr@10": float(self.reciprocal_ranks / scored),
-            "pairs_scored": scored,
+            "recall@1": rate(self.hits[1]),
+            "recall@5": rate(self.hits[5]),
+            "recall@10": rate(self.hits[10]),
+            "mrr@10": rate(self.reciprocal_ranks),
+            "p95_latency_ms": p95(self.latencies_ms),
+            "pairs_scored": n,
         }
 
 
-def score(store: CorpusStore, pairs: Iterable[Pair | Mapping[str, object]]) -> Results:
-    """Target-only Recall@10 and MRR@10 for every mode whose `available(store)` holds."""
+class _ModeTally:
+    def __init__(self) -> None:
+        self.kinds = {kind: _Tally() for kind in KINDS}
+        self.overall = _Tally()
+        self.ranks: dict[int, int | None] = {}
+
+    def add(self, pair: Pair, rank: int | None, latency_ms: float) -> None:
+        self.kinds[pair.kind].add(rank, latency_ms)
+        self.overall.add(rank, latency_ms)
+        self.ranks[pair.query] = rank
+
+    def results(self) -> ModeResults:
+        return {
+            "short": self.kinds["short"].scores(),
+            "log_heavy": self.kinds["log_heavy"].scores(),
+            "overall": self.overall.scores(),
+            "first_member_ranks": [[query, rank] for query, rank in sorted(self.ranks.items())],
+        }
+
+
+def score(store: CorpusStore, pairs: Iterable[Pair | Mapping[str, Any]]) -> Results:
+    """Cluster Recall@1/5/10, MRR@10 and p95 latency, per kind and overall, for every mode
+    whose `available(store)` holds; the other registry modes are named in `skipped_modes`."""
     parsed = [as_pair(line) for line in pairs]
-    retrievers: dict[str, Retriever] = {
-        name: mode.build(store) for name, mode in modes.REGISTRY.items() if mode.available(store)
-    }
-    tallies = {name: _Tally() for name in retrievers}
+    registry = modes.REGISTRY
+    retrievers: dict[str, Retriever] = {}
+    skipped: list[str] = []
+    for name, mode in registry.items():
+        if mode.available(store):
+            retrievers[name] = mode.build(store)
+        else:
+            skipped.append(name)
+    tallies = {name: _ModeTally() for name in retrievers}
     for pair in parsed:
         text = query_text(store, pair.query)
         exclude = frozenset({pair.query})
         for name, retriever in retrievers.items():
+            started = time.perf_counter()
             hits = retriever.search(text, K, exclude=exclude)
-            tallies[name].add(pair.target, [hit.issue.number for hit in hits])
+            latency_ms = (time.perf_counter() - started) * 1000
+            ranked = [hit.issue.number for hit in hits]
+            tallies[name].add(pair, first_member_rank(pair.relevant, ranked), latency_ms)
     return {
         "k": K,
         "relevance": RELEVANCE,
-        "modes": {name: tally.scores(len(parsed)) for name, tally in tallies.items()},
+        "modes": {name: tally.results() for name, tally in tallies.items()},
+        "skipped_modes": sorted(skipped),
     }

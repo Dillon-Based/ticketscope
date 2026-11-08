@@ -102,12 +102,6 @@ def _scripted_keyword(rankings: Mapping[int, tuple[int, ...]], calls: list[Call]
     return modes.Mode(name="keyword", score_kind="bm25", build=build, available=available)
 
 
-@pytest.mark.skip(
-    reason=(
-        "ATDD red phase, [P0] AC-1: cluster metrics match the hand-computed oracle. "
-        "Remove when story 2.2 adds cluster relevance to ticketscope.jobs.eval."
-    )
-)
 @pytest.mark.criterion("ticketscope--e2-s2--AC-1")
 def test_p0_ac1_cluster_metrics_match_the_oracle(monkeypatch: pytest.MonkeyPatch) -> None:
     """[P0] AC-1: every cluster metric, short, log-heavy and overall, equals the oracle; a

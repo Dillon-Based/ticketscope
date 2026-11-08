@@ -88,6 +88,25 @@ def test_ci_chart_render_job_runs_the_eval_chart_tests() -> None:
     assert "tests/unit/test_chart_eval.py" in CI.read_text(encoding="utf-8")
 
 
+def test_base_commit_is_fetched_and_the_gate_runs_after_the_eval_check() -> None:
+    eval_text = EVAL.read_text(encoding="utf-8")
+    assert "base_sha: ${{ github.event.pull_request.base.sha }}" in eval_text
+    pytest_at = eval_text.index("uv run pytest -m kind tests/eval")
+    gate_at = eval_text.index("python -m ticketscope.jobs.eval.gate")
+    assert pytest_at < gate_at
+    assert '--base-sha "$BASE_SHA"' in eval_text
+    assert "--results reports/eval-results.json" in eval_text
+
+    text = KIND_DEPLOY.read_text(encoding="utf-8")
+    block = _block(_block(text, "inputs", 4), "base_sha", 6)
+    assert "type: string" in block and 'default: ""' in block
+    fetch = text.index("      - name: Fetch the PR base commit\n")
+    check = text.index("      - name: Check\n")
+    assert fetch < check
+    assert 'git fetch --no-tags --depth=1 origin "$BASE_SHA"' in text[fetch:check]
+    assert "BASE_SHA: ${{ inputs.base_sha }}" in text[check:]
+
+
 def test_kind_up_leaves_eval_off_unless_asked() -> None:
     text = KIND_UP.read_text(encoding="utf-8")
     assert 'if [[ "${EVAL_ENABLED:-0}" == 1 ]]; then' in text

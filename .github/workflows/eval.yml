@@ -19,4 +19,7 @@ jobs:
     uses: ./.github/workflows/_kind-deploy.yml
     with:
       eval_enabled: true
-      check: uv run pytest -m kind tests/eval --junitxml=reports/eval.xml
+      base_sha: ${{ github.event.pull_request.base.sha }}
+      # The gate runs after the eval check, on the results file it wrote, and diffs
+      # eval/baseline.json against the PR base commit.
+      check: uv run pytest -m kind tests/eval --junitxml=reports/eval.xml && uv run python -m ticketscope.jobs.eval.gate --baseline eval/baseline.json --results reports/eval-results.json --base-sha "$BASE_SHA"

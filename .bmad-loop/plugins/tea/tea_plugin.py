@@ -6,12 +6,21 @@
 * ``on_pre_session``: when the session is bmad-loop's auto retrospective for a
   ticket-tree epic (task ``<epic-slug>-retrospective``, role ``retro``), prepend
   the TEA release gate for that epic to its prompt.
+* ``on_post_session``: after that retrospective session, commit any gate report
+  still dirty under TEA's ``test_artifacts`` folder (and nothing else). The prompt
+  asks the session to commit them, but on epic 1 three reports were left dirty and
+  the engine paused the run at the boundary (``retro-auto-dirty``). This hook runs
+  before the engine's dirty check, so the commit no longer depends on the session.
+
+Hooks never raise: bmad-loop disables a plugin whose hook raises for the rest of
+the run. Failures are recorded in ``ctx.shared["tea_gate_commits"]``.
 """
 
 from __future__ import annotations
 
 import json
 import subprocess
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -22,6 +31,48 @@ if TYPE_CHECKING:
 
 RETRO_SUFFIX = "-retrospective"
 SUBPROCESS_TIMEOUT_S = 60
+
+# (args, cwd) -> (returncode, stdout + stderr); injectable for tests.
+Runner = Callable[[Sequence[str], Path], tuple[int, str]]
+
+
+def run_command(args: Sequence[str], cwd: Path) -> tuple[int, str]:
+    try:
+        proc = subprocess.run(
+            list(args), cwd=cwd, capture_output=True, text=True, timeout=SUBPROCESS_TIMEOUT_S
+        )
+    except OSError as e:
+        return 127, str(e)
+    except subprocess.TimeoutExpired:
+        return 124, f"timed out after {SUBPROCESS_TIMEOUT_S}s: {' '.join(args)}"
+    return proc.returncode, proc.stdout + proc.stderr
+
+
+def commit_gate_reports(root: Path, artifacts: Path, slug: str, run: Runner) -> dict[str, Any]:
+    """Commit every dirty path under ``artifacts`` (tracked or new) in one commit.
+
+    Touches nothing outside ``artifacts``: changes staged elsewhere stay staged and
+    uncommitted (``git commit --only``). Returns a record of what happened."""
+    try:
+        rel = artifacts.resolve().relative_to(root.resolve())
+    except ValueError:
+        return {"status": "skipped", "reason": f"{artifacts} is outside {root}"}
+    spec = str(rel)
+    rc, out = run(["git", "status", "--porcelain", "--untracked-files=all", "--", spec], root)
+    if rc != 0:
+        return {"status": "error", "step": "status", "output": out[-500:]}
+    paths = [line[3:] for line in out.splitlines() if len(line) > 3]
+    if not paths:
+        return {"status": "clean"}
+    rc, out = run(["git", "add", "--all", "--", spec], root)
+    if rc != 0:
+        return {"status": "error", "step": "add", "output": out[-500:]}
+    message = f"test(tea): {slug} release gate"
+    rc, out = run(["git", "commit", "--only", "-m", message, "--", spec], root)
+    if rc != 0:
+        return {"status": "error", "step": "commit", "output": out[-500:]}
+    return {"status": "committed", "paths": paths}
+
 
 # TEA's release-gate order: test review, NFR, then trace (the gate decision).
 EPIC_GATES = (
@@ -84,6 +135,7 @@ def epic_gate_prompt(
 
 class TeaPlugin(Plugin):
     fail_closed = False
+    runner: Runner = staticmethod(run_command)
 
     # ------------------------------------------------------------ readiness
 
@@ -149,6 +201,22 @@ class TeaPlugin(Plugin):
         ctx.shared.setdefault("tea_epic_gates", {})[slug] = {
             "steps": [s.split("`")[1] for s in steps],
         }
+
+    def on_post_session(self, ctx: HookContext) -> None:
+        key = ctx.story_key or ""
+        if ctx.role != "retro" or not key.endswith(RETRO_SUFFIX) or not self._epic_steps():
+            return
+        slug = key[: -len(RETRO_SUFFIX)]
+        try:
+            root = Path(ctx.worktree or ctx.repo_root or Path.cwd())
+            artifacts = self._expand(self._resolve_config(root, "modules.tea.test_artifacts"), root)
+            if artifacts is None:
+                record: dict[str, Any] = {"status": "skipped", "reason": "no test_artifacts"}
+            else:
+                record = commit_gate_reports(root, Path(artifacts), slug, self.runner)
+        except Exception as e:  # never raise: a raising hook disables the plugin
+            record = {"status": "error", "step": "hook", "output": f"{type(e).__name__}: {e}"}
+        ctx.shared.setdefault("tea_gate_commits", {})[slug] = record
 
     # --------------------------------------------------------------- helpers
 

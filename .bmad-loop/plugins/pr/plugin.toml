@@ -1,0 +1,87 @@
+# Project-local PR-per-story plugin for bmad-loop.
+#
+# Every ticket the loop builds lands through its own branch and pull request, so
+# CI gates each merge (epic-eval-gate Decision: "Stories land through a branch and
+# a PR each, so the required check gates them"). It replaces running
+# scripts/loop-story-pr.sh once per story: `bmad-loop run --epic <slug>` builds
+# the epic and merges each story as its CI goes green.
+#
+#   pre_story   tracked changes stop the run; an earlier story whose PR is still
+#               open or red pauses it until that PR merges; otherwise update the
+#               base branch and switch to <branch_prefix><ref> (reused on resume).
+#   post_story  ticket built or done: push, open or reuse the PR, wait for every
+#               check, squash-merge, return to the updated base branch. A red
+#               check, timeout or error goes to the run's ATTENTION file, and the
+#               next story's pre_story pauses the run (bmad-loop ignores vetoes
+#               from post_story). A ticket left unbuilt keeps its branch.
+#
+# Requirements:
+#   * [scm] isolation = "none" (validated): the plugin switches branches in the
+#     main checkout, as the loop builds in place.
+#   * `gh` authenticated, and branch protection on the base branch requiring CI.
+#   * A grant, since this is a project plugin with Python:
+#       bmad-loop plugins enable pr
+#       # .bmad-loop/policy.toml
+#       [plugins]
+#       enabled = ["tea", "pr"]
+
+[plugin]
+name = "pr"
+version = "1.0.0"
+api_version = 1
+description = "Land each ticket through its own branch and PR: push, wait for CI, squash-merge, then build the next."
+author = "ticketscope"
+
+[python]
+module = "pr_plugin.py"
+class = "PrPlugin"
+
+[[settings]]
+key = "base_branch"
+type = "str"
+default = "main"
+label = "Base branch"
+help = "The branch every story branches from and merges into."
+
+[[settings]]
+key = "branch_prefix"
+type = "str"
+default = "story-"
+label = "Story branch prefix"
+help = "A story's branch is this prefix plus its ref with dots as dashes (story-2-2)."
+
+[[settings]]
+key = "merge"
+type = "bool"
+default = true
+label = "Merge on green"
+help = "true = squash-merge once every check passes. false = leave the green PR open; the next story pauses until you merge it."
+
+[[settings]]
+key = "merge_method"
+type = "select"
+default = "squash"
+options = ["squash", "merge", "rebase"]
+label = "Merge method"
+help = "Passed to `gh pr merge` as --squash, --merge or --rebase."
+
+[[settings]]
+key = "ci_timeout_minutes"
+type = "int"
+default = 90
+label = "CI timeout (minutes)"
+help = "How long post_story waits for every check before recording the story as not landed."
+
+[[settings]]
+key = "poll_seconds"
+type = "int"
+default = 30
+label = "Check poll interval (seconds)"
+help = "How often post_story re-reads the PR's checks."
+
+[[settings]]
+key = "checks_register_seconds"
+type = "int"
+default = 180
+label = "Check registration grace (seconds)"
+help = "How long a new PR may show no checks before that counts as a failure."

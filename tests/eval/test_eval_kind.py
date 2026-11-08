@@ -41,7 +41,7 @@ def _secret(name: str, key: str) -> str:
     return base64.b64decode(raw).decode("utf-8")
 
 
-@pytest.mark.criterion("ticketscope--e2-s1--AC-1")
+@pytest.mark.criterion("ticketscope--e2-s1--AC-2")
 def test_eval_job_completed_after_load() -> None:
     job = _job(EVAL_JOB)
     complete = [c for c in job["status"].get("conditions", []) if c["type"] == "Complete"]
@@ -107,7 +107,7 @@ def test_first_member_ranks_recompute_to_the_reported_metrics(
         assert keyword[kind] | _recompute(ranks, kinds, kind) == pytest.approx(keyword[kind])
 
 
-@pytest.mark.criterion("ticketscope--e2-s1--AC-1")
+@pytest.mark.criterion("ticketscope--e2-s1--AC-2")
 def test_lineage_equals_corpus_meta(eval_results: dict[str, Any]) -> None:
     version, model, preprocessing = _corpus_meta()
     lineage = eval_results["lineage"]
@@ -117,7 +117,7 @@ def test_lineage_equals_corpus_meta(eval_results: dict[str, Any]) -> None:
     assert eval_results["pairs_file"] == f"eval/pairs/{version}.jsonl"
 
 
-@pytest.mark.criterion("ticketscope--e2-s1--AC-1")
+@pytest.mark.criterion("ticketscope--e2-s1--AC-2")
 def test_eval_job_reads_as_ticketscope_ro() -> None:
     [container] = _job(EVAL_JOB)["spec"]["template"]["spec"]["containers"]
     refs = {
@@ -129,7 +129,7 @@ def test_eval_job_reads_as_ticketscope_ro() -> None:
     assert _secret(RO_SECRET, "username") == "ticketscope_ro"
 
 
-@pytest.mark.criterion("ticketscope--e2-s1--AC-1")
+@pytest.mark.criterion("ticketscope--e2-s1--AC-2")
 def test_uploaded_results_hold_no_secret_value(eval_results: dict[str, Any]) -> None:
     text = RESULTS_PATH.read_text(encoding="utf-8")
     for name in (RO_SECRET, OWNER_SECRET):
@@ -138,7 +138,7 @@ def test_uploaded_results_hold_no_secret_value(eval_results: dict[str, Any]) -> 
     assert "password" not in text.lower()
 
 
-@pytest.mark.criterion("ticketscope--e2-s1--AC-1")
+@pytest.mark.criterion("ticketscope--e2-s1--AC-5")
 def test_pairs_regenerate_byte_identical_with_the_release_counts(
     pytestconfig: pytest.Config,
 ) -> None:

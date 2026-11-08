@@ -66,10 +66,10 @@ deferred: []
 - [ ] Update the header comment of `ci.yml` to mention the README check
 
 **Acceptance Criteria:**
-- Given the committed `eval/baseline.json` and README, when `python3 scripts/render_readme_table.py --check` runs, then it exits 0, and `--write` leaves `git diff` empty.
-- Given one digit of the README table changed by hand, when the check runs, then it exits 1.
-- Given a README without the generated-section markers, when the check runs, then it exits 1.
-- Given `ci.yml`, when parsed as text, then the `checks` job runs the check command.
+- Given the committed `eval/baseline.json` and README, when `python3 scripts/render_readme_table.py --check` runs, then it exits 0, and `--write` leaves `git diff` empty (R4).
+- Given one digit of the README table changed by hand, when the check runs, then it exits 1 (R4).
+- Given a README without the generated-section markers, when the check runs, then it exits 1 (R4).
+- Given `ci.yml`, when parsed as text, then the `checks` job runs the check command (R4).
 
 ## Implementation Notes
 

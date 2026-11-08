@@ -23,6 +23,13 @@ on:
         type: boolean
         required: false
         default: false
+      base_sha:
+        description: >-
+          PR base commit. When set, it is fetched (the checkout is depth 1) and exported to
+          the check as BASE_SHA, so a check can diff against it. Only eval.yml sets it.
+        type: string
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -38,6 +45,12 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v7
+
+      - name: Fetch the PR base commit
+        if: inputs.base_sha != ''
+        env:
+          BASE_SHA: ${{ inputs.base_sha }}
+        run: git fetch --no-tags --depth=1 origin "$BASE_SHA"
 
       - name: Start runner-fit sampler
         run: |
@@ -72,6 +85,7 @@ jobs:
       - name: Check
         env:
           CHECK: ${{ inputs.check }}
+          BASE_SHA: ${{ inputs.base_sha }}
           # The Postgres image kind-up.sh built, for tests/smoke/test_time_load.py.
           POSTGRES_IMAGE: ticketscope-postgres:18-${{ github.sha }}
         run: bash -c "$CHECK"

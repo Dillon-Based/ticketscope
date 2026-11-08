@@ -16,6 +16,13 @@ on:
         type: string
         required: false
         default: ""
+      eval_enabled:
+        description: >-
+          Render the eval Job, a Helm hook after load (kind-up.sh EVAL_ENABLED=1).
+          Only eval.yml sets it.
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -60,6 +67,7 @@ jobs:
         run: scripts/kind-up.sh
         env:
           TAG: ${{ github.sha }}
+          EVAL_ENABLED: ${{ inputs.eval_enabled && '1' || '0' }}
 
       - name: Check
         env:
@@ -72,6 +80,7 @@ jobs:
         if: inputs.upgrade_check != ''
         env:
           TAG: ${{ github.sha }}
+          EVAL_ENABLED: ${{ inputs.eval_enabled && '1' || '0' }}
           CHECK: ${{ inputs.upgrade_check }}
           POSTGRES_IMAGE: ticketscope-postgres:18-${{ github.sha }}
         run: |
@@ -125,6 +134,9 @@ jobs:
             echo "| Wall clock, kind-up start to api Ready | ${wall} |"
             echo
             echo "Wall clock is measured by scripts/kind-up.sh and includes its image builds."
+            if [[ "${{ inputs.eval_enabled }}" == true ]]; then
+              echo "With eval enabled, this wall clock also includes the eval Job (a Helm hook kind-up waits on)."
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
           cat "$GITHUB_STEP_SUMMARY"
           mkdir -p reports

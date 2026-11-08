@@ -1,0 +1,22 @@
+# PR eval (epic-eval-gate): one kind deploy with the eval Job enabled. The Job runs as a
+# Helm hook after load, as ticketscope_ro; the check reads its results line from the Job
+# log into reports/eval-results.json before any assertion, so _kind-deploy.yml's
+# always-run upload keeps it, then regenerates eval/pairs from the pinned asset.
+name: eval
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: eval-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  eval:
+    uses: ./.github/workflows/_kind-deploy.yml
+    with:
+      eval_enabled: true
+      check: uv run pytest -m kind tests/eval --junitxml=reports/eval.xml

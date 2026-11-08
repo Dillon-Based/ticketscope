@@ -90,12 +90,6 @@ def _scripted_keyword(calls: list[tuple[int, str, int, frozenset[int]]]) -> mode
     return modes.Mode(name="keyword", score_kind="bm25", build=build, available=available)
 
 
-@pytest.mark.skip(
-    reason=(
-        "ATDD red phase, [P0] AC-1: keyword's Recall@10 and MRR@10 over every pair. "
-        "Remove when story 2.1 adds ticketscope.jobs.eval."
-    )
-)
 @pytest.mark.criterion("ticketscope--e2-s1--AC-1")
 def test_p0_ac1_keyword_target_only_metrics_match_the_oracle(
     monkeypatch: pytest.MonkeyPatch,

@@ -1,5 +1,5 @@
 # The one app image (AD-2). The process is chosen by command:
-#   ticketscope-api | ticketscope-migrate | ticketscope-load
+#   ticketscope-api | ticketscope-migrate | ticketscope-load | ticketscope-eval
 # ingest runs on a person's machine (scripts/publish-snapshot.sh); its `ingest`
 # dependency group (pymongo) is not installed here.
 # Build from the repo root: docker build -f images/app.Dockerfile .
@@ -27,6 +27,8 @@ ENV PATH=/app/.venv/bin:$PATH \
 WORKDIR /app
 COPY --from=build /app /app
 COPY migrations /app/migrations
+# eval reads eval/pairs/<snapshot_version>.jsonl relative to /app (AD-26).
+COPY eval/pairs /app/eval/pairs
 USER 10001:10001
 EXPOSE 8080
 CMD ["ticketscope-api"]

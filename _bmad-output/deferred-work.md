@@ -1,0 +1,3 @@
+- source_plan: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-tracer-keyword-is-scored-on-kind-and-ci-uploads-the-results-plan.md`
+  summary: The 45-minute `_kind-deploy.yml` job limit may cut off the eval hook (Helm allows 40m, the Job's deadline is 30m), and a cancelled job skips the Diagnostics step.
+  evidence: Unverified, medium if true (R-006). The eval run time on a GitHub runner is unknown (117 s locally, without a collector). The first `eval.yml` run's `wall_seconds` and job duration settle it. If it is close, raise `timeout-minutes` (or make it an input) and size `eval.activeDeadlineSeconds` from the recorded run, as story 2.2 plans.

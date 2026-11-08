@@ -4,4 +4,5 @@
 !.python-version
 !src/
 !migrations/
+!eval/pairs/
 **/__pycache__

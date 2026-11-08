@@ -20,6 +20,7 @@ dependencies = [
 ticketscope-api = "ticketscope.http.app:main"
 ticketscope-migrate = "ticketscope.jobs.migrate.main:main"
 ticketscope-load = "ticketscope.jobs.load.main:main"
+ticketscope-eval = "ticketscope.jobs.eval.main:main"
 ticketscope-ingest = "ticketscope.jobs.ingest.main:main"
 
 [dependency-groups]

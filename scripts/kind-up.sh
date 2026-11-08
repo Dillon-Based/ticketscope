@@ -12,6 +12,8 @@
 #   TAG            image tag (default: git SHA of HEAD, AD-16)
 #   FORCE_BUILD=1  rebuild images even if the tag exists locally
 #   CLUSTER_NAME   kind cluster name (default: ticketscope)
+#   EVAL_ENABLED=1 render the eval Job (a hook after load; eval.yml only) and give
+#                  Helm longer to wait for it (default: off)
 #
 # When $GITHUB_ENV is set, exports TICKETSCOPE_GATEWAY_URL,
 # TICKETSCOPE_GATEWAY_HOST and TICKETSCOPE_KIND_UP_TO_READY_SECONDS to later steps.
@@ -110,13 +112,23 @@ k -n "$PLATFORM_NS" wait "gateway/${GATEWAY_NAME}" --for=condition=Programmed --
 # tag (or no api yet) needs no restart; Helm's rollout covers it.
 DEPLOYED_APP_IMAGE=$(k -n "$APP_NS" get deploy/ticketscope-api \
   -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || true)
-log "installing ticketscope (hooks: migrate, then load)"
+# EVAL_ENABLED=1 adds the eval hook after load; Helm blocks on it, so allow it longer.
+EVAL_ARGS=()
+HELM_TIMEOUT=25m
+if [[ "${EVAL_ENABLED:-0}" == 1 ]]; then
+  EVAL_ARGS=(--set eval.enabled=true)
+  HELM_TIMEOUT=40m
+  log "installing ticketscope (hooks: migrate, then load, then eval)"
+else
+  log "installing ticketscope (hooks: migrate, then load)"
+fi
 helm --kube-context "$KCTX" upgrade --install ticketscope deploy/charts/ticketscope \
   --namespace "$APP_NS" --create-namespace \
   -f deploy/charts/ticketscope/values-kind.yaml \
   --set-string "image.app.tag=${TAG}" \
   --set-string "image.postgres.tag=${PG_TAG}" \
-  --timeout 25m
+  ${EVAL_ARGS[@]+"${EVAL_ARGS[@]}"} \
+  --timeout "$HELM_TIMEOUT"
 if [[ "$APP_BUILT" == 1 && "$DEPLOYED_APP_IMAGE" == "$APP_IMAGE" ]]; then
   log "app image rebuilt under the deployed tag: restarting api"
   k -n "$APP_NS" rollout restart deploy/ticketscope-api

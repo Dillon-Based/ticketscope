@@ -54,6 +54,12 @@ jobs:
   # How long migrate waits for the Cluster and the ticketscope_ro role.
   dbWaitTimeoutSeconds: 900
 
+# The eval Job (epic-eval-gate, AD-22): a hook after load that scores every available
+# mode on eval/pairs as ticketscope_ro. Only eval.yml's kind cluster enables it.
+eval:
+  enabled: false
+  activeDeadlineSeconds: 1800
+
 database:
   instances: 2
   storage:

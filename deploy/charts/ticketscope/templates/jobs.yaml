@@ -1,7 +1,9 @@
 {{- /*
 AD-22 order: migrate is a post-install/pre-upgrade hook; load is a
 post-install/post-upgrade hook with a later weight, so on install migrate
-finishes first. before-hook-creation avoids Job-immutability failures on upgrade.
+finishes first. eval (only when eval.enabled) is a post-install/post-upgrade hook
+weighted after load, so it scores the corpus load just wrote. before-hook-creation
+avoids Job-immutability failures on upgrade.
 */ -}}
 apiVersion: batch/v1
 kind: Job
@@ -83,3 +85,53 @@ spec:
       volumes:
         - name: snapshots
           emptyDir: {}
+{{- if .Values.eval.enabled }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ticketscope-eval
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ticketscope.labels" . | nindent 4 }}
+    app.kubernetes.io/component: eval
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "10"
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  # Deterministic: a retry would only repeat a failure and double the run time.
+  backoffLimit: 0
+  activeDeadlineSeconds: {{ .Values.eval.activeDeadlineSeconds }}
+  template:
+    metadata:
+      labels:
+        {{- include "ticketscope.labels" . | nindent 8 }}
+        app.kubernetes.io/component: eval
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: eval
+          image: {{ include "ticketscope.appImage" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["ticketscope-eval"]
+          env:
+            # eval reads as ticketscope_ro (AD-7).
+            - name: TICKETSCOPE_DB_HOST
+              value: {{ include "ticketscope.dbCluster" . }}-rw
+            - name: TICKETSCOPE_DB_NAME
+              value: app
+            - name: TICKETSCOPE_DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ticketscope.roSecret" . }}
+                  key: username
+            - name: TICKETSCOPE_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "ticketscope.roSecret" . }}
+                  key: password
+            {{- include "ticketscope.otlpEnv" . | nindent 12 }}
+          resources:
+            {{- toYaml .Values.jobs.resources | nindent 12 }}
+{{- end }}

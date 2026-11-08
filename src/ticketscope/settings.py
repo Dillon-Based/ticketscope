@@ -12,7 +12,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="TICKETSCOPE_", extra="ignore")
 
-    # Database. `api` gets ticketscope_ro; `migrate` and `load` get the app owner (AD-7).
+    # Database. `api` and `eval` get ticketscope_ro; `migrate` and `load` get the app owner (AD-7).
     db_host: str = "localhost"
     db_port: int = 5432
     db_name: str = "app"
@@ -43,6 +43,9 @@ class Settings(BaseSettings):
     snapshot_base_url: str = "https://github.com/Dillon-Based/ticketscope/releases/download"
     snapshot_download_timeout_seconds: int = 300
     snapshot_dir: Path = Path("snapshots")
+
+    # eval: the labelled pairs, one `<snapshot_version>.jsonl` per snapshot (AD-26).
+    eval_pairs_dir: Path = Path("eval/pairs")
 
     def conninfo(self) -> str:
         """A libpq keyword/value connection string."""

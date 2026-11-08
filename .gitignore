@@ -17,3 +17,6 @@ deploy/charts/*/charts/*.tgz
 
 # CI test reports (scripts/live_results.py input)
 /reports/
+
+# Snapshot assets fetched locally (load, scripts/derive_pairs.py)
+/snapshots/

@@ -7,6 +7,7 @@ The asset lives at `{base_url}/snapshot-{version}/{version}.jsonl.gz`. A local c
 import hashlib
 import logging
 import os
+import re
 import tempfile
 from pathlib import Path
 
@@ -15,6 +16,24 @@ import httpx2
 log = logging.getLogger(__name__)
 
 _CHUNK = 1 << 20
+
+_SNAPSHOT_BLOCK = re.compile(r"^snapshot:\n((?:[ \t]+.*\n|[ \t]*#.*\n|\n)+)", re.MULTILINE)
+_PIN_FIELD = re.compile(
+    r'^[ \t]+(version|sha256|baseUrl):[ \t]*"?([^"\n#]*?)"?[ \t]*$', re.MULTILINE
+)
+
+
+def read_snapshot_pin(values: Path) -> dict[str, str]:
+    """`snapshot.version`, `sha256` and `baseUrl` from a chart's values.yaml (no YAML
+    dependency: the block is flat)."""
+    block = _SNAPSHOT_BLOCK.search(values.read_text(encoding="utf-8"))
+    if block is None:
+        raise ValueError(f"{values}: no top-level snapshot: block")
+    pin = dict(_PIN_FIELD.findall(block.group(1)))
+    missing = {"version", "sha256", "baseUrl"} - set(pin)
+    if missing:
+        raise ValueError(f"{values}: snapshot block lacks {sorted(missing)}")
+    return pin
 
 
 class ChecksumMismatch(ValueError):

@@ -6,8 +6,9 @@ schema; `load` never reads it.
 """
 
 import json
-import re
 from pathlib import Path
+
+from ticketscope.adapters.release import read_snapshot_pin
 
 REPO = Path(__file__).resolve().parent.parent
 SNAPSHOT_DIR = REPO / "snapshot"
@@ -28,20 +29,8 @@ def fixture_kinds() -> dict[int, str]:
 
 
 CHART_VALUES = REPO / "deploy" / "charts" / "ticketscope" / "values.yaml"
-_SNAPSHOT_BLOCK = re.compile(r"^snapshot:\n((?:[ \t]+.*\n|[ \t]*#.*\n|\n)+)", re.MULTILINE)
-_PIN_FIELD = re.compile(
-    r'^[ \t]+(version|sha256|baseUrl):[ \t]*"?([^"\n#]*?)"?[ \t]*$', re.MULTILINE
-)
 
 
 def snapshot_pin() -> dict[str, str]:
-    """`snapshot.version`, `sha256` and `baseUrl` from the chart's values.yaml (no YAML
-    dependency: the block is flat)."""
-    block = _SNAPSHOT_BLOCK.search(CHART_VALUES.read_text(encoding="utf-8"))
-    if block is None:
-        raise ValueError(f"{CHART_VALUES}: no top-level snapshot: block")
-    pin = dict(_PIN_FIELD.findall(block.group(1)))
-    missing = {"version", "sha256", "baseUrl"} - set(pin)
-    if missing:
-        raise ValueError(f"{CHART_VALUES}: snapshot block lacks {sorted(missing)}")
-    return pin
+    """`snapshot.version`, `sha256` and `baseUrl` from the chart's values.yaml."""
+    return read_snapshot_pin(CHART_VALUES)

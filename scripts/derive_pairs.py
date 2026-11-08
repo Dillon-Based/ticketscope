@@ -12,33 +12,21 @@ against its SHA-256, into `--snapshot-dir` (reused when already there). Prints
 from __future__ import annotations
 
 import argparse
-import re
 import sys
 from pathlib import Path
 
-from ticketscope.adapters.release import fetch_snapshot
+from ticketscope.adapters.release import fetch_snapshot, read_snapshot_pin
 from ticketscope.core.pairs import count_by_kind, derive_pairs, pairs_jsonl
 from ticketscope.jobs.load.main import read_snapshot
 
 ROOT = Path(__file__).resolve().parent.parent
 CHART_VALUES = ROOT / "deploy" / "charts" / "ticketscope" / "values.yaml"
 PAIRS_DIR = ROOT / "eval" / "pairs"
-_SNAPSHOT_BLOCK = re.compile(r"^snapshot:\n((?:[ \t]+.*\n|[ \t]*#.*\n|\n)+)", re.MULTILINE)
-_PIN_FIELD = re.compile(
-    r'^[ \t]+(version|sha256|baseUrl):[ \t]*"?([^"\n#]*?)"?[ \t]*$', re.MULTILINE
-)
 
 
 def snapshot_pin(values: Path = CHART_VALUES) -> dict[str, str]:
     """`snapshot.version`, `sha256` and `baseUrl` from the chart's values.yaml."""
-    block = _SNAPSHOT_BLOCK.search(values.read_text(encoding="utf-8"))
-    if block is None:
-        raise ValueError(f"{values}: no top-level snapshot: block")
-    pin = dict(_PIN_FIELD.findall(block.group(1)))
-    missing = {"version", "sha256", "baseUrl"} - set(pin)
-    if missing:
-        raise ValueError(f"{values}: snapshot block lacks {sorted(missing)}")
-    return pin
+    return read_snapshot_pin(values)
 
 
 def main(argv: list[str] | None = None) -> int:

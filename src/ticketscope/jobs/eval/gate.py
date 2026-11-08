@@ -18,11 +18,13 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any, cast
 
+from ticketscope.jobs.eval.score import KINDS as SCORED_KINDS
+
 BASELINE_PATH = "eval/baseline.json"
 TOLERANCE = Decimal("0.005")
 GATED_METRICS = ("recall@10", "mrr@10")
 REPORTED_METRICS = ("recall@1", "recall@5", "p95_latency_ms")
-KINDS = ("short", "log_heavy", "overall")
+KINDS = (*SCORED_KINDS, "overall")
 LINEAGE_FIELDS = ("snapshot_version", "embedding_model_id", "preprocessing_version")
 LOG_HEAVY_FLOOR = 200
 

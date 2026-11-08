@@ -38,7 +38,7 @@ FROM (
            outcome_status, outcome_summary, outcome_source, outcome_ref,
            search_text <@> to_bm25query(%(query)s, 'issue_search_bm25_idx') AS score
     FROM issue
-    ORDER BY score
+    ORDER BY score, number
     LIMIT %(k)s
 ) AS ranked
 WHERE score < 0

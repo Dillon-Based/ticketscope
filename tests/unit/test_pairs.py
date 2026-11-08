@@ -5,6 +5,7 @@ from typing import Any
 
 import pytest
 
+from tests import eval_oracle as oracle
 from tests.factories import snapshot_issue
 from ticketscope.core.derive import duplicate_target
 from ticketscope.core.pairs import (
@@ -12,6 +13,7 @@ from ticketscope.core.pairs import (
     as_pair,
     count_by_kind,
     derive_pairs,
+    duplicate_clusters,
     pairs_jsonl,
     read_pairs,
 )
@@ -38,7 +40,7 @@ def _duplicate(number: int, *links: DuplicateLink, **overrides: Any) -> Snapshot
 def test_one_pair_per_duplicate_issue_to_its_duplicate_target() -> None:
     issues = [snapshot_issue(number=1), _duplicate(2, _link(1))]
     pairs = derive_pairs(issues)
-    assert pairs == [Pair(query=2, target=1, kind="short")]
+    assert pairs == [Pair(query=2, target=1, kind="short", relevant=(1,))]
     target = duplicate_target(issues[1])
     assert target is not None and pairs[0].target == target.target_number
 
@@ -58,12 +60,13 @@ def test_a_duplicate_linked_both_ways_pairs_to_its_duplicates_target() -> None:
         snapshot_issue(number=5),
         _duplicate(3, _link(1, "duplicated_by"), _link(5, "duplicates")),
     ]
-    assert derive_pairs(issues) == [Pair(query=3, target=5, kind="short")]
+    # One pair, to the `duplicates` target; every in-subset link joins the cluster.
+    assert derive_pairs(issues) == [Pair(query=3, target=5, kind="short", relevant=(1, 5))]
 
 
 def test_two_duplicates_links_give_one_pair_to_the_lowest_number() -> None:
     issues = [snapshot_issue(number=7), snapshot_issue(number=4), _duplicate(9, _link(7), _link(4))]
-    assert derive_pairs(issues) == [Pair(query=9, target=4, kind="short")]
+    assert derive_pairs(issues) == [Pair(query=9, target=4, kind="short", relevant=(4, 7))]
 
 
 def test_the_chosen_target_outside_the_snapshot_gives_no_pair_even_if_another_link_is_in() -> None:
@@ -74,7 +77,7 @@ def test_the_chosen_target_outside_the_snapshot_gives_no_pair_even_if_another_li
 
 def test_a_pair_carries_the_query_issues_kind() -> None:
     issues = [snapshot_issue(number=1), _duplicate(2, _link(1), body=LOG_BODY)]
-    assert derive_pairs(issues) == [Pair(query=2, target=1, kind="log_heavy")]
+    assert derive_pairs(issues) == [Pair(query=2, target=1, kind="log_heavy", relevant=(1,))]
 
 
 def test_pairs_are_sorted_by_query_whatever_the_input_order() -> None:
@@ -87,33 +90,67 @@ def test_pairs_are_sorted_by_query_whatever_the_input_order() -> None:
     assert [p.query for p in derive_pairs(issues)] == [4, 12, 30]
 
 
+def test_a_cluster_follows_links_from_either_side_and_through_a_chain() -> None:
+    issues = [
+        snapshot_issue(number=1, duplicate_links=[_link(2, "duplicated_by")]),
+        _duplicate(2, _link(1)),
+        _duplicate(3, _link(2)),
+    ]
+    pairs = derive_pairs(issues)
+    assert [(p.query, p.relevant) for p in pairs] == [(2, (1, 3)), (3, (1, 2))]
+
+
+def _oracle_issues() -> list[SnapshotIssueV2]:
+    links: dict[int, list[DuplicateLink]] = {n: [] for n in oracle.MEMBERSHIP_ISSUES}
+    for source, target in oracle.MEMBERSHIP_LINKS:
+        links[source].append(_link(target))
+    return [snapshot_issue(number=n, duplicate_links=ls) for n, ls in links.items()]
+
+
+def test_clusters_match_the_oracle_including_a_chain_and_an_outside_link() -> None:
+    assert duplicate_clusters(_oracle_issues()) == oracle.EXPECTED_CLUSTERS
+    assert duplicate_clusters(reversed(_oracle_issues())) == oracle.EXPECTED_CLUSTERS
+
+
+def test_a_link_to_an_issue_outside_the_snapshot_adds_no_member() -> None:
+    [cluster] = duplicate_clusters([_duplicate(16, _link(999))])
+    assert cluster == frozenset({16})
+
+
 def test_pairs_jsonl_has_fixed_key_order_one_line_each_and_a_trailing_newline() -> None:
-    data = pairs_jsonl([Pair(2, 1, "short"), Pair(7, 6, "log_heavy")])
+    data = pairs_jsonl([Pair(2, 1, "short", (1, 3)), Pair(7, 6, "log_heavy", (6,))])
     assert data == (
-        b'{"query": 2, "target": 1, "kind": "short"}\n'
-        b'{"query": 7, "target": 6, "kind": "log_heavy"}\n'
+        b'{"query": 2, "target": 1, "kind": "short", "relevant": [1, 3]}\n'
+        b'{"query": 7, "target": 6, "kind": "log_heavy", "relevant": [6]}\n'
     )
     assert pairs_jsonl([]) == b""
 
 
 def test_every_line_holds_only_numbers_and_kind() -> None:
-    data = pairs_jsonl([Pair(2, 1, "short")])
+    data = pairs_jsonl([Pair(2, 1, "short", (1,))])
     [line] = data.decode().splitlines()
-    assert list(json.loads(line)) == ["query", "target", "kind"]
+    assert list(json.loads(line)) == ["query", "target", "kind", "relevant"]
 
 
 def test_read_pairs_round_trips() -> None:
-    pairs = [Pair(2, 1, "short"), Pair(7, 6, "log_heavy")]
+    pairs = [Pair(2, 1, "short", (1, 3)), Pair(7, 6, "log_heavy", (6,))]
     assert read_pairs(pairs_jsonl(pairs)) == pairs
 
 
 @pytest.mark.parametrize(
     "line",
     [
-        b'{"query": 2, "target": 1}\n',
-        b'{"query": 2, "target": 1, "kind": "short", "title": "x"}\n',
-        b'{"query": "2", "target": 1, "kind": "short"}\n',
-        b'{"query": 2, "target": 1, "kind": "medium"}\n',
+        b'{"query": 2, "target": 1, "kind": "short"}\n',
+        b'{"query": 2, "target": 1, "kind": "short", "relevant": [1], "title": "x"}\n',
+        b'{"query": "2", "target": 1, "kind": "short", "relevant": [1]}\n',
+        b'{"query": 2, "target": 1, "kind": "medium", "relevant": [1]}\n',
+        b'{"query": 2, "target": 1, "kind": "short", "relevant": [3, 1]}\n',
+        b'{"query": 2, "target": 1, "kind": "short", "relevant": [1, 1]}\n',
+        b'{"query": 2, "target": 1, "kind": "short", "relevant": ["1"]}\n',
+        b'{"query": 2, "target": 1, "kind": "short", "relevant": [true]}\n',
+        b'{"query": 2, "target": 1, "kind": "short", "relevant": 1}\n',
+        b'{"query": 2, "target": 1, "kind": "short", "relevant": [1, 2]}\n',
+        b'{"query": 2, "target": 1, "kind": "short", "relevant": [3]}\n',
         b"[2, 1]\n",
     ],
 )
@@ -122,10 +159,17 @@ def test_read_pairs_refuses_a_malformed_line(line: bytes) -> None:
         read_pairs(line)
 
 
+def test_read_pairs_names_the_failing_line() -> None:
+    good = pairs_jsonl([Pair(2, 1, "short", (1,))])
+    with pytest.raises(ValueError, match="pairs line 2"):
+        read_pairs(good + b'{"query": 3}\n')
+
+
 def test_as_pair_accepts_a_parsed_mapping() -> None:
-    assert as_pair({"query": 2, "target": 1, "kind": "short"}) == Pair(2, 1, "short")
+    line = {"query": 2, "target": 1, "kind": "short", "relevant": [1, 3]}
+    assert as_pair(line) == Pair(2, 1, "short", (1, 3))
 
 
 def test_count_by_kind() -> None:
-    pairs = [Pair(2, 1, "short"), Pair(3, 1, "short"), Pair(7, 6, "log_heavy")]
+    pairs = [Pair(2, 1, "short", (1,)), Pair(3, 1, "short", (1,)), Pair(7, 6, "log_heavy", (6,))]
     assert count_by_kind(pairs) == {"total": 3, "short": 2, "log_heavy": 1}

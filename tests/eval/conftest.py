@@ -1,9 +1,12 @@
 """`eval_results` reads the eval Job's results line once and writes
 `reports/eval-results.json` before any test that requests it asserts anything, so
 `_kind-deploy.yml`'s always-run upload carries it even when a check fails (AD-17: the
-cluster dies with the job)."""
+cluster dies with the job). It then appends a markdown summary to `$GITHUB_STEP_SUMMARY`
+when set, so the run's cost and scores show on the job page."""
 
 import json
+import os
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -51,9 +54,41 @@ def results_from_log(log: str) -> dict[str, Any]:
     return json.loads(found[0])
 
 
+METRICS = ("recall@1", "recall@5", "recall@10", "mrr@10", "p95_latency_ms")
+KIND_ROWS = ("short", "log_heavy", "overall")
+
+
+def summary_markdown(results: dict[str, Any]) -> str:
+    """Wall seconds, pairs by kind and each mode's per-kind metrics, as markdown."""
+    lines = ["### Retrieval eval", "", f"Wall seconds: {results['wall_seconds']}", ""]
+    for name, mode in sorted(results["modes"].items()):
+        counts = ", ".join(f"{kind} {mode[kind]['pairs_scored']}" for kind in KIND_ROWS)
+        lines += [f"**{name}** pairs: {counts}", ""]
+        lines += ["| kind | " + " | ".join(METRICS) + " |", "|---|" + "---|" * len(METRICS)]
+        for kind in KIND_ROWS:
+            cells = " | ".join(f"{mode[kind][metric]:.4f}" for metric in METRICS)
+            lines.append(f"| {kind} | {cells} |")
+        lines.append("")
+    skipped = ", ".join(results["skipped_modes"]) or "none"
+    lines.append(f"Skipped modes: {skipped}")
+    return "\n".join(lines) + "\n"
+
+
+def write_job_summary(results: dict[str, Any], path: Path | None = None) -> None:
+    """Append `summary_markdown` to `path`, default `$GITHUB_STEP_SUMMARY`; no-op if unset."""
+    target = path or (
+        Path(os.environ["GITHUB_STEP_SUMMARY"]) if "GITHUB_STEP_SUMMARY" in os.environ else None
+    )
+    if target is None:
+        return
+    with target.open("a", encoding="utf-8") as handle:
+        handle.write(summary_markdown(results))
+
+
 @pytest.fixture(scope="session")
 def eval_results() -> dict[str, Any]:
     results = results_from_log(eval_log())
     RESULTS_PATH.parent.mkdir(parents=True, exist_ok=True)
     RESULTS_PATH.write_text(json.dumps(results, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    write_job_summary(results)
     return results

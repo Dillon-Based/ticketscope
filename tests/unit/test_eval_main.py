@@ -6,12 +6,13 @@ do, so `run` reads lineage from a fake row and scores a fake store.
 
 import json
 import logging
+import sys
 from pathlib import Path
 
 import pytest
 from opentelemetry.instrumentation.utils import is_instrumentation_enabled
 
-from tests.eval.conftest import results_from_log
+from tests.eval.conftest import results_from_log, write_job_summary
 from tests.factories import snapshot_issue
 from ticketscope import telemetry
 from ticketscope.adapters.postgres import CorpusMeta
@@ -23,9 +24,11 @@ from ticketscope.core.ports import CorpusStore, Retriever
 from ticketscope.core.snapshot import JiraComment
 from ticketscope.jobs.eval import main as eval_main
 from ticketscope.jobs.eval import score
+from ticketscope.jobs.eval.score import first_member_rank, p95
 from ticketscope.jobs.load.main import build_rows
 from ticketscope.settings import Settings
 
+PAIR = Pair(2, 1, "short", (1,))
 META = CorpusMeta(
     snapshot_version="2026.99.1",
     embedding_model_id=None,
@@ -45,7 +48,7 @@ def _store() -> InMemoryCorpusStore:
 
 @pytest.fixture
 def pairs_dir(tmp_path: Path) -> Path:
-    (tmp_path / f"{META.snapshot_version}.jsonl").write_bytes(pairs_jsonl([Pair(2, 1, "short")]))
+    (tmp_path / f"{META.snapshot_version}.jsonl").write_bytes(pairs_jsonl([PAIR]))
     return tmp_path
 
 
@@ -84,7 +87,14 @@ def test_results_line_carries_scores_lineage_pairs_file_and_wall_seconds(
     }
     assert results["pairs_file"] == str(pairs_dir / "2026.99.1.jsonl")
     assert isinstance(results["wall_seconds"], float)
-    assert results["modes"] == {"keyword": {"recall@10": 1.0, "mrr@10": 1.0, "pairs_scored": 1}}
+    assert results["relevance"] == "cluster"
+    assert results["skipped_modes"] == []
+    keyword = results["modes"]["keyword"]  # pyright: ignore[reportIndexIssue]
+    assert keyword["overall"]["recall@1"] == 1.0
+    assert keyword["overall"]["mrr@10"] == 1.0
+    assert keyword["short"]["pairs_scored"] == 1
+    assert keyword["log_heavy"]["pairs_scored"] == 0
+    assert keyword["first_member_ranks"] == [[2, 1]]
 
 
 def test_the_kind_check_reads_the_results_line_back_from_the_json_log(
@@ -106,7 +116,7 @@ def test_scoring_runs_with_instrumentation_suppressed(
 
     def spy_score(store: CorpusStore, pairs: object) -> dict[str, object]:
         seen.append(is_instrumentation_enabled())
-        return {"k": 10, "relevance": "target", "modes": {}}
+        return {"k": 10, "relevance": "cluster", "modes": {}}
 
     _patch(monkeypatch, META)
     monkeypatch.setattr(eval_main, "score", spy_score)
@@ -147,7 +157,7 @@ def test_a_store_failure_exits_1(
 def test_a_query_issue_missing_from_the_corpus_fails_rather_than_scoring_zero(
     monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture, tmp_path: Path
 ) -> None:
-    (tmp_path / "2026.99.1.jsonl").write_bytes(pairs_jsonl([Pair(42, 1, "short")]))
+    (tmp_path / "2026.99.1.jsonl").write_bytes(pairs_jsonl([Pair(42, 1, "short", (1,))]))
     _patch(monkeypatch, META)
     assert eval_main.run(_settings(tmp_path)) == 1
     assert "query issue 42" in caplog.text
@@ -188,19 +198,155 @@ def test_query_text_is_title_and_description_without_comments(
     spy_mode = modes.Mode("spy", "bm25", build, lambda _store: True)
     monkeypatch.setattr(modes, "REGISTRY", {"spy": spy_mode})
 
-    score(store, [Pair(2, 1, "short")])
+    score(store, [PAIR])
 
     assert texts == ["Title token alpha\n\nDescription token bravo"]
     assert "charlie" not in texts[0]
 
 
-def test_unavailable_modes_are_skipped(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_unavailable_modes_are_skipped_and_named(monkeypatch: pytest.MonkeyPatch) -> None:
     off = modes.Mode("off", "cosine", modes.KeywordRetriever, lambda _store: False)
     monkeypatch.setattr(modes, "REGISTRY", {**modes.REGISTRY, "off": off})
-    results = score(_store(), [Pair(2, 1, "short")])
+    results = score(_store(), [PAIR])
     assert list(results["modes"]) == ["keyword"]
+    assert results["skipped_modes"] == ["off"]
 
 
-def test_no_pairs_scores_zero_pairs() -> None:
-    results = score(_store(), [])
-    assert results["modes"]["keyword"] == {"recall@10": 0.0, "mrr@10": 0.0, "pairs_scored": 0}
+def test_a_mode_registered_after_import_is_scored_with_no_job_change(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    second = modes.Mode("second", "cosine", modes.KeywordRetriever, lambda _store: True)
+    monkeypatch.setattr(modes, "REGISTRY", {**modes.REGISTRY, "second": second})
+    results = score(_store(), [PAIR])
+    assert sorted(results["modes"]) == ["keyword", "second"]
+    assert results["modes"]["second"]["overall"]["recall@10"] == 1.0
+
+
+def test_no_pairs_scores_zero_pairs_with_zero_metrics() -> None:
+    empty = {
+        "recall@1": 0.0,
+        "recall@5": 0.0,
+        "recall@10": 0.0,
+        "mrr@10": 0.0,
+        "p95_latency_ms": 0.0,
+        "pairs_scored": 0,
+    }
+    keyword = score(_store(), [])["modes"]["keyword"]
+    assert keyword["short"] == keyword["log_heavy"] == keyword["overall"] == empty
+    assert keyword["first_member_ranks"] == []
+
+
+def test_a_kind_with_no_pairs_has_zero_metrics_while_overall_counts_the_rest() -> None:
+    keyword = score(_store(), [PAIR])["modes"]["keyword"]
+    assert keyword["log_heavy"]["pairs_scored"] == 0
+    assert keyword["log_heavy"]["recall@10"] == 0.0
+    assert keyword["log_heavy"]["p95_latency_ms"] == 0.0
+    assert keyword["overall"]["pairs_scored"] == 1
+
+
+def test_scoring_the_same_corpus_twice_gives_identical_metrics_and_ranks() -> None:
+    def metrics() -> object:
+        keyword = score(_store(), [PAIR])["modes"]["keyword"]
+        return {
+            kind: {m: v for m, v in keyword[kind].items() if m != "p95_latency_ms"}  # pyright: ignore[reportIndexIssue, reportAttributeAccessIssue]
+            for kind in ("short", "log_heavy", "overall")
+        } | {"ranks": keyword["first_member_ranks"]}
+
+    assert metrics() == metrics()
+
+
+def test_a_latency_is_measured_per_search(monkeypatch: pytest.MonkeyPatch) -> None:
+    ticks = iter([0.0, 0.004, 1.0, 1.010, 2.0, 2.002])
+    monkeypatch.setattr(
+        sys.modules["ticketscope.jobs.eval.score"].time, "perf_counter", lambda: next(ticks)
+    )
+    pairs = [PAIR, Pair(1, 2, "log_heavy", (2,)), Pair(3, 1, "short", (1,))]
+    store = InMemoryCorpusStore(
+        [
+            (IssueRecord(n, "launcher crash", f"u{n}", "short", "closed"), "launcher crash")
+            for n in (1, 2, 3)
+        ]
+    )
+    keyword = score(store, pairs)["modes"]["keyword"]
+    # three searches of 4, 10 and 2 ms; nearest-rank p95 of three is the largest
+    assert keyword["overall"]["p95_latency_ms"] == pytest.approx(10.0)
+    assert keyword["short"]["pairs_scored"] == 2
+    assert keyword["log_heavy"]["pairs_scored"] == 1
+    assert keyword["short"]["p95_latency_ms"] == pytest.approx(4.0)
+    assert keyword["log_heavy"]["p95_latency_ms"] == pytest.approx(10.0)
+
+
+def test_p95_is_the_nearest_rank_value() -> None:
+    values = [float(n) for n in range(1, 101)]
+    assert p95(values) == 95.0
+    assert p95([5.0]) == 5.0
+    assert p95([]) == 0.0
+    assert p95([10.0, 1.0]) == 10.0
+
+
+def test_first_member_rank_boundaries() -> None:
+    assert first_member_rank({1, 3}, [100, 3, 1]) == 2
+    assert first_member_rank({6}, [*range(100, 109), 6]) == 10
+    assert first_member_rank({6}, [*range(100, 110), 6]) is None
+    assert first_member_rank({6}, []) is None
+
+
+def test_the_job_summary_shows_cost_pair_counts_and_metrics(tmp_path: Path) -> None:
+    results = {"wall_seconds": 12.3, "skipped_modes": [], "modes": score(_store(), [PAIR])["modes"]}
+    summary = tmp_path / "summary.md"
+    write_job_summary(results, summary)
+    write_job_summary(results, summary)  # appends
+    text = summary.read_text()
+    assert text.count("Wall seconds: 12.3") == 2
+    assert "short 1, log_heavy 0, overall 1" in text
+    assert "| overall | 1.0000 | 1.0000 | 1.0000 | 1.0000 |" in text
+
+
+def test_the_job_summary_is_skipped_without_the_env_var(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.delenv("GITHUB_STEP_SUMMARY", raising=False)
+    monkeypatch.chdir(tmp_path)
+    write_job_summary({"wall_seconds": 1.0, "skipped_modes": [], "modes": {}})
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_the_job_summary_goes_to_github_step_summary(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    path = tmp_path / "s.md"
+    monkeypatch.setenv("GITHUB_STEP_SUMMARY", str(path))
+    write_job_summary({"wall_seconds": 1.0, "skipped_modes": ["dense"], "modes": {}})
+    assert "Skipped modes: dense" in path.read_text()
+
+
+def test_a_malformed_pairs_line_exits_1_and_names_the_line(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture, tmp_path: Path
+) -> None:
+    good = pairs_jsonl([PAIR])
+    (tmp_path / "2026.99.1.jsonl").write_bytes(
+        good + b'{"query": 3, "target": 1, "kind": "short"}\n'
+    )
+    _patch(monkeypatch, META)
+    assert eval_main.run(_settings(tmp_path)) == 1
+    assert "pairs line 2" in caplog.text
+
+
+def test_modes_keep_separate_ranks_and_latency_samples(monkeypatch: pytest.MonkeyPatch) -> None:
+    class Miss:
+        def search(self, query: str, k: int, exclude: frozenset[int] = frozenset()) -> list[Scored]:
+            return []
+
+    second = modes.Mode("miss", "cosine", lambda _store: Miss(), lambda _store: True)
+    monkeypatch.setattr(modes, "REGISTRY", {**modes.REGISTRY, "miss": second})
+    ticks = iter([0.0, 0.004, 1.0, 1.020])
+    monkeypatch.setattr(
+        sys.modules["ticketscope.jobs.eval.score"].time, "perf_counter", lambda: next(ticks)
+    )
+    results = score(_store(), [PAIR])["modes"]
+    assert results["keyword"]["first_member_ranks"] == [[2, 1]]
+    assert results["miss"]["first_member_ranks"] == [[2, None]]
+    assert results["keyword"]["overall"]["recall@10"] == 1.0
+    assert results["miss"]["overall"]["recall@10"] == 0.0
+    assert results["keyword"]["overall"]["p95_latency_ms"] == pytest.approx(4.0)
+    assert results["miss"]["overall"]["p95_latency_ms"] == pytest.approx(20.0)

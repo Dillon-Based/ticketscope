@@ -1,0 +1,4 @@
+vague      status 200 results 10  identical
+log-heavy  status 200 results 10  identical
+plain      status 200 results 10  identical
+before (32049eef3d093ba1591d1cca259780359044f7cb) vs after (d29ed1efd99c932c64d21c7f926dc8d7951c1839): IDENTICAL

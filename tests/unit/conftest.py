@@ -26,10 +26,9 @@ def _isolate_process_bootstrap(monkeypatch: pytest.MonkeyPatch) -> Iterator[None
     """
     monkeypatch.setattr(trace, "set_tracer_provider", lambda provider: None)
     opt_in = telemetry.SEMCONV_OPT_IN_VAR
-    if opt_in in os.environ:
-        monkeypatch.setenv(opt_in, os.environ[opt_in])
-    else:
-        monkeypatch.delenv(opt_in, raising=False)
+    # Saved by hand: monkeypatch.delenv on an absent variable records no undo, so a
+    # value the app writes later would outlive the test.
+    opt_in_before = os.environ.get(opt_in)
     logger = logging.getLogger("httpx2")
     level = logger.level
     instrumentor = PsycopgInstrumentor()
@@ -37,6 +36,10 @@ def _isolate_process_bootstrap(monkeypatch: pytest.MonkeyPatch) -> Iterator[None
     try:
         yield
     finally:
+        if opt_in_before is None:
+            os.environ.pop(opt_in, None)
+        else:
+            os.environ[opt_in] = opt_in_before
         logger.setLevel(level)
         if not was_instrumented and instrumentor.is_instrumented_by_opentelemetry:
             instrumentor.uninstrument()

@@ -1,23 +1,24 @@
 {
   "schema_version": "0.3.0",
-  "snapshot_at": "2026-11-07T17:27:47.043271+00:00",
+  "snapshot_at": "2026-11-07T21:39:16.193443+00:00",
   "repo": "ticketscope",
   "collection_mode": "contract_static",
   "collection_status": "COLLECTED",
   "inventory_basis": "acceptance_criteria",
   "gate_basis": "priority_thresholds",
-  "source_sha": "53358199a43fee326e8834d0d7c881a2a566b54a",
+  "source_sha": "6400e5ac8e3bb4cadeea8061a5581c33b2b45036",
   "target": {
     "type": "epic",
     "id": "ticketscope--e1",
     "label": "Epic 1: Keyword search over Mojang issues, deployed on kind"
   },
   "decision_mode": "deterministic",
-  "evaluator": "Codex / Master Test Architect",
+  "evaluator": "Claude Code / Master Test Architect",
   "confidence": "high",
   "oracle": {
     "resolution_mode": "formal_requirements",
     "confidence": "high",
+    "granularity": "requirements",
     "sources": [
       "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/epic-search-baseline.md",
       "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-tracer-keyword-search-answers-through-the-gateway-on-kind-plan.md",
@@ -36,490 +37,41 @@
       "_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/tickets/story-integrated-check-on-kind-plan.md"
     ],
     "external_pointer_status": "not_used",
-    "synthetic": false,
-    "granularity": "requirements",
-    "rows": [
-      {
-        "id": "ticketscope--e1--R1",
-        "kind": "requirement",
-        "priority": "P2",
-        "priority_basis": "contributors",
-        "coverage": "NONE",
-        "parent": "parent R1",
-        "missing_behaviors": [
-          "An ingest job publishes a versioned corpus snapshot of the Mojang subset of The Public Jira Dataset v7 (see Corpus scope).",
-          "The snapshot carries every field the spine's snapshot contract names.",
-          "a published snapshot validates against the committed JSON Schema and holds both short and log-heavy issues."
-        ],
-        "contributors": [
-          {
-            "id": "ticketscope--e1-s2--verify",
-            "story": "ticketscope--e1-s2",
-            "coverage": "NONE"
-          }
-        ]
-      },
-      {
-        "id": "ticketscope--e1--R2",
-        "kind": "requirement",
-        "priority": "P1",
-        "priority_basis": "inferred",
-        "coverage": "NONE",
-        "parent": "parent R1",
-        "missing_behaviors": [
-          "A load job, the only writer, loads the pinned snapshot and stores each issue's kind and outcome, each computed once in core. It is met when every loaded issue has a kind and an outcome, and the load reports the share of each kind and each outcome."
-        ],
-        "contributors": []
-      },
-      {
-        "id": "ticketscope--e1--R3",
-        "kind": "requirement",
-        "priority": "P1",
-        "priority_basis": "inferred",
-        "coverage": "NONE",
-        "parent": "parent R2",
-        "missing_behaviors": [
-          "Keyword (BM25) retrieval through `/v1/search` returns ranked issues with how each ended. It is met when a vague query and a log-heavy query each return ranked issues with outcomes."
-        ],
-        "contributors": []
-      },
-      {
-        "id": "ticketscope--e1--R4",
-        "kind": "requirement",
-        "priority": "P1",
-        "priority_basis": "inferred",
-        "coverage": "NONE",
-        "parent": "parent R5",
-        "missing_behaviors": [
-          "One search page takes ticket text and shows the ranked issues with how each ended. It is met when the page renders results for both example queries."
-        ],
-        "contributors": []
-      },
-      {
-        "id": "ticketscope--e1--R5",
-        "kind": "requirement",
-        "priority": "P1",
-        "priority_basis": "inferred",
-        "coverage": "NONE",
-        "parent": "parent R3",
-        "missing_behaviors": [
-          "CloudNativePG Postgres runs on the cluster with pgvector, pg_textsearch, two instances, persistent volumes and backups to SeaweedFS. It is met when CI deploys it on kind on every PR and a backup completes."
-        ],
-        "contributors": []
-      },
-      {
-        "id": "ticketscope--e1--R6",
-        "kind": "requirement",
-        "priority": "P1",
-        "priority_basis": "inferred",
-        "coverage": "NONE",
-        "parent": "parent R8",
-        "missing_behaviors": [
-          "One search request yields one trace whose retrieval and database spans follow the span contract, viewable in Grafana through Tempo. It is met when CI on kind shows that trace."
-        ],
-        "contributors": []
-      },
-      {
-        "id": "ticketscope--e1--R7",
-        "kind": "requirement",
-        "priority": "P1",
-        "priority_basis": "inferred",
-        "coverage": "NONE",
-        "parent": "parent R11",
-        "missing_behaviors": [
-          "Helm deploys the platform and app releases, and CI runs them on kind on every PR through the reusable kind-deploy step. It is met when the integrated check passes on a PR."
-        ],
-        "contributors": []
-      },
-      {
-        "id": "ticketscope--e1-s1--AC-1",
-        "kind": "exception",
-        "priority": "P0",
-        "priority_basis": "inferred",
-        "coverage": "PARTIAL",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s1--AC-2",
-        "kind": "exception",
-        "priority": "P1",
-        "priority_basis": "inferred",
-        "coverage": "NONE",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s1--AC-3",
-        "kind": "exception",
-        "priority": "P1",
-        "priority_basis": "inferred",
-        "coverage": "PARTIAL",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s1--AC-4",
-        "kind": "exception",
-        "priority": "P1",
-        "priority_basis": "inferred",
-        "coverage": "NONE",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s3--AC-1",
-        "kind": "exception",
-        "priority": "P0",
-        "priority_basis": "inferred",
-        "coverage": "PARTIAL",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s3--AC-2",
-        "kind": "exception",
-        "priority": "P1",
-        "priority_basis": "inferred",
-        "coverage": "FULL",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s3--AC-3",
-        "kind": "exception",
-        "priority": "P1",
-        "priority_basis": "inferred",
-        "coverage": "PARTIAL",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s12--AC-1",
-        "kind": "exception",
-        "priority": "P2",
-        "priority_basis": "inferred",
-        "coverage": "NONE",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s12--AC-2",
-        "kind": "exception",
-        "priority": "P2",
-        "priority_basis": "inferred",
-        "coverage": "NONE",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s12--AC-3",
-        "kind": "exception",
-        "priority": "P2",
-        "priority_basis": "inferred",
-        "coverage": "NONE",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s12--AC-4",
-        "kind": "exception",
-        "priority": "P2",
-        "priority_basis": "inferred",
-        "coverage": "NONE",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s4--AC-1",
-        "kind": "exception",
-        "priority": "P1",
-        "priority_basis": "inferred",
-        "coverage": "PARTIAL",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s4--AC-2",
-        "kind": "exception",
-        "priority": "P1",
-        "priority_basis": "inferred",
-        "coverage": "FULL",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s14--AC-1",
-        "kind": "exception",
-        "priority": "P1",
-        "priority_basis": "inferred",
-        "coverage": "FULL",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s14--AC-2",
-        "kind": "exception",
-        "priority": "P1",
-        "priority_basis": "inferred",
-        "coverage": "NONE",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s14--AC-3",
-        "kind": "exception",
-        "priority": "P1",
-        "priority_basis": "inferred",
-        "coverage": "FULL",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s13--AC-1",
-        "kind": "exception",
-        "priority": "P1",
-        "priority_basis": "inferred",
-        "coverage": "FULL",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s13--AC-2",
-        "kind": "exception",
-        "priority": "P1",
-        "priority_basis": "inferred",
-        "coverage": "FULL",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s13--AC-3",
-        "kind": "exception",
-        "priority": "P1",
-        "priority_basis": "inferred",
-        "coverage": "NONE",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s13--AC-4",
-        "kind": "exception",
-        "priority": "P1",
-        "priority_basis": "inferred",
-        "coverage": "PARTIAL",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s5--AC-1",
-        "kind": "exception",
-        "priority": "P1",
-        "priority_basis": "inferred",
-        "coverage": "FULL",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s5--AC-2",
-        "kind": "exception",
-        "priority": "P0",
-        "priority_basis": "inferred",
-        "coverage": "FULL",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s5--AC-3",
-        "kind": "exception",
-        "priority": "P1",
-        "priority_basis": "inferred",
-        "coverage": "FULL",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s5--AC-4",
-        "kind": "exception",
-        "priority": "P1",
-        "priority_basis": "inferred",
-        "coverage": "FULL",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s5--AC-5",
-        "kind": "exception",
-        "priority": "P1",
-        "priority_basis": "inferred",
-        "coverage": "NONE",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s6--AC-1",
-        "kind": "exception",
-        "priority": "P1",
-        "priority_basis": "inferred",
-        "coverage": "FULL",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s6--AC-2",
-        "kind": "exception",
-        "priority": "P1",
-        "priority_basis": "inferred",
-        "coverage": "PARTIAL",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s6--AC-3",
-        "kind": "exception",
-        "priority": "P1",
-        "priority_basis": "inferred",
-        "coverage": "NONE",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s7--AC-1",
-        "kind": "exception",
-        "priority": "P1",
-        "priority_basis": "inferred",
-        "coverage": "FULL",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s7--AC-2",
-        "kind": "exception",
-        "priority": "P1",
-        "priority_basis": "inferred",
-        "coverage": "FULL",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s7--AC-3",
-        "kind": "exception",
-        "priority": "P1",
-        "priority_basis": "inferred",
-        "coverage": "NONE",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s8--AC-1",
-        "kind": "exception",
-        "priority": "P1",
-        "priority_basis": "inferred",
-        "coverage": "PARTIAL",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s8--AC-2",
-        "kind": "exception",
-        "priority": "P1",
-        "priority_basis": "inferred",
-        "coverage": "FULL",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s8--AC-3",
-        "kind": "exception",
-        "priority": "P1",
-        "priority_basis": "inferred",
-        "coverage": "FULL",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s9--AC-1",
-        "kind": "exception",
-        "priority": "P1",
-        "priority_basis": "inferred",
-        "coverage": "FULL",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s9--AC-2",
-        "kind": "exception",
-        "priority": "P1",
-        "priority_basis": "inferred",
-        "coverage": "PARTIAL",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s9--AC-3",
-        "kind": "exception",
-        "priority": "P1",
-        "priority_basis": "inferred",
-        "coverage": "UNIT-ONLY",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s9--AC-4",
-        "kind": "exception",
-        "priority": "P3",
-        "priority_basis": "inferred",
-        "coverage": "PARTIAL",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s10--AC-1",
-        "kind": "exception",
-        "priority": "P2",
-        "priority_basis": "inferred",
-        "coverage": "FULL",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s10--AC-2",
-        "kind": "exception",
-        "priority": "P1",
-        "priority_basis": "inferred",
-        "coverage": "PARTIAL",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s10--AC-3",
-        "kind": "exception",
-        "priority": "P1",
-        "priority_basis": "inferred",
-        "coverage": "NONE",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s10--AC-4",
-        "kind": "exception",
-        "priority": "P1",
-        "priority_basis": "inferred",
-        "coverage": "PARTIAL",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s11--AC-1",
-        "kind": "exception",
-        "priority": "P1",
-        "priority_basis": "inferred",
-        "coverage": "FULL",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s11--AC-2",
-        "kind": "exception",
-        "priority": "P2",
-        "priority_basis": "inferred",
-        "coverage": "PARTIAL",
-        "exception": "unlinked"
-      },
-      {
-        "id": "ticketscope--e1-s11--AC-3",
-        "kind": "exception",
-        "priority": "P1",
-        "priority_basis": "inferred",
-        "coverage": "PARTIAL",
-        "exception": "unlinked"
-      }
-    ]
+    "synthetic": false
   },
+  "gate_status": "WAIVED",
   "coverage": {
     "inventory": {
-      "covered": 18,
-      "total": 52,
-      "pct": 35
+      "covered": 9,
+      "total": 13,
+      "pct": 69
     },
     "priority_breakdown": {
       "P0": {
         "total": 3,
-        "covered": 1,
-        "pct": 33
+        "covered": 2,
+        "pct": 67
       },
       "P1": {
-        "total": 41,
-        "covered": 16,
-        "pct": 39
+        "total": 10,
+        "covered": 7,
+        "pct": 70
       },
       "P2": {
-        "total": 7,
-        "covered": 1,
-        "pct": 14
+        "total": 0,
+        "covered": 0,
+        "pct": 100
       },
       "P3": {
-        "total": 1,
+        "total": 0,
         "covered": 0,
-        "pct": 0
+        "pct": 100
       }
+    },
+    "criteria": {
+      "total": 46,
+      "full": 42,
+      "pct": 91
     },
     "by_level": {
       "e2e": {
@@ -535,12 +87,12 @@
         "criteria_covered": 0
       },
       "unit": {
-        "tests": 62,
+        "tests": 64,
         "criteria_covered": 24
       },
       "live": {
-        "tests": 0,
-        "criteria_covered": 0
+        "tests": 22,
+        "criteria_covered": 22
       },
       "other": {
         "tests": 0,
@@ -549,373 +101,139 @@
     }
   },
   "tests": {
-    "files": 20,
-    "cases": 87,
+    "files": 22,
+    "cases": 111,
     "skipped_cases": 0,
     "fixme_cases": 0,
     "pending_cases": 0
   },
   "risk_summary": {
-    "critical_open": 2,
-    "high_open": 14,
-    "medium_open": 5,
+    "critical_open": 1,
+    "high_open": 1,
+    "medium_open": 0,
     "low_open": 0
   },
   "heuristics": {
     "endpoint_gaps": 0,
-    "auth_negative_path_status": "partial",
+    "auth_negative_path_status": "present",
     "error_path_status": "present",
     "ui_journey_status": "not_applicable",
     "ui_state_status": "not_applicable"
   },
   "live_evidence": {
-    "present": false,
+    "present": true,
     "results_file": "_bmad-output/test-artifacts/live-verification-results.json",
-    "freshness": "not_present",
-    "recorded_source_sha": "",
-    "current_source_sha": "53358199a43fee326e8834d0d7c881a2a566b54a",
-    "producer": "",
-    "counted": 0,
+    "freshness": "fresh",
+    "recorded_source_sha": "6400e5ac8e3bb4cadeea8061a5581c33b2b45036",
+    "current_source_sha": "6400e5ac8e3bb4cadeea8061a5581c33b2b45036",
+    "producer": "GitHub Actions ci run 42415340129 (workflow_dispatch, scripts/live_results.py) + local kind runs of scripts/fault-inject.sh and scripts/v1-parity.sh at the same commit (Claude Code); author-confirmed manual and document checks (user, 2026-11-07)",
+    "counted": 22,
     "stale": 0,
     "unverifiable": 0,
     "failed": 0,
-    "fresh_failed": 0,
     "contradicted": 0,
     "blocked": 0,
     "skipped": 0,
     "unmatched": 0,
     "invalid": 0,
-    "requirements_live_only": 0
+    "fresh_failed": 0,
+    "requirements_live_only": 5
   },
   "blockers": [],
   "rejected_evidence": [],
   "recommendations": [
     {
       "priority": "URGENT",
-      "action": "Add explicit epic requirement links to the selected numbered/plan criteria, preserving their meaning; reconcile legacy GitHub and fixture-only criteria with the approved Jira migration, then rerun trace. Do not infer these links or retire criteria inside this run.",
+      "action": "Six retired GitHub-era criteria (s3 AC-1..3, s4 AC-1..2, s14 AC-2) stay in the inventory: the trace contract has no superseded disposition, the stories are done, and the PO replan rule forbids rewriting built criteria. Fill the remaining fields of W-001 in _bmad-output/test-artifacts/gate-waivers.md (approver, dates, expiry, owner) so the waiver is reported as valid; a person then applies WAIVED. Longer term, raise a TEA/PO change so superseded criteria leave the gate.",
       "requirements": [
-        "ticketscope--e1-s1--AC-1",
-        "ticketscope--e1-s1--AC-2",
-        "ticketscope--e1-s1--AC-3",
-        "ticketscope--e1-s1--AC-4",
         "ticketscope--e1-s3--AC-1",
         "ticketscope--e1-s3--AC-2",
         "ticketscope--e1-s3--AC-3",
-        "ticketscope--e1-s12--AC-1",
-        "ticketscope--e1-s12--AC-2",
-        "ticketscope--e1-s12--AC-3",
-        "ticketscope--e1-s12--AC-4",
         "ticketscope--e1-s4--AC-1",
         "ticketscope--e1-s4--AC-2",
-        "ticketscope--e1-s14--AC-1",
-        "ticketscope--e1-s14--AC-2",
-        "ticketscope--e1-s14--AC-3",
-        "ticketscope--e1-s13--AC-1",
-        "ticketscope--e1-s13--AC-2",
-        "ticketscope--e1-s13--AC-3",
-        "ticketscope--e1-s13--AC-4",
-        "ticketscope--e1-s5--AC-1",
-        "ticketscope--e1-s5--AC-2",
-        "ticketscope--e1-s5--AC-3",
-        "ticketscope--e1-s5--AC-4",
-        "ticketscope--e1-s5--AC-5",
-        "ticketscope--e1-s6--AC-1",
-        "ticketscope--e1-s6--AC-2",
-        "ticketscope--e1-s6--AC-3",
-        "ticketscope--e1-s7--AC-1",
-        "ticketscope--e1-s7--AC-2",
-        "ticketscope--e1-s7--AC-3",
-        "ticketscope--e1-s8--AC-1",
-        "ticketscope--e1-s8--AC-2",
-        "ticketscope--e1-s8--AC-3",
-        "ticketscope--e1-s9--AC-1",
-        "ticketscope--e1-s9--AC-2",
-        "ticketscope--e1-s9--AC-3",
-        "ticketscope--e1-s9--AC-4",
-        "ticketscope--e1-s10--AC-1",
-        "ticketscope--e1-s10--AC-2",
-        "ticketscope--e1-s10--AC-3",
-        "ticketscope--e1-s10--AC-4",
-        "ticketscope--e1-s11--AC-1",
-        "ticketscope--e1-s11--AC-2",
-        "ticketscope--e1-s11--AC-3"
-      ]
-    },
-    {
-      "priority": "HIGH",
-      "action": "Run the current revision through PR CI, including integrated-check; record the five deployed fault-injection outcomes and manual checks with a producer outside trace in live-verification-results.json using qualified criterion IDs and the verified source SHA. Missing live results are not manufactured by trace.",
-      "requirements": [
-        "ticketscope--e1--R7",
-        "ticketscope--e1-s11--AC-2",
-        "ticketscope--e1-s9--AC-4"
-      ]
-    },
-    {
-      "priority": "HIGH",
-      "action": "Add a kind check that an attempted write as ticketscope_ro is rejected; this is the NFR privilege-boundary gap.",
-      "requirements": []
-    },
-    {
-      "priority": "LOW",
-      "action": "Use the existing test-quality review as supporting context; repeat /bmad-tea-test-review after changes to the test suite.",
-      "requirements": []
-    },
-    {
-      "priority": "MEDIUM",
-      "action": "Suggested E1-TRACE-001 (e2e): Given the stated preconditions, when the required action runs, assert every stated result: An ingest job publishes a versioned corpus snapshot of the Mojang subset of The Public Jira Dataset v7 (see Corpus scope). The snapshot carries every field the spine's snapshot contract names. It is met when a published snapshot validates against the committed JSON Schema and holds both short and log-heavy issues. First repair explicit criterion links; use existing tests where they already prove the behavior.",
-      "requirements": [
-        "ticketscope--e1--R1"
-      ]
-    },
-    {
-      "priority": "HIGH",
-      "action": "Suggested E1-TRACE-002 (e2e): Given the stated preconditions, when the required action runs, assert every stated result: A load job, the only writer, loads the pinned snapshot and stores each issue's kind and outcome, each computed once in core. It is met when every loaded issue has a kind and an outcome, and the load reports the share of each kind and each outcome. First repair explicit criterion links; use existing tests where they already prove the behavior.",
-      "requirements": [
-        "ticketscope--e1--R2"
-      ]
-    },
-    {
-      "priority": "HIGH",
-      "action": "Suggested E1-TRACE-003 (e2e): Given the stated preconditions, when the required action runs, assert every stated result: Keyword (BM25) retrieval through `/v1/search` returns ranked issues with how each ended. It is met when a vague query and a log-heavy query each return ranked issues with outcomes. First repair explicit criterion links; use existing tests where they already prove the behavior.",
-      "requirements": [
-        "ticketscope--e1--R3"
-      ]
-    },
-    {
-      "priority": "HIGH",
-      "action": "Suggested E1-TRACE-004 (e2e): Given the stated preconditions, when the required action runs, assert every stated result: One search page takes ticket text and shows the ranked issues with how each ended. It is met when the page renders results for both example queries. First repair explicit criterion links; use existing tests where they already prove the behavior.",
-      "requirements": [
-        "ticketscope--e1--R4"
-      ]
-    },
-    {
-      "priority": "HIGH",
-      "action": "Suggested E1-TRACE-005 (e2e): Given the stated preconditions, when the required action runs, assert every stated result: CloudNativePG Postgres runs on the cluster with pgvector, pg_textsearch, two instances, persistent volumes and backups to SeaweedFS. It is met when CI deploys it on kind on every PR and a backup completes. First repair explicit criterion links; use existing tests where they already prove the behavior.",
-      "requirements": [
-        "ticketscope--e1--R5"
-      ]
-    },
-    {
-      "priority": "HIGH",
-      "action": "Suggested E1-TRACE-006 (e2e): Given the stated preconditions, when the required action runs, assert every stated result: One search request yields one trace whose retrieval and database spans follow the span contract, viewable in Grafana through Tempo. It is met when CI on kind shows that trace. First repair explicit criterion links; use existing tests where they already prove the behavior.",
-      "requirements": [
-        "ticketscope--e1--R6"
-      ]
-    },
-    {
-      "priority": "HIGH",
-      "action": "Suggested E1-TRACE-007 (e2e): Given the stated preconditions, when the required action runs, assert every stated result: Helm deploys the platform and app releases, and CI runs them on kind on every PR through the reusable kind-deploy step. It is met when the integrated check passes on a PR. First repair explicit criterion links; use existing tests where they already prove the behavior.",
-      "requirements": [
-        "ticketscope--e1--R7"
-      ]
-    },
-    {
-      "priority": "URGENT",
-      "action": "Suggested E1-TRACE-008 (e2e): Given the stated preconditions, when the required action runs, assert every stated result: Given a PR, when `ci.yml` runs, then ruff, pyright, pytest and lint-imports pass, and `_kind-deploy` brings up both releases and passes the smoke test. Use /bmad-tea-automate expand for implemented behavior, or red mode if behavior is missing; obsolete behavior needs a requirements decision before new tests.",
-      "requirements": [
-        "ticketscope--e1-s1--AC-1"
-      ]
-    },
-    {
-      "priority": "HIGH",
-      "action": "Suggested E1-TRACE-009 (e2e): Given the stated preconditions, when the required action runs, assert every stated result: Given a PR that changes `images/`, when `ci.yml` runs, then both images build for `linux/amd64` and `linux/arm64`. Use /bmad-tea-automate expand for implemented behavior, or red mode if behavior is missing; obsolete behavior needs a requirements decision before new tests.",
-      "requirements": [
-        "ticketscope--e1-s1--AC-2"
-      ]
-    },
-    {
-      "priority": "HIGH",
-      "action": "Suggested E1-TRACE-010 (e2e): Given the stated preconditions, when the required action runs, assert every stated result: Given a one-line change that makes a `core` module import `ticketscope.adapters.postgres`, when `lint-imports` runs, then it fails. Use /bmad-tea-automate expand for implemented behavior, or red mode if behavior is missing; obsolete behavior needs a requirements decision before new tests.",
-      "requirements": [
-        "ticketscope--e1-s1--AC-3"
-      ]
-    },
-    {
-      "priority": "HIGH",
-      "action": "Suggested E1-TRACE-011 (e2e): Given the stated preconditions, when the required action runs, assert every stated result: Given a `_kind-deploy` run, when it finishes, then its job summary shows peak memory, free disk, and the wall-clock time from kind-up to api Ready. Use /bmad-tea-automate expand for implemented behavior, or red mode if behavior is missing; obsolete behavior needs a requirements decision before new tests.",
-      "requirements": [
-        "ticketscope--e1-s1--AC-4"
-      ]
-    },
-    {
-      "priority": "URGENT",
-      "action": "Suggested E1-TRACE-012 (e2e): Given the stated preconditions, when the required action runs, assert every stated result: Given the recordings, when ingest runs to completion, then the output validates against the schema, each record's `url` is its github.com issue URL, and no recorded `user.login` value appears anywhere in the gzipped output. Use /bmad-tea-automate expand for implemented behavior, or red mode if behavior is missing; obsolete behavior needs a requirements decision before new tests.",
-      "requirements": [
-        "ticketscope--e1-s3--AC-1"
-      ]
-    },
-    {
-      "priority": "HIGH",
-      "action": "Suggested E1-TRACE-013 (e2e): Given the stated preconditions, when the required action runs, assert every stated result: Given `snapshot.yml` is dispatched on main (person's step), when it finishes, then a `snapshot-YYYY.MM.N` Release holds the asset and checksum, and its notes state window, count, kind split, load seconds \u2264 600, attribution and the takedown path; a second dispatch publishes `N+1` and leaves the first unchanged. Use /bmad-tea-automate expand for implemented behavior, or red mode if behavior is missing; obsolete behavior needs a requirements decision before new tests.",
-      "requirements": [
-        "ticketscope--e1-s3--AC-3"
-      ]
-    },
-    {
-      "priority": "MEDIUM",
-      "action": "Suggested E1-TRACE-014 (unit): Given the stated preconditions, when the required action runs, assert every stated result: The instances and leading projects are compared on the decision rule Use /bmad-tea-automate expand for implemented behavior, or red mode if behavior is missing; obsolete behavior needs a requirements decision before new tests.",
-      "requirements": [
-        "ticketscope--e1-s12--AC-1"
-      ]
-    },
-    {
-      "priority": "MEDIUM",
-      "action": "Suggested E1-TRACE-015 (e2e): Given the stated preconditions, when the required action runs, assert every stated result: The recommended subset is shown to work Use /bmad-tea-automate expand for implemented behavior, or red mode if behavior is missing; obsolete behavior needs a requirements decision before new tests.",
-      "requirements": [
-        "ticketscope--e1-s12--AC-2"
-      ]
-    },
-    {
-      "priority": "MEDIUM",
-      "action": "Suggested E1-TRACE-016 (e2e): Given the stated preconditions, when the required action runs, assert every stated result: The answer and its consequences are recorded where the waiting tickets read them Use /bmad-tea-automate expand for implemented behavior, or red mode if behavior is missing; obsolete behavior needs a requirements decision before new tests.",
-      "requirements": [
-        "ticketscope--e1-s12--AC-3"
-      ]
-    },
-    {
-      "priority": "MEDIUM",
-      "action": "Suggested E1-TRACE-017 (e2e): Given the stated preconditions, when the required action runs, assert every stated result: The author accepts it Use /bmad-tea-automate expand for implemented behavior, or red mode if behavior is missing; obsolete behavior needs a requirements decision before new tests.",
-      "requirements": [
-        "ticketscope--e1-s12--AC-4"
-      ]
-    },
-    {
-      "priority": "HIGH",
-      "action": "Suggested E1-TRACE-018 (e2e): Given the stated preconditions, when the required action runs, assert every stated result: Given the unit suite, when `uv run pytest tests/unit/test_derive.py -v` runs, then one named case passes for each outcome branch (duplicate, fixed, not_planned, stale, answered, unknown), the duplicate-also-fixed tie, the CONTRIBUTOR-only support issue, the unmerged cross-referenced PR, and kind cases at `threshold-1` and `threshold`. Use /bmad-tea-automate expand for implemented behavior, or red mode if behavior is missing; obsolete behavior needs a requirements decision before new tests.",
-      "requirements": [
-        "ticketscope--e1-s4--AC-1"
-      ]
-    },
-    {
-      "priority": "HIGH",
-      "action": "Suggested E1-TRACE-019 (e2e): Given the stated preconditions, when the required action runs, assert every stated result: Given story 4's suite, when `uv run pytest tests/unit/test_derive.py` runs, then every GitHub-rule case still passes. Use /bmad-tea-automate expand for implemented behavior, or red mode if behavior is missing; obsolete behavior needs a requirements decision before new tests.",
-      "requirements": [
         "ticketscope--e1-s14--AC-2"
       ]
     },
     {
-      "priority": "HIGH",
-      "action": "Suggested E1-TRACE-020 (e2e): Given the stated preconditions, when the required action runs, assert every stated result: Given the v2 fixture, when `scripts/time-load.sh` runs on it, then it prints a load time and exits 0. Use /bmad-tea-automate expand for implemented behavior, or red mode if behavior is missing; obsolete behavior needs a requirements decision before new tests.",
+      "priority": "DONE",
+      "action": "(Approved 2026-11-07) The drafts in _bmad-output/test-artifacts/live-verification-drafts.json (Grafana Explore look for s9 AC-4; spike 12 and spike 2 document evidence; the snapshot-2026.11.1 publish for s13 AC-4) and move them into live-verification-results.json at the final commit. That closes R1 and R6.",
       "requirements": [
-        "ticketscope--e1-s13--AC-3"
-      ]
-    },
-    {
-      "priority": "HIGH",
-      "action": "Suggested E1-TRACE-021 (e2e): Given the stated preconditions, when the required action runs, assert every stated result: Given a restored dump on the person's machine after merge, when `scripts/publish-snapshot.sh` runs, then a `snapshot-YYYY.MM.N` Release holds the asset and checksum, with notes stating subset, count, pairs by kind, kind split, load seconds \u2264 600 and the attribution line. Use /bmad-tea-automate expand for implemented behavior, or red mode if behavior is missing; obsolete behavior needs a requirements decision before new tests.",
-      "requirements": [
+        "ticketscope--e1--R1",
+        "ticketscope--e1--R6",
+        "ticketscope--e1-s9--AC-4",
+        "ticketscope--e1-s12--AC-1",
+        "ticketscope--e1-s12--AC-2",
+        "ticketscope--e1-s12--AC-3",
+        "ticketscope--e1-s12--AC-4",
+        "ticketscope--e1-s2--verify",
         "ticketscope--e1-s13--AC-4"
       ]
     },
     {
-      "priority": "HIGH",
-      "action": "Suggested E1-TRACE-022 (e2e): Given the stated preconditions, when the required action runs, assert every stated result: Given `scripts/time-load.sh <dir> 2026.11.1` with only the asset in `<dir>`, when it runs, then it exits 0 and prints a time under 600. Use /bmad-tea-automate expand for implemented behavior, or red mode if behavior is missing; obsolete behavior needs a requirements decision before new tests.",
-      "requirements": [
-        "ticketscope--e1-s5--AC-5"
-      ]
-    },
-    {
-      "priority": "HIGH",
-      "action": "Suggested E1-TRACE-023 (e2e): Given the stated preconditions, when the required action runs, assert every stated result: Given `src/ticketscope/core/modes.py` imports `ticketscope.adapters.postgres`, when `uv run lint-imports` runs, then it fails (the layering is unchanged). Use /bmad-tea-automate expand for implemented behavior, or red mode if behavior is missing; obsolete behavior needs a requirements decision before new tests.",
-      "requirements": [
-        "ticketscope--e1-s6--AC-2"
-      ]
-    },
-    {
-      "priority": "HIGH",
-      "action": "Suggested E1-TRACE-024 (api): Given the stated preconditions, when the required action runs, assert every stated result: Given a `POST /v1/search` response saved before this change, when the same request runs after it, then the body is identical. Use /bmad-tea-automate expand for implemented behavior, or red mode if behavior is missing; obsolete behavior needs a requirements decision before new tests.",
-      "requirements": [
-        "ticketscope--e1-s6--AC-3"
-      ]
-    },
-    {
-      "priority": "HIGH",
-      "action": "Suggested E1-TRACE-025 (e2e): Given the stated preconditions, when the required action runs, assert every stated result: Given a `POST /v1/search` body saved before this change, when the same request runs after it, then the body is identical. Use /bmad-tea-automate expand for implemented behavior, or red mode if behavior is missing; obsolete behavior needs a requirements decision before new tests.",
-      "requirements": [
-        "ticketscope--e1-s7--AC-3"
-      ]
-    },
-    {
-      "priority": "HIGH",
-      "action": "Suggested E1-TRACE-026 (e2e): Given the stated preconditions, when the required action runs, assert every stated result: Given a PR, when `ci.yml` runs, then the `checks` and `charts` jobs pass, and `_kind-deploy` passes every `kind` smoke test, including test (7). Use /bmad-tea-automate expand for implemented behavior, or red mode if behavior is missing; obsolete behavior needs a requirements decision before new tests.",
-      "requirements": [
-        "ticketscope--e1-s8--AC-1"
-      ]
-    },
-    {
-      "priority": "HIGH",
-      "action": "Suggested E1-TRACE-027 (e2e): Given the stated preconditions, when the required action runs, assert every stated result: Given the repo, when `uv run ruff check . && uv run ruff format --check . && uv run pyright && uv run lint-imports && uv run pytest` runs, then all pass, including `test_telemetry.py`. Use /bmad-tea-automate expand for implemented behavior, or red mode if behavior is missing; obsolete behavior needs a requirements decision before new tests.",
-      "requirements": [
-        "ticketscope--e1-s9--AC-2"
-      ]
-    },
-    {
-      "priority": "HIGH",
-      "action": "Suggested E1-TRACE-028 (e2e): Given the stated preconditions, when the required action runs, assert every stated result: Given the api pod on kind, when `kubectl -n ticketscope logs deploy/ticketscope-api` is read after a search, then each line is a JSON object, and the lines logged during the request carry the trace's `trace_id`. Use /bmad-tea-automate expand for implemented behavior, or red mode if behavior is missing; obsolete behavior needs a requirements decision before new tests.",
-      "requirements": [
-        "ticketscope--e1-s9--AC-3"
-      ]
-    },
-    {
       "priority": "MEDIUM",
-      "action": "Suggested E1-TRACE-029 (e2e): Given the stated preconditions, when the required action runs, assert every stated result: Given Grafana port-forwarded (`kubectl -n platform port-forward svc/grafana 3000:80`), when the trace id from (8) is opened in Explore on the Tempo datasource, then the same span tree is shown (manual, human-visual). Use /bmad-tea-automate expand for implemented behavior, or red mode if behavior is missing; obsolete behavior needs a requirements decision before new tests.",
-      "requirements": [
-        "ticketscope--e1-s9--AC-4"
-      ]
-    },
-    {
-      "priority": "HIGH",
-      "action": "Suggested E1-TRACE-030 (e2e): Given the stated preconditions, when the required action runs, assert every stated result: Given the change, when ruff, pyright, lint-imports and pytest run, then all pass, and `preprocessing_version()` still returns `pre1.kind2-t3.outcome3`. Use /bmad-tea-automate expand for implemented behavior, or red mode if behavior is missing; obsolete behavior needs a requirements decision before new tests.",
-      "requirements": [
-        "ticketscope--e1-s10--AC-2"
-      ]
-    },
-    {
-      "priority": "HIGH",
-      "action": "Suggested E1-TRACE-031 (api): Given the stated preconditions, when the required action runs, assert every stated result: Given a kind cluster that ran the baseline and then `kind-up.sh` on the sweep commit, when the golden queries are posted before and after, then the two sets of responses are identical. Use /bmad-tea-automate expand for implemented behavior, or red mode if behavior is missing; obsolete behavior needs a requirements decision before new tests.",
-      "requirements": [
-        "ticketscope--e1-s10--AC-3"
-      ]
-    },
-    {
-      "priority": "HIGH",
-      "action": "Suggested E1-TRACE-032 (e2e): Given the stated preconditions, when the required action runs, assert every stated result: Given a cluster that was just upgraded in place, when `uv run pytest -m kind tests/smoke` runs once, then (3) passes on the first run. Use /bmad-tea-automate expand for implemented behavior, or red mode if behavior is missing; obsolete behavior needs a requirements decision before new tests.",
-      "requirements": [
-        "ticketscope--e1-s10--AC-4"
-      ]
-    },
-    {
-      "priority": "MEDIUM",
-      "action": "Suggested E1-TRACE-033 (e2e): Given the stated preconditions, when the required action runs, assert every stated result: Given each of the five checks broken on purpose by hand, one at a time (e.g. a stricter schema copy, a NULLed kind via SQL, a golden expected number swapped in a scratch copy, Tempo scaled to 0, the backup ObjectStore pointed at a missing bucket), when the suite runs, then that check fails; the break is then reverted and the suite passes again. Use /bmad-tea-automate expand for implemented behavior, or red mode if behavior is missing; obsolete behavior needs a requirements decision before new tests.",
-      "requirements": [
-        "ticketscope--e1-s11--AC-2"
-      ]
-    },
-    {
-      "priority": "HIGH",
-      "action": "Suggested E1-TRACE-034 (e2e): Given the stated preconditions, when the required action runs, assert every stated result: Given the change, when `uv run pytest` runs without a cluster, then the integrated module is deselected and the new unit tests pass. Use /bmad-tea-automate expand for implemented behavior, or red mode if behavior is missing; obsolete behavior needs a requirements decision before new tests.",
-      "requirements": [
-        "ticketscope--e1-s11--AC-3"
-      ]
+      "action": "Every new commit makes the live records stale. After the final commit, take the CI evidence artifact (live-verification-results) from that commit's run, re-run scripts/fault-inject.sh and scripts/v1-parity.sh locally if the cluster code changed, and re-run /bmad-tea-trace.",
+      "requirements": []
     }
   ],
   "links": {
-    "trace_report_path": "/Users/dillonheffernan/Code/ticketscope/_bmad-output/test-artifacts/trace/traceability-matrix-epic-ticketscope--e1.md",
+    "trace_report_path": "_bmad-output/test-artifacts/trace/traceability-matrix-epic-ticketscope--e1.md",
     "trace_report_url": "",
     "artifact_url": "",
     "journey_evidence_url": ""
   },
-  "gate_status": "FAIL",
+  "waivers": {
+    "register": "_bmad-output/test-artifacts/gate-waivers.md",
+    "read_error": "",
+    "filed": 1,
+    "valid": 1,
+    "invalid": 0,
+    "entries": [
+      {
+        "id": "W-001",
+        "title": "Retired GitHub-era criteria of stories 1.3, 1.4 and 1.14",
+        "covers": [
+          "ticketscope--e1-s3--AC-1",
+          "ticketscope--e1-s3--AC-2",
+          "ticketscope--e1-s3--AC-3",
+          "ticketscope--e1-s4--AC-1",
+          "ticketscope--e1-s4--AC-2",
+          "ticketscope--e1-s14--AC-2"
+        ],
+        "priority": "P0",
+        "valid": true,
+        "failed_checks": []
+      }
+    ]
+  },
   "gate_criteria": {
     "p0_coverage_required": "100%",
-    "p0_coverage_actual": "33%",
+    "p0_coverage_actual": "67%",
     "p0_status": "NOT_MET",
     "p1_coverage_target": "90%",
     "p1_coverage_minimum": "80%",
-    "p1_coverage_actual": "39%",
+    "p1_coverage_actual": "70%",
     "p1_status": "NOT_MET",
     "overall_coverage_minimum": "80%",
-    "overall_coverage_actual": "35%",
+    "overall_coverage_actual": "69%",
     "overall_status": "NOT_MET"
+  },
+  "derived_gate_status": "FAIL",
+  "override": {
+    "status": "WAIVED",
+    "derived_status": "FAIL",
+    "waiver_id": "W-001",
+    "waiver_register": "_bmad-output/test-artifacts/gate-waivers.md",
+    "approver": "Dillon, Product Owner",
+    "approved_at": "2026-11-07",
+    "expires": "2027-11-07",
+    "covers": [
+      "ticketscope--e1-s3--AC-1",
+      "ticketscope--e1-s3--AC-2",
+      "ticketscope--e1-s3--AC-3",
+      "ticketscope--e1-s4--AC-1",
+      "ticketscope--e1-s4--AC-2",
+      "ticketscope--e1-s14--AC-2"
+    ],
+    "reason": "Superseded GitHub-era criteria; replacement behavior covered by stories 13 and 14."
   }
 }

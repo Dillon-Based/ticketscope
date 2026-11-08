@@ -1,19 +1,19 @@
 import pytest
 from pydantic import ValidationError
 
-from tests.factories import outcome_payload
+from tests.factories import issue_payload, outcome_payload, search_payload
 from ticketscope.contract.search import IssueResponse, SearchRequest, SearchResponse
 
 
 def test_mode_is_optional_with_no_default() -> None:
-    request = SearchRequest.model_validate({"query": "q"})
+    request = SearchRequest.model_validate(search_payload("q"))
     assert request.mode is None
     assert request.k == 10
 
 
 def test_unknown_mode_is_rejected() -> None:
     with pytest.raises(ValidationError):
-        SearchRequest.model_validate({"query": "q", "mode": "nope"})
+        SearchRequest.model_validate(search_payload("q", mode="nope"))
 
 
 def test_query_is_required() -> None:
@@ -22,7 +22,7 @@ def test_query_is_required() -> None:
 
 
 def test_unknown_fields_pass_through() -> None:
-    request = SearchRequest.model_validate({"query": "q", "future": 1})
+    request = SearchRequest.model_validate(search_payload("q", future=1))
     assert request.model_dump()["future"] == 1
 
 
@@ -35,15 +35,13 @@ def test_response_has_the_v1_shape() -> None:
             {
                 "rank": 1,
                 "score": 2.5,
-                "issue": {
-                    "number": 900003,
-                    "title": "t",
-                    "url": "https://example.invalid/900003",
-                    "kind": "log_heavy",
-                    "state": "closed",
-                    "added_later": True,
-                },
-                "outcome": {"status": "unknown", "summary": None, "source": None, "ref": None},
+                "issue": issue_payload(
+                    900003,
+                    url="https://example.invalid/900003",
+                    kind="log_heavy",
+                    added_later=True,
+                ),
+                "outcome": outcome_payload(),
             }
         ],
     }
@@ -69,13 +67,7 @@ def test_response_enums_are_closed(path: tuple[str | int, ...], value: str) -> N
             {
                 "rank": 1,
                 "score": 1.0,
-                "issue": {
-                    "number": 1,
-                    "title": "t",
-                    "url": "u",
-                    "kind": "short",
-                    "state": "closed",
-                },
+                "issue": issue_payload(),
                 "outcome": outcome_payload(),
             }
         ],
@@ -90,26 +82,24 @@ def test_response_enums_are_closed(path: tuple[str | int, ...], value: str) -> N
 
 @pytest.mark.parametrize("k", [1, 50])
 def test_k_edges_are_accepted(k: int) -> None:
-    assert SearchRequest.model_validate({"query": "q", "k": k}).k == k
+    assert SearchRequest.model_validate(search_payload("q", k=k)).k == k
 
 
 @pytest.mark.parametrize("k", [0, 51, -1])
 def test_k_outside_1_to_50_is_rejected(k: int) -> None:
     with pytest.raises(ValidationError):
-        SearchRequest.model_validate({"query": "q", "k": k})
+        SearchRequest.model_validate(search_payload("q", k=k))
 
 
 def test_issue_response_round_trips_an_unknown_field() -> None:
     body = {
-        "issue": {
-            "number": 900003,
-            "title": "t",
-            "url": "https://bugs.mojang.com/browse/MCD-9003",
-            "kind": "log_heavy",
-            "state": "closed",
-            "body": "a body",
-            "key": "MCD-9003",
-        },
+        "issue": issue_payload(
+            900003,
+            url="https://bugs.mojang.com/browse/MCD-9003",
+            kind="log_heavy",
+            body="a body",
+            key="MCD-9003",
+        ),
         "outcome": outcome_payload(status="fixed", summary="Fixed"),
         "added_later": [1, 2],
     }
@@ -118,7 +108,7 @@ def test_issue_response_round_trips_an_unknown_field() -> None:
 
 def test_issue_response_body_may_be_null_but_not_missing() -> None:
     body: dict[str, object] = {
-        "issue": {"number": 1, "title": "t", "url": "u", "kind": "short", "state": "open"},
+        "issue": issue_payload(state="open"),
         "outcome": outcome_payload(),
     }
     with pytest.raises(ValidationError):

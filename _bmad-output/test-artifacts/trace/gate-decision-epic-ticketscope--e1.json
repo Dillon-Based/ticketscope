@@ -1,6 +1,6 @@
 {
   "schema_version": "0.1.0",
-  "evaluated_at": "2026-11-07T17:27:47.043271+00:00",
+  "evaluated_at": "2026-11-07T21:39:16.193443+00:00",
   "repo": "ticketscope",
   "target": {
     "type": "epic",
@@ -9,16 +9,35 @@
   },
   "collection_status": "COLLECTED",
   "gate_basis": "priority_thresholds",
-  "gate_status": "FAIL",
-  "rationale": "P0 coverage is 33% (required: 100%). 2 critical requirement(s) below FULL coverage.",
+  "gate_status": "WAIVED",
+  "rationale": "P0 coverage is 67% (required: 100%). 1 critical requirement(s) below FULL coverage.",
   "p0_status": "NOT_MET",
   "p1_status": "NOT_MET",
   "overall_status": "NOT_MET",
-  "critical_open": 2,
+  "critical_open": 1,
   "links": {
-    "trace_report_path": "/Users/dillonheffernan/Code/ticketscope/_bmad-output/test-artifacts/trace/traceability-matrix-epic-ticketscope--e1.md",
+    "trace_report_path": "_bmad-output/test-artifacts/trace/traceability-matrix-epic-ticketscope--e1.md",
     "trace_report_url": "",
     "artifact_url": "",
     "journey_evidence_url": ""
+  },
+  "derived_gate_status": "FAIL",
+  "override": {
+    "status": "WAIVED",
+    "derived_status": "FAIL",
+    "waiver_id": "W-001",
+    "waiver_register": "_bmad-output/test-artifacts/gate-waivers.md",
+    "approver": "Dillon, Product Owner",
+    "approved_at": "2026-11-07",
+    "expires": "2027-11-07",
+    "covers": [
+      "ticketscope--e1-s3--AC-1",
+      "ticketscope--e1-s3--AC-2",
+      "ticketscope--e1-s3--AC-3",
+      "ticketscope--e1-s4--AC-1",
+      "ticketscope--e1-s4--AC-2",
+      "ticketscope--e1-s14--AC-2"
+    ],
+    "reason": "Superseded GitHub-era criteria; replacement behavior covered by stories 13 and 14."
   }
 }

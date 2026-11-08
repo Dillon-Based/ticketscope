@@ -9,6 +9,13 @@ on:
         description: Shell command run after kind-up.sh, against the live cluster.
         type: string
         required: true
+      upgrade_check:
+        description: >-
+          Optional shell command run once after a second kind-up.sh on the same cluster
+          (an in-place upgrade), when `check` passed.
+        type: string
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -57,7 +64,23 @@ jobs:
       - name: Check
         env:
           CHECK: ${{ inputs.check }}
+          # The Postgres image kind-up.sh built, for tests/smoke/test_time_load.py.
+          POSTGRES_IMAGE: ticketscope-postgres:18-${{ github.sha }}
         run: bash -c "$CHECK"
+
+      - name: In-place upgrade, then check once
+        if: inputs.upgrade_check != ''
+        env:
+          TAG: ${{ github.sha }}
+          CHECK: ${{ inputs.upgrade_check }}
+          POSTGRES_IMAGE: ticketscope-postgres:18-${{ github.sha }}
+        run: |
+          # Keep the fresh cluster's kind-up-to-Ready time for the runner-fit summary;
+          # kind-up.sh would otherwise export the upgrade's time over it.
+          fresh="${TICKETSCOPE_KIND_UP_TO_READY_SECONDS:-}"
+          scripts/kind-up.sh
+          echo "TICKETSCOPE_KIND_UP_TO_READY_SECONDS=${fresh}" >> "$GITHUB_ENV"
+          bash -c "$CHECK"
 
       - name: Diagnostics
         if: failure()
@@ -104,3 +127,14 @@ jobs:
             echo "Wall clock is measured by scripts/kind-up.sh and includes its image builds."
           } >> "$GITHUB_STEP_SUMMARY"
           cat "$GITHUB_STEP_SUMMARY"
+          mkdir -p reports
+          printf '{"peak_memory_mib": "%s", "total_memory_mib": "%s", "free_disk": "%s", "kind_up_to_api_ready_seconds": "%s"}\n' \
+            "${peak:-n/a}" "$total" "$disk" "${TICKETSCOPE_KIND_UP_TO_READY_SECONDS:-n/a}" > reports/runner-fit.json
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports-kind
+          path: reports/
+          if-no-files-found: ignore

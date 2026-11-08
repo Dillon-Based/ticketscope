@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="5" time="7.068" timestamp="2026-11-07T16:18:13.785409-05:00" hostname="Dillons-Mac-mini.local"><testcase classname="tests.integrated.test_done_when" name="test_loaded_corpus_is_the_pinned_asset_valid_against_schema_v2" time="0.009"><failure message="AssertionError: 2026.11.1.jsonl.gz line 1 (issue 11313): 'fault_injected_field' is a required property at []&#10;assert &lt;ValidationError: &quot;'fault_injected_field' is a required property&quot;&gt; is None">pytestconfig = &lt;_pytest.config.Config object at 0x109321be0&gt;
+
+    def test_loaded_corpus_is_the_pinned_asset_valid_against_schema_v2(
+        pytestconfig: pytest.Config,
+    ) -&gt; None:
+        pin = snapshot_pin()
+        # The checksum-verified asset, kept in pytest's cache so a local rerun does not
+        # download it again (a cached copy is checked against the same pin).
+        path = fetch_snapshot(
+            pin["baseUrl"],
+            pin["version"],
+            pytestconfig.cache.mkdir("ticketscope-snapshot"),
+            pin["sha256"],
+            timeout=300,
+        )
+        schema = json.loads((SNAPSHOT_DIR / "schema-v2.json").read_text(encoding="utf-8"))
+        validator = Draft202012Validator(schema, format_checker=Draft202012Validator.FORMAT_CHECKER)
+        numbers: list[int] = []
+        with gzip.open(path, "rt", encoding="utf-8") as lines:
+            for lineno, line in enumerate(lines, start=1):
+                if not line.strip():
+                    continue
+                record: dict[str, Any] = json.loads(line)
+                error = next(validator.iter_errors(record), None)
+&gt;               assert error is None, (
+                    f"{path.name} line {lineno} (issue {record.get('number')}): {error.message}"
+                    f" at {list(error.absolute_path)}"
+                )
+E               AssertionError: 2026.11.1.jsonl.gz line 1 (issue 11313): 'fault_injected_field' is a required property at []
+E               assert &lt;ValidationError: "'fault_injected_field' is a required property"&gt; is None
+
+tests/integrated/test_done_when.py:99: AssertionError</failure></testcase><testcase classname="tests.integrated.test_done_when" name="test_every_loaded_issue_has_a_valid_kind_and_outcome" time="0.383" /><testcase classname="tests.integrated.test_done_when" name="test_golden_queries_return_their_twins_with_outcomes_via_v1_and_page" time="0.111" /><testcase classname="tests.integrated.test_done_when" name="test_one_search_reaches_tempo_as_the_ad10_tree" time="3.132" /><testcase classname="tests.integrated.test_done_when" name="test_an_on_demand_backup_completes_to_seaweedfs" time="3.314" /></testsuite></testsuites>

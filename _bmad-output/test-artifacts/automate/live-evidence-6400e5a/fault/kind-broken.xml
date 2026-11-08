@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="5" time="9.701" timestamp="2026-11-07T16:18:31.850315-05:00" hostname="Dillons-Mac-mini.local"><testcase classname="tests.integrated.test_done_when" name="test_loaded_corpus_is_the_pinned_asset_valid_against_schema_v2" time="2.929" /><testcase classname="tests.integrated.test_done_when" name="test_every_loaded_issue_has_a_valid_kind_and_outcome" time="0.122"><failure message="AssertionError: issues with an invalid kind or outcome (number kind outcome): ['11313 NULL fixed']&#10;assert not ['11313 NULL fixed']">def test_every_loaded_issue_has_a_valid_kind_and_outcome() -&gt; None:
+        bad = _sql(
+            "SELECT number || ' ' || coalesce(kind, 'NULL') || ' ' || coalesce(outcome_status, 'NULL')"
+            f" FROM issue WHERE kind IS NULL OR kind NOT IN ({_sql_list(KINDS)})"
+            f" OR outcome_status IS NULL OR outcome_status NOT IN ({_sql_list(OUTCOMES)})"
+            " ORDER BY number LIMIT 20"
+        ).split("\n")
+        bad = [row for row in bad if row.strip()]
+&gt;       assert not bad, f"issues with an invalid kind or outcome (number kind outcome): {bad}"
+E       AssertionError: issues with an invalid kind or outcome (number kind outcome): ['11313 NULL fixed']
+E       assert not ['11313 NULL fixed']
+
+tests/integrated/test_done_when.py:128: AssertionError</failure></testcase><testcase classname="tests.integrated.test_done_when" name="test_golden_queries_return_their_twins_with_outcomes_via_v1_and_page" time="0.100" /><testcase classname="tests.integrated.test_done_when" name="test_one_search_reaches_tempo_as_the_ad10_tree" time="3.117" /><testcase classname="tests.integrated.test_done_when" name="test_an_on_demand_backup_completes_to_seaweedfs" time="3.316" /></testsuite></testsuites>

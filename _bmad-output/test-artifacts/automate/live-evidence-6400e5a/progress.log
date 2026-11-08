@@ -1,0 +1,14 @@
+[21:11:31] 1 kind-up HEAD 6400e5ac8e3bb4cadeea8061a5581c33b2b45036
+[21:12:42] kind-up exit 0
+[21:12:46] 1b full kind suite
+[21:18:13] kind suite exit 0 : ======================== 32 passed in 326.90s (0:05:26) ========================
+[21:18:13] 2 fault injection
+[21:21:37] fault-inject exit 0
+[21:21:37] 3 parity
+[21:23:12] parity s6 (32049ee -> d29ed1e) exit 0 : scripts/v1-parity.sh: line 22: 52274 Terminated: 15          kubectl -n platform port-forward "$svc" "$port:80" > /dev/null 2>&1
+[21:24:11] parity s7 (d29ed1e -> 88613bd) exit 0 : scripts/v1-parity.sh: line 22: 53072 Terminated: 15          kubectl -n platform port-forward "$svc" "$port:80" > /dev/null 2>&1
+[21:26:24] parity s10 (93c4344 -> 9b291e3) exit 0 : scripts/v1-parity.sh: line 22: 54753 Terminated: 15          kubectl -n platform port-forward "$svc" "$port:80" > /dev/null 2>&1
+[21:26:24] 4 restore HEAD
+[21:27:09] kind-up exit 0
+[21:27:27] restore integrated exit 0 : 5 passed in 14.30s
+[21:27:27] done

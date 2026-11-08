@@ -1,0 +1,55 @@
+{
+  "_note": "All seven records were approved by the author on 2026-11-07 and moved into live-verification-results.json.",
+  "schema_version": "0.1.0",
+  "results": [
+    {
+      "requirement_id": "ticketscope--e1-s9--AC-4",
+      "title": "Grafana Explore shows the same span tree for the smoke trace (manual, human-visual)",
+      "status": "pending",
+      "how": "kubectl -n platform port-forward svc/grafana 3000:80; open http://localhost:3000/explore, datasource Tempo, paste a trace id from a fresh traced search (the smoke (8) test prints none; use: T=$(openssl rand -hex 16); curl -H 'Host: ticketscope.kind.internal' -H \"traceparent: 00-$T-$(openssl rand -hex 8)-01\" -H 'content-type: application/json' -d '{\"query\":\"launcher crash\",\"mode\":\"keyword\",\"k\":5}' http://127.0.0.1:18080/v1/search; echo $T).",
+      "confirm": "Did Explore show ticketscope-api SERVER -> retrieval keyword -> db query spans for that trace id?"
+    },
+    {
+      "requirement_id": "ticketscope--e1-s12--AC-1",
+      "title": "Instances and leading projects compared on the decision rule",
+      "status": "pass",
+      "evidence": "spike-choose-the-jira-corpus-findings/findings.md (per-instance and per-project tables: issue count, in-subset pairs by kind, outcome shares, issue-type mix, hygiene counts) built from instances.csv, projects.csv, subsets.csv beside it.",
+      "confirm": "Do the findings tables cover every instance and leading project with all five measures?"
+    },
+    {
+      "requirement_id": "ticketscope--e1-s12--AC-2",
+      "title": "Recommended subset shown to work",
+      "status": "pass",
+      "evidence": "findings.md names Mojang MCL + REALMS + MCD: 32,154 issues, 10,466 in-subset pairs (10,162 short, 304 log-heavy), timed load 3.9 s vs 600 s; samples-mojang-mcl-realms-mcd.md (and the Spark/JRASERVER sample files) hold the 20 sampled issues per leading candidate.",
+      "confirm": "Do the sample files hold 20 issues per leading candidate, each with your judgement?"
+    },
+    {
+      "requirement_id": "ticketscope--e1-s12--AC-3",
+      "title": "Answer and consequences recorded where waiting tickets read them",
+      "status": "pass",
+      "evidence": "epic-search-baseline.md Notes lines 110-112: dated Decision 'Spike 12 decided: switch ... subset Mojang MCL + REALMS + MCD ...', terms accepted, Corpus scope/terms/Jira outcome/Kind rule amended, data lane replanned (stories 13, 14).",
+      "confirm": "Does the line name the subset, the resolution-to-outcome mapping and answered rule, the Jira {code}/{noformat} kind rule, and the attribution line?"
+    },
+    {
+      "requirement_id": "ticketscope--e1-s12--AC-4",
+      "title": "Author accepts it",
+      "status": "pass",
+      "evidence": "epic-search-baseline.md Notes line 110 Decision attributed '(user, 2026-11-06)'.",
+      "confirm": "Was that decision yours?"
+    },
+    {
+      "requirement_id": "ticketscope--e1-s2--verify",
+      "title": "Corpus-terms decision recorded",
+      "status": "pass",
+      "evidence": "epic-search-baseline.md Notes line 108: 'Decision: Corpus terms settled (spike 2): yes, with attribution, no author logins, masking of emails and secrets, and a takedown path ...'; story 3's entry carries the conditions.",
+      "confirm": "Is that the dated decision you made for spike 2?"
+    },
+    {
+      "requirement_id": "ticketscope--e1-s13--AC-4",
+      "title": "Person-run publish produced the snapshot Release",
+      "status": "pass",
+      "evidence": "https://github.com/Dillon-Based/ticketscope/releases/tag/snapshot-2026.11.1 (published 2026-11-07T00:48:56Z): assets 2026.11.1.jsonl.gz + .sha256; notes state subset (MCL, REALMS, MCD), 32153 issues, 10473 in-subset pairs (10164 short, 309 log-heavy), kind split 31339/814, timed load 2.6 s (budget 600 s), attribution line, built from b525b53.",
+      "confirm": "Was this Release produced by scripts/publish-snapshot.sh from your restored dump after merge?"
+    }
+  ]
+}

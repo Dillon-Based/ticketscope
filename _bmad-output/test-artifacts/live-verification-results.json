@@ -1,0 +1,162 @@
+{
+  "schema_version": "0.1.0",
+  "source_sha": "6400e5ac8e3bb4cadeea8061a5581c33b2b45036",
+  "observed_at": "2026-11-07T21:27:27Z",
+  "producer": "GitHub Actions ci run 42415340129 (workflow_dispatch, scripts/live_results.py) + local kind runs of scripts/fault-inject.sh and scripts/v1-parity.sh at the same commit (Claude Code); author-confirmed manual and document checks (user, 2026-11-07)",
+  "results": [
+    {
+      "id": "ticketscope--e1-LIVE-001",
+      "requirement_id": "ticketscope--e1-s1--AC-1",
+      "title": "PR ci.yml: ruff, pyright, pytest, lint-imports pass; _kind-deploy brings up both releases and passes smoke",
+      "status": "pass",
+      "evidence": "https://github.com/Dillon-Based/ticketscope/actions/runs/42415340129 \u2014 checks=success, charts=success, images=success, integrated-check=success; unit: 716 passed, 0 failed, 17 skipped; kind: 32 passed, 0 failed, 0 skipped"
+    },
+    {
+      "id": "ticketscope--e1-LIVE-002",
+      "requirement_id": "ticketscope--e1-s1--AC-2",
+      "title": "images/ change builds linux/amd64 and linux/arm64",
+      "status": "pass",
+      "evidence": "https://github.com/Dillon-Based/ticketscope/actions/runs/42415340129 \u2014 images job success"
+    },
+    {
+      "id": "ticketscope--e1-LIVE-003",
+      "requirement_id": "ticketscope--e1-s1--AC-4",
+      "title": "_kind-deploy job summary shows peak memory, free disk, kind-up to api Ready wall clock",
+      "status": "pass",
+      "evidence": "https://github.com/Dillon-Based/ticketscope/actions/runs/42415340129 \u2014 runner fit: peak_memory_mib=4197, free_disk=75G, kind_up_to_api_ready_seconds=198"
+    },
+    {
+      "id": "ticketscope--e1-LIVE-004",
+      "requirement_id": "ticketscope--e1-s10--AC-2",
+      "title": "ruff, pyright, lint-imports, pytest pass (preprocessing_version asserted in the unit suite)",
+      "status": "pass",
+      "evidence": "https://github.com/Dillon-Based/ticketscope/actions/runs/42415340129 \u2014 checks=success; unit: 716 passed, 0 failed, 17 skipped"
+    },
+    {
+      "id": "ticketscope--e1-LIVE-005",
+      "requirement_id": "ticketscope--e1-s10--AC-3",
+      "title": "POST /v1/search body identical before and after the change",
+      "status": "pass",
+      "evidence": "scripts/v1-parity.sh 93c4344 9b291e3 on the local kind cluster (snapshot 2026.11.1, each revision deployed with its own kind-up.sh and image tag): vague, log-heavy and plain keyword requests returned status 200 with byte-identical bodies. Saved responses in _bmad-output/test-artifacts/automate/live-evidence-6400e5a/parity-s10/."
+    },
+    {
+      "id": "ticketscope--e1-LIVE-006",
+      "requirement_id": "ticketscope--e1-s10--AC-4",
+      "title": "first smoke run after an in-place kind-up.sh upgrade passes (3)",
+      "status": "pass",
+      "evidence": "https://github.com/Dillon-Based/ticketscope/actions/runs/42415340129 \u2014 after a second kind-up.sh on the same cluster, one smoke run: 27 passed, 0 failed, 0 skipped; test (3) passed"
+    },
+    {
+      "id": "ticketscope--e1-LIVE-007",
+      "requirement_id": "ticketscope--e1-s11--AC-2",
+      "title": "Each of the five integrated checks fails when broken by hand, then passes when restored",
+      "status": "pass",
+      "evidence": "scripts/fault-inject.sh on the local kind cluster at 6400e5ac8e3bb4cadeea8061a5581c33b2b45036: schema broken: only test_loaded_corpus_is_the_pinned_asset_valid_against_schema_v2 failed; schema restored: all five passed; kind broken: only test_every_loaded_issue_has_a_valid_kind_and_outcome failed; kind restored: all five passed; golden broken: only test_golden_queries_return_their_twins_with_outcomes_via_v1_and_page failed; golden restored: all five passed; tempo broken: only test_one_search_reaches_tempo_as_the_ad10_tree failed; tempo restored: all five passed; backup broken: only test_an_on_demand_backup_completes_to_seaweedfs failed; backup restored: all five passed. JUnit per run and summary.json in _bmad-output/test-artifacts/automate/live-evidence-6400e5a/fault/."
+    },
+    {
+      "id": "ticketscope--e1-LIVE-008",
+      "requirement_id": "ticketscope--e1-s11--AC-3",
+      "title": "uv run pytest without a cluster deselects the integrated module and unit tests pass",
+      "status": "pass",
+      "evidence": "https://github.com/Dillon-Based/ticketscope/actions/runs/42415340129 \u2014 default `uv run pytest` (no cluster): 716 passed, 0 failed, 17 skipped; integrated cases collected: 0"
+    },
+    {
+      "id": "ticketscope--e1-LIVE-009",
+      "requirement_id": "ticketscope--e1-s12--AC-1",
+      "title": "Instances and leading projects compared on the decision rule",
+      "status": "pass",
+      "evidence": "spike-choose-the-jira-corpus-findings/findings.md (per-instance and per-project tables: issue count, in-subset pairs by kind, outcome shares, issue-type mix, hygiene counts) built from instances.csv, projects.csv, subsets.csv beside it. Confirmed by the author (user) on 2026-11-07: \"Do the findings tables cover every instance and leading project with all five measures?\" \u2014 approved."
+    },
+    {
+      "id": "ticketscope--e1-LIVE-010",
+      "requirement_id": "ticketscope--e1-s12--AC-2",
+      "title": "Recommended subset shown to work",
+      "status": "pass",
+      "evidence": "findings.md names Mojang MCL + REALMS + MCD: 32,154 issues, 10,466 in-subset pairs (10,162 short, 304 log-heavy), timed load 3.9 s vs 600 s; samples-mojang-mcl-realms-mcd.md (and the Spark/JRASERVER sample files) hold the 20 sampled issues per leading candidate. Confirmed by the author (user) on 2026-11-07: \"Do the sample files hold 20 issues per leading candidate, each with your judgement?\" \u2014 approved."
+    },
+    {
+      "id": "ticketscope--e1-LIVE-011",
+      "requirement_id": "ticketscope--e1-s12--AC-3",
+      "title": "Answer and consequences recorded where waiting tickets read them",
+      "status": "pass",
+      "evidence": "epic-search-baseline.md Notes lines 110-112: dated Decision 'Spike 12 decided: switch ... subset Mojang MCL + REALMS + MCD ...', terms accepted, Corpus scope/terms/Jira outcome/Kind rule amended, data lane replanned (stories 13, 14). Confirmed by the author (user) on 2026-11-07: \"Does the line name the subset, the resolution-to-outcome mapping and answered rule, the Jira {code}/{noformat} kind rule, and the attribution line?\" \u2014 approved."
+    },
+    {
+      "id": "ticketscope--e1-LIVE-012",
+      "requirement_id": "ticketscope--e1-s12--AC-4",
+      "title": "Author accepts it",
+      "status": "pass",
+      "evidence": "epic-search-baseline.md Notes line 110 Decision attributed '(user, 2026-11-06)'. Confirmed by the author (user) on 2026-11-07: \"Was that decision yours?\" \u2014 approved."
+    },
+    {
+      "id": "ticketscope--e1-LIVE-013",
+      "requirement_id": "ticketscope--e1-s13--AC-3",
+      "title": "tagged tests for ticketscope--e1-s13--AC-3",
+      "status": "pass",
+      "evidence": "https://github.com/Dillon-Based/ticketscope/actions/runs/42415340129 \u2014 tests.smoke.test_time_load::test_v2_fixture_loads_and_prints_a_time [passed] (kind-upgrade.xml), tests.smoke.test_time_load::test_v2_fixture_loads_and_prints_a_time [passed] (kind.xml)"
+    },
+    {
+      "id": "ticketscope--e1-LIVE-014",
+      "requirement_id": "ticketscope--e1-s13--AC-4",
+      "title": "Person-run publish produced the snapshot Release",
+      "status": "pass",
+      "evidence": "https://github.com/Dillon-Based/ticketscope/releases/tag/snapshot-2026.11.1 (published 2026-11-07T00:48:56Z): assets 2026.11.1.jsonl.gz + .sha256; notes state subset (MCL, REALMS, MCD), 32153 issues, 10473 in-subset pairs (10164 short, 309 log-heavy), kind split 31339/814, timed load 2.6 s (budget 600 s), attribution line, built from b525b53. Confirmed by the author (user) on 2026-11-07: \"Was this Release produced by scripts/publish-snapshot.sh from your restored dump after merge?\" \u2014 approved."
+    },
+    {
+      "id": "ticketscope--e1-LIVE-015",
+      "requirement_id": "ticketscope--e1-s2--verify",
+      "title": "Corpus-terms decision recorded",
+      "status": "pass",
+      "evidence": "epic-search-baseline.md Notes line 108: 'Decision: Corpus terms settled (spike 2): yes, with attribution, no author logins, masking of emails and secrets, and a takedown path ...'; story 3's entry carries the conditions. Confirmed by the author (user) on 2026-11-07: \"Is that the dated decision you made for spike 2?\" \u2014 approved."
+    },
+    {
+      "id": "ticketscope--e1-LIVE-016",
+      "requirement_id": "ticketscope--e1-s5--AC-5",
+      "title": "tagged tests for ticketscope--e1-s5--AC-5",
+      "status": "pass",
+      "evidence": "https://github.com/Dillon-Based/ticketscope/actions/runs/42415340129 \u2014 tests.smoke.test_time_load::test_pinned_asset_alone_loads_within_budget [passed] (kind-upgrade.xml), tests.smoke.test_time_load::test_pinned_asset_alone_loads_within_budget [passed] (kind.xml)"
+    },
+    {
+      "id": "ticketscope--e1-LIVE-017",
+      "requirement_id": "ticketscope--e1-s6--AC-3",
+      "title": "POST /v1/search body identical before and after the change",
+      "status": "pass",
+      "evidence": "scripts/v1-parity.sh 32049ee d29ed1e on the local kind cluster (snapshot 2026.11.1, each revision deployed with its own kind-up.sh and image tag): vague, log-heavy and plain keyword requests returned status 200 with byte-identical bodies. Saved responses in _bmad-output/test-artifacts/automate/live-evidence-6400e5a/parity-s6/."
+    },
+    {
+      "id": "ticketscope--e1-LIVE-018",
+      "requirement_id": "ticketscope--e1-s7--AC-3",
+      "title": "POST /v1/search body identical before and after the change",
+      "status": "pass",
+      "evidence": "scripts/v1-parity.sh d29ed1e 88613bd on the local kind cluster (snapshot 2026.11.1, each revision deployed with its own kind-up.sh and image tag): vague, log-heavy and plain keyword requests returned status 200 with byte-identical bodies. Saved responses in _bmad-output/test-artifacts/automate/live-evidence-6400e5a/parity-s7/."
+    },
+    {
+      "id": "ticketscope--e1-LIVE-019",
+      "requirement_id": "ticketscope--e1-s8--AC-1",
+      "title": "PR ci.yml: checks and charts pass; _kind-deploy passes every kind smoke test incl. (7)",
+      "status": "pass",
+      "evidence": "https://github.com/Dillon-Based/ticketscope/actions/runs/42415340129 \u2014 checks=success, charts=success, images=success, integrated-check=success; kind: 32 passed, 0 failed, 0 skipped; backup test (7) passed"
+    },
+    {
+      "id": "ticketscope--e1-LIVE-020",
+      "requirement_id": "ticketscope--e1-s9--AC-2",
+      "title": "ruff, ruff format, pyright, lint-imports, pytest all pass incl. test_telemetry.py",
+      "status": "pass",
+      "evidence": "https://github.com/Dillon-Based/ticketscope/actions/runs/42415340129 \u2014 checks=success; unit: 716 passed, 0 failed, 17 skipped; test_telemetry.py: 16 passed, 0 failed, 0 skipped"
+    },
+    {
+      "id": "ticketscope--e1-LIVE-021",
+      "requirement_id": "ticketscope--e1-s9--AC-3",
+      "title": "tagged tests for ticketscope--e1-s9--AC-3",
+      "status": "pass",
+      "evidence": "https://github.com/Dillon-Based/ticketscope/actions/runs/42415340129 \u2014 tests.smoke.test_gateway::test_api_logs_are_json_lines_carrying_the_request_trace_id [passed] (kind-upgrade.xml), tests.smoke.test_gateway::test_api_logs_are_json_lines_carrying_the_request_trace_id [passed] (kind.xml)"
+    },
+    {
+      "id": "ticketscope--e1-LIVE-022",
+      "requirement_id": "ticketscope--e1-s9--AC-4",
+      "title": "Grafana Explore shows the same span tree for the smoke trace (manual, human-visual)",
+      "status": "pass",
+      "evidence": "Author confirmed in Grafana Explore (Tempo datasource, port-forwarded) that the trace shows the ticketscope-api SERVER -> retrieval keyword -> db query span tree. Confirmed by the author (user) on 2026-11-07: \"Did Explore show ticketscope-api SERVER -> retrieval keyword -> db query spans for that trace id?\" \u2014 approved."
+    }
+  ]
+}

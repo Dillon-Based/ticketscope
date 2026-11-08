@@ -60,4 +60,7 @@ venv = ".venv"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-m 'not kind'"
-markers = ["kind: needs the kind cluster and its Gateway; run with -m kind"]
+markers = [
+  "kind: needs the kind cluster and its Gateway; run with -m kind",
+  "criterion(id, ...): qualified acceptance-criterion ids this test establishes; written to JUnit as properties for scripts/live_results.py",
+]

@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="5" time="10.218" timestamp="2026-11-07T16:18:52.399591-05:00" hostname="Dillons-Mac-mini.local"><testcase classname="tests.integrated.test_done_when" name="test_loaded_corpus_is_the_pinned_asset_valid_against_schema_v2" time="2.972" /><testcase classname="tests.integrated.test_done_when" name="test_every_loaded_issue_has_a_valid_kind_and_outcome" time="0.360" /><testcase classname="tests.integrated.test_done_when" name="test_golden_queries_return_their_twins_with_outcomes_via_v1_and_page" time="0.113"><failure message="AssertionError: vague: expected 38127 (MCL-602) not in top-10; returned [331490, 477621, 337579, 333928, 462385, 345598, 418169, 456476, 330048, 332536]&#10;assert not ['vague: expected 38127 (MCL-602) not in top-10; returned [331490, 477621, 337579, 333928, 462385, 345598, 418169, 456476, 330048, 332536]']">capsys = &lt;_pytest.capture.CaptureFixture object at 0x1098df620&gt;
+
+    def test_golden_queries_return_their_twins_with_outcomes_via_v1_and_page(
+        capsys: pytest.CaptureFixture[str],
+    ) -&gt; None:
+        k, mode = int(GOLDEN["k"]), str(GOLDEN["mode"])
+        assert GOLDEN["snapshot_version"] == PIN
+        url, host = _gateway()
+        rows: list[GoldenRow] = []
+        failures: list[str] = []
+        try:
+            for entry in GOLDEN["queries"]:
+                entry_id = str(entry["id"])
+                expected = entry["expected_issue"]
+                gated = not entry["known_keyword_miss"]
+    
+                response = httpx2.post(
+                    f"{url}/v1/search",
+                    json=search_payload(str(entry["query"]), mode=mode, k=k),
+                    headers={"Host": host},
+                    timeout=30,
+                )
+                assert response.status_code == 200, f"{entry_id}: {response.text}"
+                raw: dict[str, Any] = response.json()
+                no_outcome = results_without_outcome(raw.get("results") or [], OUTCOMES)
+                assert not no_outcome, f"{entry_id}: results without a contract outcome: {no_outcome}"
+                body = SearchResponse.model_validate(raw)
+                assert body.mode == mode and body.corpus_version == PIN, (entry_id, body.mode)
+                assert len(body.results) &lt;= k, entry_id
+                ranked = [r.issue.number for r in body.results]
+                verdict = twin_verdict(
+                    bool(entry["known_keyword_miss"]), int(expected["number"]), ranked
+                )
+                rows.append(GoldenRow(entry_id, str(entry["kind"]), str(expected["key"]), verdict))
+                if verdict.status == "fail":
+                    failures.append(
+                        f"{entry_id}: expected {expected['number']} ({expected['key']}) not in top-{k};"
+                        f" returned {ranked}"
+                    )
+                elif verdict.status == "known-miss":
+                    warnings.warn(f"golden {entry_id}: {verdict.note}", stacklevel=1)
+    
+                _, page = _page(str(entry["query"]))
+                assert page.rows, f"{entry_id}: the page has no rows"
+                bad_rows = [r["rank"] for r in page.rows if r["data-outcome"] not in OUTCOMES]
+                assert not bad_rows, f"{entry_id}: page rows without a contract outcome: {bad_rows}"
+                # A gated twin found through /v1 must be on the page too, whatever its row count.
+                hrefs = [r["href"] for r in page.rows]
+                if (
+                    gated
+                    and verdict.rank is not None
+                    and page_rank(hrefs, str(expected["key"])) is None
+                ):
+                    failures.append(
+                        f"{entry_id}: the page has no row for {expected['key']}"
+                        f" (/v1 rank {verdict.rank}); hrefs {hrefs}"
+                    )
+        finally:
+            # Whatever rows were collected, even when an assert above stopped the loop.
+            _report(summary_table(rows, k=k, mode=mode), capsys)
+&gt;       assert not failures, "\n".join(failures)
+E       AssertionError: vague: expected 38127 (MCL-602) not in top-10; returned [331490, 477621, 337579, 333928, 462385, 345598, 418169, 456476, 330048, 332536]
+E       assert not ['vague: expected 38127 (MCL-602) not in top-10; returned [331490, 477621, 337579, 333928, 462385, 345598, 418169, 456476, 330048, 332536]']
+
+tests/integrated/test_done_when.py:205: AssertionError</failure></testcase><testcase classname="tests.integrated.test_done_when" name="test_one_search_reaches_tempo_as_the_ad10_tree" time="3.124" /><testcase classname="tests.integrated.test_done_when" name="test_an_on_demand_backup_completes_to_seaweedfs" time="3.531" /></testsuite></testsuites>

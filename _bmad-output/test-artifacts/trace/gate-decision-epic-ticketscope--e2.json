@@ -1,0 +1,24 @@
+{
+  "schema_version": "0.1.0",
+  "evaluated_at": "2026-11-08T23:09:18.119742+00:00",
+  "repo": "ticketscope",
+  "target": {
+    "type": "epic",
+    "id": "ticketscope--e2",
+    "label": "Epic 2: Retrieval is scored on every PR and regressions block the merge"
+  },
+  "collection_status": "COLLECTED",
+  "gate_basis": "priority_thresholds",
+  "gate_status": "FAIL",
+  "rationale": "P0 coverage is 43% (required: 100%). 4 critical requirement(s) below FULL coverage. Overall FULL coverage is 61% (minimum 80%); P1 is 73% (minimum 80%, PASS target 90%).",
+  "p0_status": "NOT_MET",
+  "p1_status": "NOT_MET",
+  "overall_status": "NOT_MET",
+  "critical_open": 4,
+  "links": {
+    "trace_report_path": "_bmad-output/test-artifacts/trace/traceability-matrix-epic-ticketscope--e2.md",
+    "trace_report_url": "",
+    "artifact_url": "",
+    "journey_evidence_url": ""
+  }
+}

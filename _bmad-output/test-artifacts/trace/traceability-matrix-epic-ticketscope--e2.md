@@ -14,7 +14,7 @@ stepsCompleted:
 lastStep: step-05-gate-decision
 lastSaved: '2026-11-08'
 coverageBasis: acceptance_criteria
-oracleConfidence: medium
+oracleConfidence: high
 oracleResolutionMode: formal_requirements
 oracleSources:
 - _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/epic-eval-gate.md
@@ -27,176 +27,176 @@ oracleSources:
 externalPointerStatus: not_used
 oracleGranularity: requirements
 collectionStatus: COLLECTED
-sourceSha: 3fe91b2a3d70da1ef41af93507812153622bb6ca
+sourceSha: 8d772e029c84d73ef4f325f024c90d63c8d7e590
 criterionLedger:
 - id: ticketscope--e2-s1--AC-1
   localId: AC-1
   story: ticketscope--e2-s1
-  name: "Given the oracle fixture, when the scaffold runs, then it passes, and `git diff b7be713 -- tests/eval_oracle.py` is empty."
-  text: "Given the oracle fixture, when the scaffold runs, then it passes, and `git diff b7be713 -- tests/eval_oracle.py` is empty."
+  name: "Given the oracle fixture, when the scaffold runs, then it passes (story 2.2 replaced the target-only scaffold with the cluster test on the same fixture), and the fixture still starts with the bytes its red commit `b7be713` wrote (R2)."
+  text: "Given the oracle fixture, when the scaffold runs, then it passes (story 2.2 replaced the target-only scaffold with the cluster test on the same fixture), and the fixture still starts with the bytes its red commit `b7be713` wrote (R2)."
   source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-tracer-keyword-is-scored-on-kind-and-ci-uploads-the-results-plan.md:82
   priority: P0
   priorityBasis: inferred
-  declaredLinks: []
-  validLinks: []
+  declaredLinks: ["R2"]
+  validLinks: ["R2"]
   invalidLinks: []
-  exception: unlinked
+  exception: none
 - id: ticketscope--e2-s1--AC-2
   localId: AC-2
   story: ticketscope--e2-s1
-  name: "Given a PR, when `eval.yml` runs, then the eval Job completes after load as `ticketscope_ro`, and the `reports-kind` artifact holds `eval-results.json` with keyword's Recall@10 and MRR@10 over 10,473 pairs and lineage equal to `corpus_meta`."
-  text: "Given a PR, when `eval.yml` runs, then the eval Job completes after load as `ticketscope_ro`, and the `reports-kind` artifact holds `eval-results.json` with keyword's Recall@10 and MRR@10 over 10,473 pairs and lineage equal to `corpus_meta`."
+  name: "Given a PR, when `eval.yml` runs, then the eval Job completes after load as `ticketscope_ro`, and the `reports-kind` artifact holds `eval-results.json` with keyword's Recall@10 and MRR@10 over 10,473 pairs and lineage equal to `corpus_meta` (R2)."
+  text: "Given a PR, when `eval.yml` runs, then the eval Job completes after load as `ticketscope_ro`, and the `reports-kind` artifact holds `eval-results.json` with keyword's Recall@10 and MRR@10 over 10,473 pairs and lineage equal to `corpus_meta` (R2)."
   source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-tracer-keyword-is-scored-on-kind-and-ci-uploads-the-results-plan.md:83
   priority: P0
   priorityBasis: inferred
-  declaredLinks: []
-  validLinks: []
+  declaredLinks: ["R2"]
+  validLinks: ["R2"]
   invalidLinks: []
-  exception: unlinked
+  exception: none
 - id: ticketscope--e2-s1--AC-3
   localId: AC-3
   story: ticketscope--e2-s1
-  name: "Given a step after the results are written fails, when the workflow ends, then the artifact is still uploaded."
-  text: "Given a step after the results are written fails, when the workflow ends, then the artifact is still uploaded."
+  name: "Given a step after the results are written fails, when the workflow ends, then the artifact is still uploaded (R2)."
+  text: "Given a step after the results are written fails, when the workflow ends, then the artifact is still uploaded (R2)."
   source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-tracer-keyword-is-scored-on-kind-and-ci-uploads-the-results-plan.md:84
   priority: P1
   priorityBasis: inferred
-  declaredLinks: []
-  validLinks: []
+  declaredLinks: ["R2"]
+  validLinks: ["R2"]
   invalidLinks: []
-  exception: unlinked
+  exception: none
 - id: ticketscope--e2-s1--AC-4
   localId: AC-4
   story: ticketscope--e2-s1
-  name: "Given the same PR, when `ci.yml` runs, then integrated-check passes."
-  text: "Given the same PR, when `ci.yml` runs, then integrated-check passes."
+  name: "Given the same PR, when `ci.yml` runs, then integrated-check passes (R2)."
+  text: "Given the same PR, when `ci.yml` runs, then integrated-check passes (R2)."
   source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-tracer-keyword-is-scored-on-kind-and-ci-uploads-the-results-plan.md:85
   priority: P1
   priorityBasis: inferred
-  declaredLinks: []
-  validLinks: []
+  declaredLinks: ["R2"]
+  validLinks: ["R2"]
   invalidLinks: []
-  exception: unlinked
+  exception: none
 - id: ticketscope--e2-s1--AC-5
   localId: AC-5
   story: ticketscope--e2-s1
-  name: "Given the pinned snapshot, when the pairs are regenerated, then the file is byte-identical and the printed counts are 10,473 / 10,164 / 309."
-  text: "Given the pinned snapshot, when the pairs are regenerated, then the file is byte-identical and the printed counts are 10,473 / 10,164 / 309."
+  name: "Given the pinned snapshot, when the pairs are regenerated, then the committed `eval/pairs/2026.11.1.jsonl` is byte-identical and the printed counts are 10,473 / 10,164 / 309 (R1)."
+  text: "Given the pinned snapshot, when the pairs are regenerated, then the committed `eval/pairs/2026.11.1.jsonl` is byte-identical and the printed counts are 10,473 / 10,164 / 309 (R1)."
   source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-tracer-keyword-is-scored-on-kind-and-ci-uploads-the-results-plan.md:86
   priority: P0
   priorityBasis: inferred
-  declaredLinks: []
-  validLinks: []
+  declaredLinks: ["R1"]
+  validLinks: ["R1"]
   invalidLinks: []
-  exception: unlinked
+  exception: none
 - id: ticketscope--e2-s2--AC-1
   localId: AC-1
   story: ticketscope--e2-s2
-  name: "Given the oracle fixture, when the cluster scaffold runs, then every metric short, log-heavy and overall equals `CLUSTER_EXPECTED` (overall differs from the mean of the kind means), a sibling counts as a hit, and the query never scores itself; `git diff 7ea485a -- tests/eval_oracle.py` is empty."
-  text: "Given the oracle fixture, when the cluster scaffold runs, then every metric short, log-heavy and overall equals `CLUSTER_EXPECTED` (overall differs from the mean of the kind means), a sibling counts as a hit, and the query never scores itself; `git diff 7ea485a -- tests/eval_oracle.py` is empty."
+  name: "Given the oracle fixture, when the cluster scaffold runs, then every metric short, log-heavy and overall equals `CLUSTER_EXPECTED` (overall differs from the mean of the kind means), a sibling counts as a hit, and the query never scores itself; the fixture still starts with the bytes its red commit `7ea485a` wrote (R2)."
+  text: "Given the oracle fixture, when the cluster scaffold runs, then every metric short, log-heavy and overall equals `CLUSTER_EXPECTED` (overall differs from the mean of the kind means), a sibling counts as a hit, and the query never scores itself; the fixture still starts with the bytes its red commit `7ea485a` wrote (R2)."
   source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-scores-count-the-whole-duplicate-cluster-split-by-ticket-kin-plan.md:75
   priority: P0
   priorityBasis: inferred
-  declaredLinks: []
-  validLinks: []
+  declaredLinks: ["R2"]
+  validLinks: ["R2"]
   invalidLinks: []
-  exception: unlinked
+  exception: none
 - id: ticketscope--e2-s2--AC-2
   localId: AC-2
   story: ticketscope--e2-s2
-  name: "Given `modes.REGISTRY` replaced after import with a fake second mode, when `score` runs, then the mode appears in the results with no change to `jobs.eval`; an unavailable mode is named in `skipped_modes`."
-  text: "Given `modes.REGISTRY` replaced after import with a fake second mode, when `score` runs, then the mode appears in the results with no change to `jobs.eval`; an unavailable mode is named in `skipped_modes`."
+  name: "Given `modes.REGISTRY` replaced after import with a fake second mode, when `score` runs, then the mode appears in the results with no change to `jobs.eval`; an unavailable mode is named in `skipped_modes` (R2)."
+  text: "Given `modes.REGISTRY` replaced after import with a fake second mode, when `score` runs, then the mode appears in the results with no change to `jobs.eval`; an unavailable mode is named in `skipped_modes` (R2)."
   source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-scores-count-the-whole-duplicate-cluster-split-by-ticket-kin-plan.md:76
   priority: P1
   priorityBasis: inferred
-  declaredLinks: []
-  validLinks: []
+  declaredLinks: ["R2"]
+  validLinks: ["R2"]
   invalidLinks: []
-  exception: unlinked
+  exception: none
 - id: ticketscope--e2-s2--AC-3
   localId: AC-3
   story: ticketscope--e2-s2
-  name: "Given the same corpus scored twice, then the metrics and ranks are identical."
-  text: "Given the same corpus scored twice, then the metrics and ranks are identical."
+  name: "Given the same corpus scored twice, then the metrics and ranks are identical (R2, R3)."
+  text: "Given the same corpus scored twice, then the metrics and ranks are identical (R2, R3)."
   source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-scores-count-the-whole-duplicate-cluster-split-by-ticket-kin-plan.md:77
   priority: P1
   priorityBasis: inferred
-  declaredLinks: []
-  validLinks: []
+  declaredLinks: ["R2", "R3"]
+  validLinks: ["R2", "R3"]
   invalidLinks: []
-  exception: unlinked
+  exception: none
 - id: ticketscope--e2-s2--AC-4
   localId: AC-4
   story: ticketscope--e2-s2
-  name: "Given a PR, when `eval.yml` runs, then `reports-kind`'s `eval-results.json` holds, for keyword, every metric split short, log-heavy and overall, pair counts 10,164 / 309 / 10,473, each query's first-member rank (an independent recompute matches), and `wall_seconds`, which the job summary also shows."
-  text: "Given a PR, when `eval.yml` runs, then `reports-kind`'s `eval-results.json` holds, for keyword, every metric split short, log-heavy and overall, pair counts 10,164 / 309 / 10,473, each query's first-member rank (an independent recompute matches), and `wall_seconds`, which the job summary also shows."
+  name: "Given a PR, when `eval.yml` runs, then `reports-kind`'s `eval-results.json` holds, for keyword, every metric split short, log-heavy and overall, pair counts 10,164 / 309 / 10,473, each query's first-member rank (an independent recompute matches), and `wall_seconds`, which the job summary also shows (R2)."
+  text: "Given a PR, when `eval.yml` runs, then `reports-kind`'s `eval-results.json` holds, for keyword, every metric split short, log-heavy and overall, pair counts 10,164 / 309 / 10,473, each query's first-member rank (an independent recompute matches), and `wall_seconds`, which the job summary also shows (R2)."
   source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-scores-count-the-whole-duplicate-cluster-split-by-ticket-kin-plan.md:78
   priority: P1
   priorityBasis: inferred
-  declaredLinks: []
-  validLinks: []
+  declaredLinks: ["R2"]
+  validLinks: ["R2"]
   invalidLinks: []
-  exception: unlinked
+  exception: none
 - id: ticketscope--e2-s2--AC-5
   localId: AC-5
   story: ticketscope--e2-s2
-  name: "Given the pinned snapshot, when pairs regenerate, then the file is byte-identical and `derive_pairs.py` prints `10473 pairs: 10164 short, 309 log_heavy`."
-  text: "Given the pinned snapshot, when pairs regenerate, then the file is byte-identical and `derive_pairs.py` prints `10473 pairs: 10164 short, 309 log_heavy`."
+  name: "Given the pinned snapshot, when pairs regenerate, then the file is byte-identical and `derive_pairs.py` prints `10473 pairs: 10164 short, 309 log_heavy` (R1)."
+  text: "Given the pinned snapshot, when pairs regenerate, then the file is byte-identical and `derive_pairs.py` prints `10473 pairs: 10164 short, 309 log_heavy` (R1)."
   source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-scores-count-the-whole-duplicate-cluster-split-by-ticket-kin-plan.md:79
   priority: P0
   priorityBasis: inferred
-  declaredLinks: []
-  validLinks: []
+  declaredLinks: ["R1"]
+  validLinks: ["R1"]
   invalidLinks: []
-  exception: unlinked
+  exception: none
 - id: ticketscope--e2-s3--AC-1
   localId: AC-1
   story: ticketscope--e2-s3
-  name: "Given a PR that worsens keyword ranking, when eval runs, then the gate step fails with the metric named."
-  text: "Given a PR that worsens keyword ranking, when eval runs, then the gate step fails with the metric named."
+  name: "Given a PR that worsens keyword ranking, when eval runs, then the gate step fails with the metric named (R3)."
+  text: "Given a PR that worsens keyword ranking, when eval runs, then the gate step fails with the metric named (R3)."
   source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-a-regressing-pr-cannot-merge-plan.md:72
   priority: P1
   priorityBasis: inferred
-  declaredLinks: []
-  validLinks: []
+  declaredLinks: ["R3"]
+  validLinks: ["R3"]
   invalidLinks: []
-  exception: unlinked
+  exception: none
 - id: ticketscope--e2-s3--AC-2
   localId: AC-2
   story: ticketscope--e2-s3
-  name: "Given the same PR also updates `eval/baseline.json` to its run's results, then the gate passes."
-  text: "Given the same PR also updates `eval/baseline.json` to its run's results, then the gate passes."
+  name: "Given the same PR also updates `eval/baseline.json` to its run's results, then the gate passes (R3)."
+  text: "Given the same PR also updates `eval/baseline.json` to its run's results, then the gate passes (R3)."
   source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-a-regressing-pr-cannot-merge-plan.md:73
   priority: P1
   priorityBasis: inferred
-  declaredLinks: []
-  validLinks: []
+  declaredLinks: ["R3"]
+  validLinks: ["R3"]
   invalidLinks: []
-  exception: unlinked
+  exception: none
 - id: ticketscope--e2-s3--AC-3
   localId: AC-3
   story: ticketscope--e2-s3
-  name: "Given a preprocessing-version change with no baseline update, then the gate fails with a lineage message."
-  text: "Given a preprocessing-version change with no baseline update, then the gate fails with a lineage message."
+  name: "Given a preprocessing-version change with no baseline update, then the gate fails with a lineage message (R3)."
+  text: "Given a preprocessing-version change with no baseline update, then the gate fails with a lineage message (R3)."
   source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-a-regressing-pr-cannot-merge-plan.md:74
   priority: P1
   priorityBasis: inferred
-  declaredLinks: []
-  validLinks: []
+  declaredLinks: ["R3"]
+  validLinks: ["R3"]
   invalidLinks: []
-  exception: unlinked
+  exception: none
 - id: ticketscope--e2-s3--AC-4
   localId: AC-4
   story: ticketscope--e2-s3
-  name: "Given `ruff`, `pyright`, `lint-imports` and `pytest tests/unit`, then all pass."
-  text: "Given `ruff`, `pyright`, `lint-imports` and `pytest tests/unit`, then all pass."
+  name: "Given `ruff`, `pyright`, `lint-imports` and `pytest tests/unit`, then all pass (R3)."
+  text: "Given `ruff`, `pyright`, `lint-imports` and `pytest tests/unit`, then all pass (R3)."
   source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-a-regressing-pr-cannot-merge-plan.md:75
   priority: P2
   priorityBasis: inferred
-  declaredLinks: []
-  validLinks: []
+  declaredLinks: ["R3"]
+  validLinks: ["R3"]
   invalidLinks: []
-  exception: unlinked
+  exception: none
 - id: ticketscope--e2-s3--AC-5
   localId: AC-5
   story: ticketscope--e2-s3
@@ -212,51 +212,51 @@ criterionLedger:
 - id: ticketscope--e2-s4--AC-1
   localId: AC-1
   story: ticketscope--e2-s4
-  name: "Given the committed `eval/baseline.json` and README, when `python3 scripts/render_readme_table.py --check` runs, then it exits 0, and `--write` leaves `git diff` empty."
-  text: "Given the committed `eval/baseline.json` and README, when `python3 scripts/render_readme_table.py --check` runs, then it exits 0, and `--write` leaves `git diff` empty."
+  name: "Given the committed `eval/baseline.json` and README, when `python3 scripts/render_readme_table.py --check` runs, then it exits 0, and `--write` leaves `git diff` empty (R4)."
+  text: "Given the committed `eval/baseline.json` and README, when `python3 scripts/render_readme_table.py --check` runs, then it exits 0, and `--write` leaves `git diff` empty (R4)."
   source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-readme-results-table-is-generated-from-ci-output-plan.md:69
   priority: P1
   priorityBasis: inferred
-  declaredLinks: []
-  validLinks: []
+  declaredLinks: ["R4"]
+  validLinks: ["R4"]
   invalidLinks: []
-  exception: unlinked
+  exception: none
 - id: ticketscope--e2-s4--AC-2
   localId: AC-2
   story: ticketscope--e2-s4
-  name: "Given one digit of the README table changed by hand, when the check runs, then it exits 1."
-  text: "Given one digit of the README table changed by hand, when the check runs, then it exits 1."
+  name: "Given one digit of the README table changed by hand, when the check runs, then it exits 1 (R4)."
+  text: "Given one digit of the README table changed by hand, when the check runs, then it exits 1 (R4)."
   source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-readme-results-table-is-generated-from-ci-output-plan.md:70
   priority: P1
   priorityBasis: inferred
-  declaredLinks: []
-  validLinks: []
+  declaredLinks: ["R4"]
+  validLinks: ["R4"]
   invalidLinks: []
-  exception: unlinked
+  exception: none
 - id: ticketscope--e2-s4--AC-3
   localId: AC-3
   story: ticketscope--e2-s4
-  name: "Given a README without the generated-section markers, when the check runs, then it exits 1."
-  text: "Given a README without the generated-section markers, when the check runs, then it exits 1."
+  name: "Given a README without the generated-section markers, when the check runs, then it exits 1 (R4)."
+  text: "Given a README without the generated-section markers, when the check runs, then it exits 1 (R4)."
   source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-readme-results-table-is-generated-from-ci-output-plan.md:71
   priority: P1
   priorityBasis: inferred
-  declaredLinks: []
-  validLinks: []
+  declaredLinks: ["R4"]
+  validLinks: ["R4"]
   invalidLinks: []
-  exception: unlinked
+  exception: none
 - id: ticketscope--e2-s4--AC-4
   localId: AC-4
   story: ticketscope--e2-s4
-  name: "Given `ci.yml`, when parsed as text, then the `checks` job runs the check command."
-  text: "Given `ci.yml`, when parsed as text, then the `checks` job runs the check command."
+  name: "Given `ci.yml`, when parsed as text, then the `checks` job runs the check command (R4)."
+  text: "Given `ci.yml`, when parsed as text, then the `checks` job runs the check command (R4)."
   source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-readme-results-table-is-generated-from-ci-output-plan.md:72
   priority: P1
   priorityBasis: inferred
-  declaredLinks: []
-  validLinks: []
+  declaredLinks: ["R4"]
+  validLinks: ["R4"]
   invalidLinks: []
-  exception: unlinked
+  exception: none
 - id: ticketscope--e2-s5--verify
   localId: verify
   story: ticketscope--e2-s5
@@ -265,10 +265,10 @@ criterionLedger:
   source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/tickets.toml:61
   priority: P1
   priorityBasis: inferred
-  declaredLinks: []
-  validLinks: []
+  declaredLinks: ["R2", "R3", "R4"]
+  validLinks: ["R2", "R3", "R4"]
   invalidLinks: []
-  exception: unlinked
+  exception: none
 oracleLedger:
 - id: ticketscope--e2--R1
   kind: requirement
@@ -276,16 +276,16 @@ oracleLedger:
   parent: "parent R6"
   source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/epic-eval-gate.md:31
   priority: P0
-  priorityBasis: inferred
-  contributors: []
+  priorityBasis: contributors
+  contributors: ["ticketscope--e2-s1--AC-5", "ticketscope--e2-s2--AC-5"]
 - id: ticketscope--e2--R2
   kind: requirement
   requirement: "An eval job scores every available mode in the core registry through the real Postgres adapter as the read-only role. It reports Recall@1, Recall@5, Recall@10, MRR@10 and p95 latency, split short versus log-heavy. It is met when the job on kind scores keyword over the full pair set, and a newly registered mode is scored with no change to the job."
   parent: "parent R6"
   source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/epic-eval-gate.md:32
   priority: P0
-  priorityBasis: inferred
-  contributors: []
+  priorityBasis: contributors
+  contributors: ["ticketscope--e2-s1--AC-1", "ticketscope--e2-s1--AC-2", "ticketscope--e2-s1--AC-3", "ticketscope--e2-s1--AC-4", "ticketscope--e2-s2--AC-1", "ticketscope--e2-s2--AC-2", "ticketscope--e2-s2--AC-3", "ticketscope--e2-s2--AC-4", "ticketscope--e2-s5--verify"]
 - id: ticketscope--e2--R3
   kind: requirement
   requirement: "The eval runs on every PR as a required check. A Recall@10 or MRR@10 regression against the committed baseline blocks the merge, unless the same diff updates the baseline. It is met when a deliberately regressing PR fails the check, and passes once its diff updates the baseline."
@@ -293,205 +293,53 @@ oracleLedger:
   source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/epic-eval-gate.md:33
   priority: P1
   priorityBasis: contributors
-  contributors: ["ticketscope--e2-s3--AC-5"]
+  contributors: ["ticketscope--e2-s2--AC-3", "ticketscope--e2-s3--AC-1", "ticketscope--e2-s3--AC-2", "ticketscope--e2-s3--AC-3", "ticketscope--e2-s3--AC-4", "ticketscope--e2-s3--AC-5", "ticketscope--e2-s5--verify"]
 - id: ticketscope--e2--R4
   kind: requirement
   requirement: "The README results table is generated from CI output and committed as-is, whatever it shows. It is met when a check fails if the README table differs from the table rendered from the committed CI results."
   parent: "parent R7"
   source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/epic-eval-gate.md:34
   priority: P1
-  priorityBasis: inferred
-  contributors: []
-- id: ticketscope--e2-s1--AC-1
-  kind: exception
-  exception: unlinked
-  requirement: "Given the oracle fixture, when the scaffold runs, then it passes, and `git diff b7be713 -- tests/eval_oracle.py` is empty."
-  source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-tracer-keyword-is-scored-on-kind-and-ci-uploads-the-results-plan.md:82
-  priority: P0
-  priorityBasis: inferred
-- id: ticketscope--e2-s1--AC-2
-  kind: exception
-  exception: unlinked
-  requirement: "Given a PR, when `eval.yml` runs, then the eval Job completes after load as `ticketscope_ro`, and the `reports-kind` artifact holds `eval-results.json` with keyword's Recall@10 and MRR@10 over 10,473 pairs and lineage equal to `corpus_meta`."
-  source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-tracer-keyword-is-scored-on-kind-and-ci-uploads-the-results-plan.md:83
-  priority: P0
-  priorityBasis: inferred
-- id: ticketscope--e2-s1--AC-3
-  kind: exception
-  exception: unlinked
-  requirement: "Given a step after the results are written fails, when the workflow ends, then the artifact is still uploaded."
-  source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-tracer-keyword-is-scored-on-kind-and-ci-uploads-the-results-plan.md:84
-  priority: P1
-  priorityBasis: inferred
-- id: ticketscope--e2-s1--AC-4
-  kind: exception
-  exception: unlinked
-  requirement: "Given the same PR, when `ci.yml` runs, then integrated-check passes."
-  source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-tracer-keyword-is-scored-on-kind-and-ci-uploads-the-results-plan.md:85
-  priority: P1
-  priorityBasis: inferred
-- id: ticketscope--e2-s1--AC-5
-  kind: exception
-  exception: unlinked
-  requirement: "Given the pinned snapshot, when the pairs are regenerated, then the file is byte-identical and the printed counts are 10,473 / 10,164 / 309."
-  source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-tracer-keyword-is-scored-on-kind-and-ci-uploads-the-results-plan.md:86
-  priority: P0
-  priorityBasis: inferred
-- id: ticketscope--e2-s2--AC-1
-  kind: exception
-  exception: unlinked
-  requirement: "Given the oracle fixture, when the cluster scaffold runs, then every metric short, log-heavy and overall equals `CLUSTER_EXPECTED` (overall differs from the mean of the kind means), a sibling counts as a hit, and the query never scores itself; `git diff 7ea485a -- tests/eval_oracle.py` is empty."
-  source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-scores-count-the-whole-duplicate-cluster-split-by-ticket-kin-plan.md:75
-  priority: P0
-  priorityBasis: inferred
-- id: ticketscope--e2-s2--AC-2
-  kind: exception
-  exception: unlinked
-  requirement: "Given `modes.REGISTRY` replaced after import with a fake second mode, when `score` runs, then the mode appears in the results with no change to `jobs.eval`; an unavailable mode is named in `skipped_modes`."
-  source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-scores-count-the-whole-duplicate-cluster-split-by-ticket-kin-plan.md:76
-  priority: P1
-  priorityBasis: inferred
-- id: ticketscope--e2-s2--AC-3
-  kind: exception
-  exception: unlinked
-  requirement: "Given the same corpus scored twice, then the metrics and ranks are identical."
-  source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-scores-count-the-whole-duplicate-cluster-split-by-ticket-kin-plan.md:77
-  priority: P1
-  priorityBasis: inferred
-- id: ticketscope--e2-s2--AC-4
-  kind: exception
-  exception: unlinked
-  requirement: "Given a PR, when `eval.yml` runs, then `reports-kind`'s `eval-results.json` holds, for keyword, every metric split short, log-heavy and overall, pair counts 10,164 / 309 / 10,473, each query's first-member rank (an independent recompute matches), and `wall_seconds`, which the job summary also shows."
-  source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-scores-count-the-whole-duplicate-cluster-split-by-ticket-kin-plan.md:78
-  priority: P1
-  priorityBasis: inferred
-- id: ticketscope--e2-s2--AC-5
-  kind: exception
-  exception: unlinked
-  requirement: "Given the pinned snapshot, when pairs regenerate, then the file is byte-identical and `derive_pairs.py` prints `10473 pairs: 10164 short, 309 log_heavy`."
-  source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-scores-count-the-whole-duplicate-cluster-split-by-ticket-kin-plan.md:79
-  priority: P0
-  priorityBasis: inferred
-- id: ticketscope--e2-s3--AC-1
-  kind: exception
-  exception: unlinked
-  requirement: "Given a PR that worsens keyword ranking, when eval runs, then the gate step fails with the metric named."
-  source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-a-regressing-pr-cannot-merge-plan.md:72
-  priority: P1
-  priorityBasis: inferred
-- id: ticketscope--e2-s3--AC-2
-  kind: exception
-  exception: unlinked
-  requirement: "Given the same PR also updates `eval/baseline.json` to its run's results, then the gate passes."
-  source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-a-regressing-pr-cannot-merge-plan.md:73
-  priority: P1
-  priorityBasis: inferred
-- id: ticketscope--e2-s3--AC-3
-  kind: exception
-  exception: unlinked
-  requirement: "Given a preprocessing-version change with no baseline update, then the gate fails with a lineage message."
-  source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-a-regressing-pr-cannot-merge-plan.md:74
-  priority: P1
-  priorityBasis: inferred
-- id: ticketscope--e2-s3--AC-4
-  kind: exception
-  exception: unlinked
-  requirement: "Given `ruff`, `pyright`, `lint-imports` and `pytest tests/unit`, then all pass."
-  source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-a-regressing-pr-cannot-merge-plan.md:75
-  priority: P2
-  priorityBasis: inferred
-- id: ticketscope--e2-s4--AC-1
-  kind: exception
-  exception: unlinked
-  requirement: "Given the committed `eval/baseline.json` and README, when `python3 scripts/render_readme_table.py --check` runs, then it exits 0, and `--write` leaves `git diff` empty."
-  source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-readme-results-table-is-generated-from-ci-output-plan.md:69
-  priority: P1
-  priorityBasis: inferred
-- id: ticketscope--e2-s4--AC-2
-  kind: exception
-  exception: unlinked
-  requirement: "Given one digit of the README table changed by hand, when the check runs, then it exits 1."
-  source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-readme-results-table-is-generated-from-ci-output-plan.md:70
-  priority: P1
-  priorityBasis: inferred
-- id: ticketscope--e2-s4--AC-3
-  kind: exception
-  exception: unlinked
-  requirement: "Given a README without the generated-section markers, when the check runs, then it exits 1."
-  source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-readme-results-table-is-generated-from-ci-output-plan.md:71
-  priority: P1
-  priorityBasis: inferred
-- id: ticketscope--e2-s4--AC-4
-  kind: exception
-  exception: unlinked
-  requirement: "Given `ci.yml`, when parsed as text, then the `checks` job runs the check command."
-  source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-readme-results-table-is-generated-from-ci-output-plan.md:72
-  priority: P1
-  priorityBasis: inferred
-- id: ticketscope--e2-s5--verify
-  kind: exception
-  exception: unlinked
-  requirement: "On a PR the eval check passes with eval/baseline.json unchanged, ci.yml and its integrated-check pass, import-linter keeps every contract, and tests/ has no time.sleep calls, enforced by a lint rule or a test"
-  source: _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/tickets.toml:61
-  priority: P1
-  priorityBasis: inferred
+  priorityBasis: contributors
+  contributors: ["ticketscope--e2-s4--AC-1", "ticketscope--e2-s4--AC-2", "ticketscope--e2-s4--AC-3", "ticketscope--e2-s4--AC-4", "ticketscope--e2-s5--verify"]
 ---
 
 # Traceability Matrix & Gate Decision — Epic 2: Retrieval is scored on every PR and regressions block the merge
 
 ## Gate Decision: FAIL
 
-**Rationale:** P0 coverage is 43% (required: 100%). 4 critical requirement(s) below FULL coverage. Overall FULL coverage is 61% (minimum 80%); P1 is 73% (minimum 80%, PASS target 90%).
+**Rationale:** P0 coverage is 50% (required: 100%). 1 critical requirement(s) below FULL coverage. Overall FULL coverage is 25% (minimum 80%); P1 is 0% (minimum 80%, PASS target 90%).
 
-**Date:** 2026-11-08. **Evaluator:** Claude Code / Master Test Architect. **Source:** `3fe91b2a3d70da1ef41af93507812153622bb6ca` (first trace of this epic; there is no previous trace).
+**Date:** 2026-11-08. **Evaluator:** Claude Code / Master Test Architect. **Source:** `8d772e029c84d73ef4f325f024c90d63c8d7e590` (first trace of this epic; there is no previous trace).
 
-The FAIL is driven by the ticket tree, not by missing tests. Of 20 criteria, 19 name no requirement, so each is an unlinked exception row and R1 to R4 have no passing contributor (see Invalid and Unlinked Criteria). With the criteria linked by their story's `covers`, the projection at the end of that section shows R4 FULL and R1 to R3 PARTIAL, held back by the clauses named there, so the gate would still fail until those close.
+This re-trace follows the fixes in commit `8d772e0`: the plan criteria now name the requirements they prove, story 2.5 covers R2 to R4, and a pin test replaces the two false `git diff` clauses. The tests were already there; the gate moved from 43% to 50% P0. It is not 100% because two R2 contributors, story 1 AC-4 and story 5 verify, depend on a CI run that no recorded live result establishes at this commit. Those two also hold R3 and R4 at PARTIAL.
 
 ## Have the gaps been closed?
 
-This is the first trace of epic 2, so there is nothing to compare against. Of 20 criteria, 14 are FULL, 4 PARTIAL and 2 NONE. Waiver W-001's remediation (this epic's Done-when line) is not yet closed.
+The previous trace (same run key, replaced by this one) had 14 of 20 criteria FULL and all four requirements NONE. Now 16 of 20 are FULL, 2 PARTIAL and 2 NONE, and every criterion is linked, so there are no exception rows. Waiver W-001's remediation (this epic's Done-when line) is not yet closed.
 
 ## Coverage Summary
 
 | Priority | Total | FULL | Coverage |
 | --- | ---: | ---: | ---: |
-| P0 | 7 | 3 | 43% |
-| P1 | 15 | 11 | 73% |
-| P2 | 1 | 0 | 0% |
+| P0 | 2 | 1 | 50% |
+| P1 | 2 | 0 | 0% |
+| P2 | 0 | 0 | 100% |
 | P3 | 0 | 0 | 100% |
-| Overall | 23 | 14 | 61% |
+| Overall | 4 | 1 | 25% |
 
-Gate rows: 14 FULL, 4 PARTIAL, 5 NONE, 0 UNIT-ONLY. Criteria: 14 FULL, 4 PARTIAL, 2 NONE. Accepted evidence: 34 unique test declarations across 12 files. Sanity run at HEAD: `uv run pytest tests/unit` 893 passed, 17 skipped; `ruff check`, `pyright` and `lint-imports` clean (informational, not counted as evidence). Kind tests (`tests/eval/`) are accepted as static e2e evidence under `collection_mode: contract_static`; this trace did not run them.
+Gate rows: 1 FULL, 3 PARTIAL, 0 NONE, 0 UNIT-ONLY. Criteria: 16 FULL, 2 PARTIAL, 2 NONE. Accepted evidence: 35 unique test declarations across 13 files. Sanity run at HEAD: `uv run pytest tests/unit` 893 passed, 17 skipped; `ruff check`, `pyright` and `lint-imports` clean (informational, not counted as evidence). Kind tests (`tests/eval/`) are accepted as static e2e evidence under `collection_mode: contract_static`; this trace did not run them.
 
-Oracle: formal epic requirements R1 to R4 with requirement granularity (v7 epic with `R<n>` lines, no duplicate ids). Confidence is medium rather than high because the plan criteria carry no `R` ids. Criterion priorities are inferred from `test-design-epic-2.md`'s coverage plan (story 2.5's row is P1). Requirement priorities: R3 from its contributor, R1, R2 and R4 inferred from the test design (R1 and R2 P0, R4 P1). Supporting artifacts: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/test-design-epic-2.md`. No NFR audit exists for epic 2 (`_bmad-output/test-artifacts/nfr/nfr-assessment-epic-1.md` is epic 1's). Live results: `live-verification-results.json` holds only epic 1 records, all recorded at `6400e5a` and so stale at `3fe91b2`; none names an epic 2 criterion and none is counted.
+Oracle: formal epic requirements R1 to R4 with requirement granularity (v7 epic with `R<n>` lines, no duplicate ids). Confidence is high: every criterion now names its requirements. Criterion priorities are inferred from `test-design-epic-2.md`'s coverage plan (story 2.5's row is P1). Requirement priorities come from their contributors (the highest criterion priority). Supporting artifacts: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/test-design-epic-2.md`. No NFR audit exists for epic 2 (`_bmad-output/test-artifacts/nfr/nfr-assessment-epic-1.md` is epic 1's). Live results: `live-verification-results.json` holds only epic 1 records, all recorded at `6400e5a` and so stale at `8d772e0`; none names an epic 2 criterion and none is counted.
 
 ## Requirement Oracle Mapping
 
 | ID | Kind | Requirement | Priority | Coverage |
 | --- | --- | --- | --- | --- |
-| ticketscope--e2--R1 | requirement | Labelled duplicate pairs are derived deterministically from the pinned snapshot's in-subset duplicate links and committed per snapshot version. It is met when the committed pairs file regenerates byte-identical from the snapshot, with its pair counts reported for short and log-heavy queries. | P0 | NONE |
-| ticketscope--e2--R2 | requirement | An eval job scores every available mode in the core registry through the real Postgres adapter as the read-only role. It reports Recall@1, Recall@5, Recall@10, MRR@10 and p95 latency, split short versus log-heavy. It is met when the job on kind scores keyword over the full pair set, and a newly registered mode is scored with no change to the job. | P0 | NONE |
-| ticketscope--e2--R3 | requirement | The eval runs on every PR as a required check. A Recall@10 or MRR@10 regression against the committed baseline blocks the merge, unless the same diff updates the baseline. It is met when a deliberately regressing PR fails the check, and passes once its diff updates the baseline. | P1 | NONE |
-| ticketscope--e2--R4 | requirement | The README results table is generated from CI output and committed as-is, whatever it shows. It is met when a check fails if the README table differs from the table rendered from the committed CI results. | P1 | NONE |
-| ticketscope--e2-s1--AC-1 | exception | Given the oracle fixture, when the scaffold runs, then it passes, and `git diff b7be713 -- tests/eval_oracle.py` is empty. | P0 | PARTIAL |
-| ticketscope--e2-s1--AC-2 | exception | Given a PR, when `eval.yml` runs, then the eval Job completes after load as `ticketscope_ro`, and the `reports-kind` artifact holds `eval-results.json` with keyword's Recall@10 and MRR@10 over 10,473 pairs and lineage equal to `corpus_meta`. | P0 | FULL |
-| ticketscope--e2-s1--AC-3 | exception | Given a step after the results are written fails, when the workflow ends, then the artifact is still uploaded. | P1 | FULL |
-| ticketscope--e2-s1--AC-4 | exception | Given the same PR, when `ci.yml` runs, then integrated-check passes. | P1 | PARTIAL |
-| ticketscope--e2-s1--AC-5 | exception | Given the pinned snapshot, when the pairs are regenerated, then the file is byte-identical and the printed counts are 10,473 / 10,164 / 309. | P0 | FULL |
-| ticketscope--e2-s2--AC-1 | exception | Given the oracle fixture, when the cluster scaffold runs, then every metric short, log-heavy and overall equals `CLUSTER_EXPECTED` (overall differs from the mean of the kind means), a sibling counts as a hit, and the query never scores itself; `git diff 7ea485a -- tests/eval_oracle.py` is empty. | P0 | PARTIAL |
-| ticketscope--e2-s2--AC-2 | exception | Given `modes.REGISTRY` replaced after import with a fake second mode, when `score` runs, then the mode appears in the results with no change to `jobs.eval`; an unavailable mode is named in `skipped_modes`. | P1 | FULL |
-| ticketscope--e2-s2--AC-3 | exception | Given the same corpus scored twice, then the metrics and ranks are identical. | P1 | FULL |
-| ticketscope--e2-s2--AC-4 | exception | Given a PR, when `eval.yml` runs, then `reports-kind`'s `eval-results.json` holds, for keyword, every metric split short, log-heavy and overall, pair counts 10,164 / 309 / 10,473, each query's first-member rank (an independent recompute matches), and `wall_seconds`, which the job summary also shows. | P1 | FULL |
-| ticketscope--e2-s2--AC-5 | exception | Given the pinned snapshot, when pairs regenerate, then the file is byte-identical and `derive_pairs.py` prints `10473 pairs: 10164 short, 309 log_heavy`. | P0 | FULL |
-| ticketscope--e2-s3--AC-1 | exception | Given a PR that worsens keyword ranking, when eval runs, then the gate step fails with the metric named. | P1 | FULL |
-| ticketscope--e2-s3--AC-2 | exception | Given the same PR also updates `eval/baseline.json` to its run's results, then the gate passes. | P1 | FULL |
-| ticketscope--e2-s3--AC-3 | exception | Given a preprocessing-version change with no baseline update, then the gate fails with a lineage message. | P1 | FULL |
-| ticketscope--e2-s3--AC-4 | exception | Given `ruff`, `pyright`, `lint-imports` and `pytest tests/unit`, then all pass. | P2 | NONE |
-| ticketscope--e2-s4--AC-1 | exception | Given the committed `eval/baseline.json` and README, when `python3 scripts/render_readme_table.py --check` runs, then it exits 0, and `--write` leaves `git diff` empty. | P1 | FULL |
-| ticketscope--e2-s4--AC-2 | exception | Given one digit of the README table changed by hand, when the check runs, then it exits 1. | P1 | FULL |
-| ticketscope--e2-s4--AC-3 | exception | Given a README without the generated-section markers, when the check runs, then it exits 1. | P1 | FULL |
-| ticketscope--e2-s4--AC-4 | exception | Given `ci.yml`, when parsed as text, then the `checks` job runs the check command. | P1 | FULL |
-| ticketscope--e2-s5--verify | exception | On a PR the eval check passes with eval/baseline.json unchanged, ci.yml and its integrated-check pass, import-linter keeps every contract, and tests/ has no time.sleep calls, enforced by a lint rule or a test (R2, R3, R4). | P1 | PARTIAL |
+| ticketscope--e2--R1 | requirement | Labelled duplicate pairs are derived deterministically from the pinned snapshot's in-subset duplicate links and committed per snapshot version. It is met when the committed pairs file regenerates byte-identical from the snapshot, with its pair counts reported for short and log-heavy queries. | P0 | FULL |
+| ticketscope--e2--R2 | requirement | An eval job scores every available mode in the core registry through the real Postgres adapter as the read-only role. It reports Recall@1, Recall@5, Recall@10, MRR@10 and p95 latency, split short versus log-heavy. It is met when the job on kind scores keyword over the full pair set, and a newly registered mode is scored with no change to the job. | P0 | PARTIAL |
+| ticketscope--e2--R3 | requirement | The eval runs on every PR as a required check. A Recall@10 or MRR@10 regression against the committed baseline blocks the merge, unless the same diff updates the baseline. It is met when a deliberately regressing PR fails the check, and passes once its diff updates the baseline. | P1 | PARTIAL |
+| ticketscope--e2--R4 | requirement | The README results table is generated from CI output and committed as-is, whatever it shows. It is met when a check fails if the README table differs from the table rendered from the committed CI results. | P1 | PARTIAL |
 
 ## Criterion Status Changes Since Previous Trace
 
@@ -499,156 +347,80 @@ None: first trace of this epic.
 
 ## Detailed Mapping
 
-### ticketscope--e2--R1 (P0, requirement): NONE
+### ticketscope--e2--R1 (P0, requirement): FULL
 
 Labelled duplicate pairs are derived deterministically from the pinned snapshot's in-subset duplicate links and committed per snapshot version. It is met when the committed pairs file regenerates byte-identical from the snapshot, with its pair counts reported for short and log-heavy queries.  
 Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/epic-eval-gate.md:31`. Contributors:
 
-- none
+- ticketscope--e2-s1--AC-5: FULL
+- ticketscope--e2-s2--AC-5: FULL
 
-Gaps: no story covers it. The story criteria that evidence it are unlinked (see below).
+Gaps: its only contributor is NONE, so the requirement is NONE.
 
-### ticketscope--e2--R2 (P0, requirement): NONE
+### ticketscope--e2--R2 (P0, requirement): PARTIAL
 
 An eval job scores every available mode in the core registry through the real Postgres adapter as the read-only role. It reports Recall@1, Recall@5, Recall@10, MRR@10 and p95 latency, split short versus log-heavy. It is met when the job on kind scores keyword over the full pair set, and a newly registered mode is scored with no change to the job.  
 Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/epic-eval-gate.md:32`. Contributors:
 
-- none
+- ticketscope--e2-s1--AC-1: FULL
+- ticketscope--e2-s1--AC-2: FULL
+- ticketscope--e2-s1--AC-3: FULL
+- ticketscope--e2-s1--AC-4: PARTIAL
+- ticketscope--e2-s2--AC-1: FULL
+- ticketscope--e2-s2--AC-2: FULL
+- ticketscope--e2-s2--AC-3: FULL
+- ticketscope--e2-s2--AC-4: FULL
+- ticketscope--e2-s5--verify: PARTIAL
 
-Gaps: no story covers it. The story criteria that evidence it are unlinked (see below).
+Gaps: its only contributor is NONE, so the requirement is NONE.
 
-### ticketscope--e2--R3 (P1, requirement): NONE
+### ticketscope--e2--R3 (P1, requirement): PARTIAL
 
 The eval runs on every PR as a required check. A Recall@10 or MRR@10 regression against the committed baseline blocks the merge, unless the same diff updates the baseline. It is met when a deliberately regressing PR fails the check, and passes once its diff updates the baseline.  
 Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/epic-eval-gate.md:33`. Contributors:
 
+- ticketscope--e2-s2--AC-3: FULL
+- ticketscope--e2-s3--AC-1: FULL
+- ticketscope--e2-s3--AC-2: FULL
+- ticketscope--e2-s3--AC-3: FULL
+- ticketscope--e2-s3--AC-4: NONE
 - ticketscope--e2-s3--AC-5: NONE
+- ticketscope--e2-s5--verify: PARTIAL
 
 Gaps: its only contributor is NONE, so the requirement is NONE.
 
-### ticketscope--e2--R4 (P1, requirement): NONE
+### ticketscope--e2--R4 (P1, requirement): PARTIAL
 
 The README results table is generated from CI output and committed as-is, whatever it shows. It is met when a check fails if the README table differs from the table rendered from the committed CI results.  
 Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/epic-eval-gate.md:34`. Contributors:
 
-- none
+- ticketscope--e2-s4--AC-1: FULL
+- ticketscope--e2-s4--AC-2: FULL
+- ticketscope--e2-s4--AC-3: FULL
+- ticketscope--e2-s4--AC-4: FULL
+- ticketscope--e2-s5--verify: PARTIAL
 
-Gaps: no story covers it. The story criteria that evidence it are unlinked (see below).
+Gaps: its only contributor is NONE, so the requirement is NONE.
 
-### ticketscope--e2-s1--AC-1 (P0, exception): PARTIAL
+#### ticketscope--e2-s1--AC-1 (P0): FULL
 
-Given the oracle fixture, when the scaffold runs, then it passes, and `git diff b7be713 -- tests/eval_oracle.py` is empty.  
-Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-tracer-keyword-is-scored-on-kind-and-ci-uploads-the-results-plan.md:82`. Exception: `unlinked` (names no requirement).
-
-### ticketscope--e2-s1--AC-2 (P0, exception): FULL
-
-Given a PR, when `eval.yml` runs, then the eval Job completes after load as `ticketscope_ro`, and the `reports-kind` artifact holds `eval-results.json` with keyword's Recall@10 and MRR@10 over 10,473 pairs and lineage equal to `corpus_meta`.  
-Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-tracer-keyword-is-scored-on-kind-and-ci-uploads-the-results-plan.md:83`. Exception: `unlinked` (names no requirement).
-
-### ticketscope--e2-s1--AC-3 (P1, exception): FULL
-
-Given a step after the results are written fails, when the workflow ends, then the artifact is still uploaded.  
-Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-tracer-keyword-is-scored-on-kind-and-ci-uploads-the-results-plan.md:84`. Exception: `unlinked` (names no requirement).
-
-### ticketscope--e2-s1--AC-4 (P1, exception): PARTIAL
-
-Given the same PR, when `ci.yml` runs, then integrated-check passes.  
-Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-tracer-keyword-is-scored-on-kind-and-ci-uploads-the-results-plan.md:85`. Exception: `unlinked` (names no requirement).
-
-### ticketscope--e2-s1--AC-5 (P0, exception): FULL
-
-Given the pinned snapshot, when the pairs are regenerated, then the file is byte-identical and the printed counts are 10,473 / 10,164 / 309.  
-Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-tracer-keyword-is-scored-on-kind-and-ci-uploads-the-results-plan.md:86`. Exception: `unlinked` (names no requirement).
-
-### ticketscope--e2-s2--AC-1 (P0, exception): PARTIAL
-
-Given the oracle fixture, when the cluster scaffold runs, then every metric short, log-heavy and overall equals `CLUSTER_EXPECTED` (overall differs from the mean of the kind means), a sibling counts as a hit, and the query never scores itself; `git diff 7ea485a -- tests/eval_oracle.py` is empty.  
-Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-scores-count-the-whole-duplicate-cluster-split-by-ticket-kin-plan.md:75`. Exception: `unlinked` (names no requirement).
-
-### ticketscope--e2-s2--AC-2 (P1, exception): FULL
-
-Given `modes.REGISTRY` replaced after import with a fake second mode, when `score` runs, then the mode appears in the results with no change to `jobs.eval`; an unavailable mode is named in `skipped_modes`.  
-Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-scores-count-the-whole-duplicate-cluster-split-by-ticket-kin-plan.md:76`. Exception: `unlinked` (names no requirement).
-
-### ticketscope--e2-s2--AC-3 (P1, exception): FULL
-
-Given the same corpus scored twice, then the metrics and ranks are identical.  
-Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-scores-count-the-whole-duplicate-cluster-split-by-ticket-kin-plan.md:77`. Exception: `unlinked` (names no requirement).
-
-### ticketscope--e2-s2--AC-4 (P1, exception): FULL
-
-Given a PR, when `eval.yml` runs, then `reports-kind`'s `eval-results.json` holds, for keyword, every metric split short, log-heavy and overall, pair counts 10,164 / 309 / 10,473, each query's first-member rank (an independent recompute matches), and `wall_seconds`, which the job summary also shows.  
-Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-scores-count-the-whole-duplicate-cluster-split-by-ticket-kin-plan.md:78`. Exception: `unlinked` (names no requirement).
-
-### ticketscope--e2-s2--AC-5 (P0, exception): FULL
-
-Given the pinned snapshot, when pairs regenerate, then the file is byte-identical and `derive_pairs.py` prints `10473 pairs: 10164 short, 309 log_heavy`.  
-Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-scores-count-the-whole-duplicate-cluster-split-by-ticket-kin-plan.md:79`. Exception: `unlinked` (names no requirement).
-
-### ticketscope--e2-s3--AC-1 (P1, exception): FULL
-
-Given a PR that worsens keyword ranking, when eval runs, then the gate step fails with the metric named.  
-Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-a-regressing-pr-cannot-merge-plan.md:72`. Exception: `unlinked` (names no requirement).
-
-### ticketscope--e2-s3--AC-2 (P1, exception): FULL
-
-Given the same PR also updates `eval/baseline.json` to its run's results, then the gate passes.  
-Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-a-regressing-pr-cannot-merge-plan.md:73`. Exception: `unlinked` (names no requirement).
-
-### ticketscope--e2-s3--AC-3 (P1, exception): FULL
-
-Given a preprocessing-version change with no baseline update, then the gate fails with a lineage message.  
-Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-a-regressing-pr-cannot-merge-plan.md:74`. Exception: `unlinked` (names no requirement).
-
-### ticketscope--e2-s3--AC-4 (P2, exception): NONE
-
-Given `ruff`, `pyright`, `lint-imports` and `pytest tests/unit`, then all pass.  
-Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-a-regressing-pr-cannot-merge-plan.md:75`. Exception: `unlinked` (names no requirement).
-
-### ticketscope--e2-s4--AC-1 (P1, exception): FULL
-
-Given the committed `eval/baseline.json` and README, when `python3 scripts/render_readme_table.py --check` runs, then it exits 0, and `--write` leaves `git diff` empty.  
-Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-readme-results-table-is-generated-from-ci-output-plan.md:69`. Exception: `unlinked` (names no requirement).
-
-### ticketscope--e2-s4--AC-2 (P1, exception): FULL
-
-Given one digit of the README table changed by hand, when the check runs, then it exits 1.  
-Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-readme-results-table-is-generated-from-ci-output-plan.md:70`. Exception: `unlinked` (names no requirement).
-
-### ticketscope--e2-s4--AC-3 (P1, exception): FULL
-
-Given a README without the generated-section markers, when the check runs, then it exits 1.  
-Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-readme-results-table-is-generated-from-ci-output-plan.md:71`. Exception: `unlinked` (names no requirement).
-
-### ticketscope--e2-s4--AC-4 (P1, exception): FULL
-
-Given `ci.yml`, when parsed as text, then the `checks` job runs the check command.  
-Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-readme-results-table-is-generated-from-ci-output-plan.md:72`. Exception: `unlinked` (names no requirement).
-
-### ticketscope--e2-s5--verify (P1, exception): PARTIAL
-
-On a PR the eval check passes with eval/baseline.json unchanged, ci.yml and its integrated-check pass, import-linter keeps every contract, and tests/ has no time.sleep calls, enforced by a lint rule or a test (R2, R3, R4).  
-Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/tickets.toml:61`. Exception: `unlinked` (names no requirement).
-
-#### ticketscope--e2-s1--AC-1 (P0): PARTIAL
-
-Given the oracle fixture, when the scaffold runs, then it passes, and `git diff b7be713 -- tests/eval_oracle.py` is empty.  
-Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-tracer-keyword-is-scored-on-kind-and-ci-uploads-the-results-plan.md:82`. Priority basis: inferred. Declared links: none.
+Given the oracle fixture, when the scaffold runs, then it passes (story 2.2 replaced the target-only scaffold with the cluster test on the same fixture), and the fixture still starts with the bytes its red commit `b7be713` wrote (R2).  
+Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-tracer-keyword-is-scored-on-kind-and-ci-uploads-the-results-plan.md:82`. Priority basis: inferred. Declared links: R2.
 
 Tests:
 - `tests/unit/test_eval_cluster_oracle.py:106` (unit) test_p0_ac1_cluster_metrics_match_the_oracle
+- `tests/unit/test_eval_oracle_pinned.py:34` (unit) test_the_oracle_fixture_is_unchanged_since_its_red_commit
 
 Assertions:
-- `tests/unit/test_eval_cluster_oracle.py:106` (declaration), `tests/unit/test_eval_cluster_oracle.py:129` (cluster metrics equal the oracle's expected values)
+- `tests/unit/test_eval_cluster_oracle.py:106` (declaration), `tests/unit/test_eval_cluster_oracle.py:129` (every metric equals the shared oracle fixture's expected values)
+- `tests/unit/test_eval_oracle_pinned.py:38` (the file keeps at least the bytes the red commit wrote), `tests/unit/test_eval_oracle_pinned.py:39` (and their SHA-256 matches the pin)
 
-The target-only scaffold this criterion names (`tests/unit/test_eval_oracle.py`) was deleted by story 2.2, which folded its `k`, `exclude` and `pairs_scored` checks into the cluster oracle test. That test reads the same `tests/eval_oracle.py` fixture and passes.
-
-Gaps: At HEAD `git diff b7be713 -- tests/eval_oracle.py` is not empty: it adds 72 lines (the cluster oracle, commit a8c8cfb) and removes none. No test pins the red-commit content, so the unchanged-oracle clause is unestablished, and its literal wording is now false by design.
+Story 2.2 replaced the target-only scaffold with the cluster test on the same `tests/eval_oracle.py`. The pin test replaces the `git diff` clause, which became false when 2.2 appended its oracle: it hashes the first 2,877 bytes (the `b7be713` content), so the fixture may grow but not be edited.
 
 #### ticketscope--e2-s1--AC-2 (P0): FULL
 
-Given a PR, when `eval.yml` runs, then the eval Job completes after load as `ticketscope_ro`, and the `reports-kind` artifact holds `eval-results.json` with keyword's Recall@10 and MRR@10 over 10,473 pairs and lineage equal to `corpus_meta`.  
-Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-tracer-keyword-is-scored-on-kind-and-ci-uploads-the-results-plan.md:83`. Priority basis: inferred. Declared links: none.
+Given a PR, when `eval.yml` runs, then the eval Job completes after load as `ticketscope_ro`, and the `reports-kind` artifact holds `eval-results.json` with keyword's Recall@10 and MRR@10 over 10,473 pairs and lineage equal to `corpus_meta` (R2).  
+Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-tracer-keyword-is-scored-on-kind-and-ci-uploads-the-results-plan.md:83`. Priority basis: inferred. Declared links: R2.
 
 Tests:
 - `tests/eval/test_eval_kind.py:45` (e2e) test_eval_job_completed_after_load
@@ -671,8 +443,8 @@ The kind tests assert the criterion at the level it states, against the deployed
 
 #### ticketscope--e2-s1--AC-3 (P1): FULL
 
-Given a step after the results are written fails, when the workflow ends, then the artifact is still uploaded.  
-Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-tracer-keyword-is-scored-on-kind-and-ci-uploads-the-results-plan.md:84`. Priority basis: inferred. Declared links: none.
+Given a step after the results are written fails, when the workflow ends, then the artifact is still uploaded (R2).  
+Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-tracer-keyword-is-scored-on-kind-and-ci-uploads-the-results-plan.md:84`. Priority basis: inferred. Declared links: R2.
 
 Tests:
 - `tests/unit/test_eval_workflow.py:58` (unit) test_reports_upload_runs_always_after_the_check
@@ -685,8 +457,8 @@ The workflow text establishes the mechanism the criterion relies on. No test fai
 
 #### ticketscope--e2-s1--AC-4 (P1): PARTIAL
 
-Given the same PR, when `ci.yml` runs, then integrated-check passes.  
-Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-tracer-keyword-is-scored-on-kind-and-ci-uploads-the-results-plan.md:85`. Priority basis: inferred. Declared links: none.
+Given the same PR, when `ci.yml` runs, then integrated-check passes (R2).  
+Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-tracer-keyword-is-scored-on-kind-and-ci-uploads-the-results-plan.md:85`. Priority basis: inferred. Declared links: R2.
 
 Tests:
 - `tests/unit/test_eval_workflow.py:68` (unit) test_ci_integrated_check_call_is_unchanged
@@ -702,8 +474,8 @@ Gaps: No recorded run result for `integrated-check`. Informational only, not cou
 
 #### ticketscope--e2-s1--AC-5 (P0): FULL
 
-Given the pinned snapshot, when the pairs are regenerated, then the file is byte-identical and the printed counts are 10,473 / 10,164 / 309.  
-Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-tracer-keyword-is-scored-on-kind-and-ci-uploads-the-results-plan.md:86`. Priority basis: inferred. Declared links: none.
+Given the pinned snapshot, when the pairs are regenerated, then the committed `eval/pairs/2026.11.1.jsonl` is byte-identical and the printed counts are 10,473 / 10,164 / 309 (R1).  
+Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-tracer-keyword-is-scored-on-kind-and-ci-uploads-the-results-plan.md:86`. Priority basis: inferred. Declared links: R1.
 
 Tests:
 - `tests/eval/test_eval_kind.py:142` (e2e) test_pairs_regenerate_byte_identical_with_the_release_counts
@@ -716,27 +488,27 @@ Assertions:
 
 The kind test is the criterion's own check, run on the pinned asset. The unit tests pin the determinism the regeneration depends on.
 
-#### ticketscope--e2-s2--AC-1 (P0): PARTIAL
+#### ticketscope--e2-s2--AC-1 (P0): FULL
 
-Given the oracle fixture, when the cluster scaffold runs, then every metric short, log-heavy and overall equals `CLUSTER_EXPECTED` (overall differs from the mean of the kind means), a sibling counts as a hit, and the query never scores itself; `git diff 7ea485a -- tests/eval_oracle.py` is empty.  
-Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-scores-count-the-whole-duplicate-cluster-split-by-ticket-kin-plan.md:75`. Priority basis: inferred. Declared links: none.
+Given the oracle fixture, when the cluster scaffold runs, then every metric short, log-heavy and overall equals `CLUSTER_EXPECTED` (overall differs from the mean of the kind means), a sibling counts as a hit, and the query never scores itself; the fixture still starts with the bytes its red commit `7ea485a` wrote (R2).  
+Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-scores-count-the-whole-duplicate-cluster-split-by-ticket-kin-plan.md:75`. Priority basis: inferred. Declared links: R2.
 
 Tests:
 - `tests/unit/test_eval_cluster_oracle.py:106` (unit) test_p0_ac1_cluster_metrics_match_the_oracle
+- `tests/unit/test_eval_oracle_pinned.py:34` (unit) test_the_oracle_fixture_is_unchanged_since_its_red_commit
 
 Assertions:
 - `tests/unit/test_eval_cluster_oracle.py:106` (declaration), `tests/unit/test_eval_cluster_oracle.py:120` (overall Recall@10 4/5: query 3's sibling at rank 4 is a hit)
 - `tests/unit/test_eval_cluster_oracle.py:129` (every metric, short, log-heavy and overall, equals `CLUSTER_EXPECTED` within tolerance), `tests/unit/test_eval_cluster_oracle.py:130` (pair counts by kind), `tests/unit/test_eval_cluster_oracle.py:132` (first-member ranks)
 - `tests/unit/test_eval_cluster_oracle.py:138` (every call carries `exclude == {query}`), `tests/unit/test_eval_cluster_oracle.py:148` (a self-ranked query scores 0 Recall@10), `tests/unit/test_eval_cluster_oracle.py:149` (and 0 MRR@10)
+- `tests/unit/test_eval_oracle_pinned.py:38` (length of the `7ea485a` content kept), `tests/unit/test_eval_oracle_pinned.py:39` (its SHA-256 matches the pin)
 
-The metric, sibling-hit, per-kind and self-exclusion clauses are established by the oracle test.
-
-Gaps: The `git diff 7ea485a -- tests/eval_oracle.py is empty` clause is not asserted by any test or recorded result. It was reproduced in this trace (empty at HEAD), which is informational only.
+The metric, sibling-hit, per-kind and self-exclusion clauses are established by the oracle test; the unchanged-fixture clause by the pin test.
 
 #### ticketscope--e2-s2--AC-2 (P1): FULL
 
-Given `modes.REGISTRY` replaced after import with a fake second mode, when `score` runs, then the mode appears in the results with no change to `jobs.eval`; an unavailable mode is named in `skipped_modes`.  
-Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-scores-count-the-whole-duplicate-cluster-split-by-ticket-kin-plan.md:76`. Priority basis: inferred. Declared links: none.
+Given `modes.REGISTRY` replaced after import with a fake second mode, when `score` runs, then the mode appears in the results with no change to `jobs.eval`; an unavailable mode is named in `skipped_modes` (R2).  
+Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-scores-count-the-whole-duplicate-cluster-split-by-ticket-kin-plan.md:76`. Priority basis: inferred. Declared links: R2.
 
 Tests:
 - `tests/unit/test_eval_main.py:215` (unit) test_a_mode_registered_after_import_is_scored_with_no_job_change
@@ -751,8 +523,8 @@ Assertions:
 
 #### ticketscope--e2-s2--AC-3 (P1): FULL
 
-Given the same corpus scored twice, then the metrics and ranks are identical.  
-Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-scores-count-the-whole-duplicate-cluster-split-by-ticket-kin-plan.md:77`. Priority basis: inferred. Declared links: none.
+Given the same corpus scored twice, then the metrics and ranks are identical (R2, R3).  
+Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-scores-count-the-whole-duplicate-cluster-split-by-ticket-kin-plan.md:77`. Priority basis: inferred. Declared links: R2, R3.
 
 Tests:
 - `tests/unit/test_eval_main.py:247` (unit) test_scoring_the_same_corpus_twice_gives_identical_metrics_and_ranks
@@ -766,8 +538,8 @@ The unit test covers the scorer, the integration test covers the Postgres tie-br
 
 #### ticketscope--e2-s2--AC-4 (P1): FULL
 
-Given a PR, when `eval.yml` runs, then `reports-kind`'s `eval-results.json` holds, for keyword, every metric split short, log-heavy and overall, pair counts 10,164 / 309 / 10,473, each query's first-member rank (an independent recompute matches), and `wall_seconds`, which the job summary also shows.  
-Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-scores-count-the-whole-duplicate-cluster-split-by-ticket-kin-plan.md:78`. Priority basis: inferred. Declared links: none.
+Given a PR, when `eval.yml` runs, then `reports-kind`'s `eval-results.json` holds, for keyword, every metric split short, log-heavy and overall, pair counts 10,164 / 309 / 10,473, each query's first-member rank (an independent recompute matches), and `wall_seconds`, which the job summary also shows (R2).  
+Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-scores-count-the-whole-duplicate-cluster-split-by-ticket-kin-plan.md:78`. Priority basis: inferred. Declared links: R2.
 
 Tests:
 - `tests/eval/test_eval_kind.py:75` (e2e) test_keyword_is_scored_on_clusters_split_by_kind
@@ -783,8 +555,8 @@ Assertions:
 
 #### ticketscope--e2-s2--AC-5 (P0): FULL
 
-Given the pinned snapshot, when pairs regenerate, then the file is byte-identical and `derive_pairs.py` prints `10473 pairs: 10164 short, 309 log_heavy`.  
-Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-scores-count-the-whole-duplicate-cluster-split-by-ticket-kin-plan.md:79`. Priority basis: inferred. Declared links: none.
+Given the pinned snapshot, when pairs regenerate, then the file is byte-identical and `derive_pairs.py` prints `10473 pairs: 10164 short, 309 log_heavy` (R1).  
+Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-scores-count-the-whole-duplicate-cluster-split-by-ticket-kin-plan.md:79`. Priority basis: inferred. Declared links: R1.
 
 Tests:
 - `tests/eval/test_eval_kind.py:142` (e2e) test_pairs_regenerate_byte_identical_with_the_release_counts
@@ -797,8 +569,8 @@ Same evidence as story 1 AC-5; the criterion was restated by story 2.2.
 
 #### ticketscope--e2-s3--AC-1 (P1): FULL
 
-Given a PR that worsens keyword ranking, when eval runs, then the gate step fails with the metric named.  
-Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-a-regressing-pr-cannot-merge-plan.md:72`. Priority basis: inferred. Declared links: none.
+Given a PR that worsens keyword ranking, when eval runs, then the gate step fails with the metric named (R3).  
+Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-a-regressing-pr-cannot-merge-plan.md:72`. Priority basis: inferred. Declared links: R3.
 
 Tests:
 - `tests/unit/test_eval_gate.py:54` (unit) test_log_heavy_recall_drop_of_0_006_fails_naming_mode_kind_metric
@@ -814,8 +586,8 @@ The test design planned throwaway-PR runs as E2E evidence recorded in the plan; 
 
 #### ticketscope--e2-s3--AC-2 (P1): FULL
 
-Given the same PR also updates `eval/baseline.json` to its run's results, then the gate passes.  
-Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-a-regressing-pr-cannot-merge-plan.md:73`. Priority basis: inferred. Declared links: none.
+Given the same PR also updates `eval/baseline.json` to its run's results, then the gate passes (R3).  
+Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-a-regressing-pr-cannot-merge-plan.md:73`. Priority basis: inferred. Declared links: R3.
 
 Tests:
 - `tests/unit/test_eval_gate.py:209` (unit) test_cli_fails_on_regression_and_writes_the_step_summary
@@ -826,8 +598,8 @@ Assertions:
 
 #### ticketscope--e2-s3--AC-3 (P1): FULL
 
-Given a preprocessing-version change with no baseline update, then the gate fails with a lineage message.  
-Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-a-regressing-pr-cannot-merge-plan.md:74`. Priority basis: inferred. Declared links: none.
+Given a preprocessing-version change with no baseline update, then the gate fails with a lineage message (R3).  
+Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-a-regressing-pr-cannot-merge-plan.md:74`. Priority basis: inferred. Declared links: R3.
 
 Tests:
 - `tests/unit/test_eval_gate.py:108` (unit) test_lineage_drift_fails_naming_the_field
@@ -837,8 +609,8 @@ Assertions:
 
 #### ticketscope--e2-s3--AC-4 (P2): NONE
 
-Given `ruff`, `pyright`, `lint-imports` and `pytest tests/unit`, then all pass.  
-Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-a-regressing-pr-cannot-merge-plan.md:75`. Priority basis: inferred. Declared links: none.
+Given `ruff`, `pyright`, `lint-imports` and `pytest tests/unit`, then all pass (R3).  
+Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-a-regressing-pr-cannot-merge-plan.md:75`. Priority basis: inferred. Declared links: R3.
 
 Tests: none.
 
@@ -859,8 +631,8 @@ Gaps: Nothing establishes that `eval` is a required check on main.
 
 #### ticketscope--e2-s4--AC-1 (P1): FULL
 
-Given the committed `eval/baseline.json` and README, when `python3 scripts/render_readme_table.py --check` runs, then it exits 0, and `--write` leaves `git diff` empty.  
-Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-readme-results-table-is-generated-from-ci-output-plan.md:69`. Priority basis: inferred. Declared links: none.
+Given the committed `eval/baseline.json` and README, when `python3 scripts/render_readme_table.py --check` runs, then it exits 0, and `--write` leaves `git diff` empty (R4).  
+Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-readme-results-table-is-generated-from-ci-output-plan.md:69`. Priority basis: inferred. Declared links: R4.
 
 Tests:
 - `tests/unit/test_readme_table.py:67` (unit) test_committed_readme_equals_render_of_committed_baseline
@@ -873,8 +645,8 @@ Assertions:
 
 #### ticketscope--e2-s4--AC-2 (P1): FULL
 
-Given one digit of the README table changed by hand, when the check runs, then it exits 1.  
-Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-readme-results-table-is-generated-from-ci-output-plan.md:70`. Priority basis: inferred. Declared links: none.
+Given one digit of the README table changed by hand, when the check runs, then it exits 1 (R4).  
+Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-readme-results-table-is-generated-from-ci-output-plan.md:70`. Priority basis: inferred. Declared links: R4.
 
 Tests:
 - `tests/unit/test_readme_table.py:85` (unit) test_hand_edited_number_fails_and_names_the_fix
@@ -884,8 +656,8 @@ Assertions:
 
 #### ticketscope--e2-s4--AC-3 (P1): FULL
 
-Given a README without the generated-section markers, when the check runs, then it exits 1.  
-Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-readme-results-table-is-generated-from-ci-output-plan.md:71`. Priority basis: inferred. Declared links: none.
+Given a README without the generated-section markers, when the check runs, then it exits 1 (R4).  
+Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-readme-results-table-is-generated-from-ci-output-plan.md:71`. Priority basis: inferred. Declared links: R4.
 
 Tests:
 - `tests/unit/test_readme_table.py:108` (unit) test_marker_faults_fail_check_and_write
@@ -895,8 +667,8 @@ Assertions:
 
 #### ticketscope--e2-s4--AC-4 (P1): FULL
 
-Given `ci.yml`, when parsed as text, then the `checks` job runs the check command.  
-Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-readme-results-table-is-generated-from-ci-output-plan.md:72`. Priority basis: inferred. Declared links: none.
+Given `ci.yml`, when parsed as text, then the `checks` job runs the check command (R4).  
+Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-readme-results-table-is-generated-from-ci-output-plan.md:72`. Priority basis: inferred. Declared links: R4.
 
 Tests:
 - `tests/unit/test_readme_table.py:182` (unit) test_ci_checks_job_runs_the_readme_check
@@ -907,7 +679,7 @@ Assertions:
 #### ticketscope--e2-s5--verify (P1): PARTIAL
 
 On a PR the eval check passes with eval/baseline.json unchanged, ci.yml and its integrated-check pass, import-linter keeps every contract, and tests/ has no time.sleep calls, enforced by a lint rule or a test (R2, R3, R4).  
-Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/tickets.toml:61`. Priority basis: inferred. Declared links: none.
+Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/tickets.toml:61`. Priority basis: inferred. Declared links: R2, R3, R4.
 
 Tests:
 - `tests/unit/test_no_sleep_in_tests.py:37` (unit) test_tests_never_call_time_sleep
@@ -915,11 +687,13 @@ Tests:
 Assertions:
 - `tests/unit/test_no_sleep_in_tests.py:37` (declaration), `tests/unit/test_no_sleep_in_tests.py:43` (no `time.sleep` call anywhere in `tests/`)
 
-Story 2.5 has no plan file; its single criterion is the entry's `verify` line, and the entry's `covers` is empty. The no-sleep clause is enforced by a test.
+Story 2.5 has no plan file; its single criterion is the entry's `verify` line, and its `covers` is now R2, R3, R4. The no-sleep clause is enforced by a test.
 
 Gaps: The clauses on the eval check, an unchanged `eval/baseline.json`, `integrated-check` and import-linter have no test or recorded result. Informational only, not counted: `git diff d2313e9 3fe91b2 -- eval/baseline.json` is empty, `lint-imports` keeps 7 of 7 contracts, and `gh pr checks 31` shows `eval / deploy`, `integrated-check / deploy` and `checks` passing.
 
 ### Rejected evidence
+
+None. The five kind tests the previous trace rejected now cite the criteria they establish.
 
 - `tests/eval/test_eval_kind.py:45` (e2e) test_eval_job_completed_after_load claims `ticketscope--e2-s1--AC-1`: Carries `@pytest.mark.criterion("ticketscope--e2-s1--AC-1")`, but story 1's AC-1 is the oracle-fixture diff check by position in the plan. Its assertions establish the Job, lineage, role, secret or pair-regeneration clauses of AC-2 and AC-5, where it is mapped as evidence. It asserts nothing about the oracle fixture.
 - `tests/eval/test_eval_kind.py:111` (e2e) test_lineage_equals_corpus_meta claims `ticketscope--e2-s1--AC-1`: Carries `@pytest.mark.criterion("ticketscope--e2-s1--AC-1")`, but story 1's AC-1 is the oracle-fixture diff check by position in the plan. Its assertions establish the Job, lineage, role, secret or pair-regeneration clauses of AC-2 and AC-5, where it is mapped as evidence. It asserts nothing about the oracle fixture.
@@ -929,21 +703,19 @@ Gaps: The clauses on the eval check, an unchanged `eval/baseline.json`, `integra
 
 ## Invalid and Unlinked Criteria
 
-19 unlinked exception rows and no invalid links. Stories 2.1 to 2.4 write their plan criteria as bare bullets with no `(R<n>)` tag, except story 3 AC-5; story 2.5's entry has `covers = []`. Under the trace contract a criterion contributes to a requirement only through an `R` id it names, so each stays in the gate as its own row. Unlinked: `ticketscope--e2-s1--AC-1`, `ticketscope--e2-s1--AC-2`, `ticketscope--e2-s1--AC-3`, `ticketscope--e2-s1--AC-4`, `ticketscope--e2-s1--AC-5`, `ticketscope--e2-s2--AC-1`, `ticketscope--e2-s2--AC-2`, `ticketscope--e2-s2--AC-3`, `ticketscope--e2-s2--AC-4`, `ticketscope--e2-s2--AC-5`, `ticketscope--e2-s3--AC-1`, `ticketscope--e2-s3--AC-2`, `ticketscope--e2-s3--AC-3`, `ticketscope--e2-s3--AC-4`, `ticketscope--e2-s4--AC-1`, `ticketscope--e2-s4--AC-2`, `ticketscope--e2-s4--AC-3`, `ticketscope--e2-s4--AC-4`, `ticketscope--e2-s5--verify`.
+None. All 20 criteria name at least one requirement, and every named id exists in the epic.
 
-Projection, not gating: if each criterion were linked by its entry's `covers` (s1: R1, R2; s2: R2; s3: R3; s4: R4; s5: none), the gate would hold four requirement rows. R4 would be FULL (s4 AC-1 to AC-4). R1 would be PARTIAL, because its contributors s1 AC-1 and AC-4 are PARTIAL. R2 would be PARTIAL for the same reason, plus s2 AC-1. R3 would be PARTIAL, because s3 AC-5 (the required-check step) is NONE. That gives P0 at 0 of 2 and P1 at 1 of 2, still a FAIL until the oracle-diff clauses, the CI-run records and the branch-protection record are closed.
+The 20 criteria contribute as follows. R1: s1 AC-5, s2 AC-5. R2: s1 AC-1 to AC-4, s2 AC-1 to AC-4 and s5 verify. R3: s2 AC-3, s3 AC-1 to AC-5, s5 verify. R4: s4 AC-1 to AC-4, s5 verify.
 
 ## Gaps & Recommendations
 
-Critical (P0 below FULL): `ticketscope--e2--R1`, `ticketscope--e2--R2`, `ticketscope--e2-s1--AC-1`, `ticketscope--e2-s2--AC-1`.
+Critical (P0 below FULL): `ticketscope--e2--R2`.
 
-High (P1 NONE): `ticketscope--e2--R3`, `ticketscope--e2--R4`. Medium (P2 NONE): `ticketscope--e2-s3--AC-4`. Low: none.
+High (P1 NONE): none. Medium and low: none. Below FULL but not NONE: `ticketscope--e2--R2`, `ticketscope--e2--R3`, `ticketscope--e2--R4`.
 
-- **URGENT** Make the plan criteria name the requirements they prove. Stories 2.1 to 2.4 list their criteria in the plan without `R` ids (only story 3 AC-5 names one), and story 2.5 has an empty `covers`, so 19 of 20 criteria are unlinked exception rows and R1, R2, R3 and R4 have no passing contributor. Add `(R1, R2)` style tags to the plan criteria (or give story 2.5 a `covers`), then re-run the trace. This is the only change needed to move the gate on the requirements; it alters no behaviour.
-- **HIGH** Record the human check that `eval` is a required check on main (story 3 AC-5, R3) in `live-verification-results.json` against the commit under trace. Nothing else establishes the Done-when line for the blocking check.
-- **HIGH** Resolve story 1 AC-1 and story 2 AC-1's diff clauses. Story 1's `git diff b7be713 -- tests/eval_oracle.py is empty` is false at HEAD because story 2.2 appended the cluster oracle (72 added lines, none removed). Either pin the red-commit content with a test (for example a hash of the original oracle block) or amend the criterion by a PO replan. For story 2 AC-1, record the empty diff against 7ea485a as a live result or pin it in a test.
-- **MEDIUM** Record the CI run results as live evidence for story 1 AC-4, story 3 AC-4 and story 5's verify clauses. PR #31's checks all passed (`checks`, `eval / deploy`, `integrated-check / deploy`) and `eval/baseline.json` is unchanged across it, but the trace counts only recorded results at the commit under trace.
-- **MEDIUM** Fix the `pytest.mark.criterion` markers on `tests/eval/test_eval_kind.py` (lines 44, 110, 120, 132, 141): they cite `ticketscope--e2-s1--AC-1` while their assertions establish AC-2 and AC-5.
+- **URGENT** Run CI on this branch and record the results at the commit under trace. Story 1 AC-4 (`integrated-check` passes) and story 5's verify (the eval check and `integrated-check` pass, `eval/baseline.json` unchanged, import-linter keeps every contract) are the only R2 contributors below FULL, so they are what holds P0 at 50%. Their static evidence is complete; what is missing is a recorded run. The live results must carry the commit the trace reads (`git rev-parse HEAD`), so record them before committing the trace outputs.
+- **HIGH** Record story 3 AC-4 (ruff, pyright, lint-imports and unit pytest pass) and AC-5 (`eval / deploy` is a required check) the same way. Branch protection on main already lists `checks`, `integrated-check / deploy` and `eval / deploy` as required contexts (read with `gh api repos/Dillon-Based/ticketscope/branches/main/protection`), which is the observation AC-5 needs. These hold R3 at PARTIAL, a P1 row.
+- **MEDIUM** Story 5 is also a contributor to R3 and R4, so its recorded result lifts those rows to FULL together with R2.
 - **LOW** Waiver W-001's remediation (epic 2 Done-when line) is still open: a fresh epic 1 trace does not yet honour the six superseded criteria. Check it at epic closure; owner Dillon.
 
 ## Waiver Register Review
@@ -954,9 +726,9 @@ High (P1 NONE): `ticketscope--e2--R3`, `ticketscope--e2--R4`. Medium (P2 NONE): 
 
 ## Next Actions
 
-1. Tag the plan criteria of stories 2.1 to 2.5 with the requirements they prove (or give 2.5 a `covers`), then re-run `/bmad-tea-trace` for epic 2.
-2. Record the branch-protection check (story 3 AC-5) and the PR #31 CI results as live verification at the final commit.
-3. Settle the two oracle-diff clauses (story 1 AC-1, story 2 AC-1) by a pinning test or a PO replan.
+1. Run CI on this branch (open the PR; `ci.yml` also has `workflow_dispatch`) so `integrated-check` and `eval / deploy` run at the final commit.
+2. Record live results at that commit for story 1 AC-4 and story 5's verify (R2, P0), and for story 3 AC-4 and AC-5 (R3, whose branch protection already lists `eval / deploy`, `integrated-check / deploy` and `checks`). Then re-run `/bmad-tea-trace` for epic 2.
+3. Closing R2 takes both records: s1 AC-4 and s5 each hold R2 at PARTIAL while unrecorded.
 4. Close W-001's remediation at epic closure, then re-trace epic 1.
 
 ### Requirement Aggregation
@@ -966,7 +738,7 @@ High (P1 NONE): `ticketscope--e2--R3`, `ticketscope--e2--R4`. Medium (P2 NONE): 
   "criterionMatrix": [
     {
       "id": "ticketscope--e2-s1--AC-1",
-      "coverage": "PARTIAL"
+      "coverage": "FULL"
     },
     {
       "id": "ticketscope--e2-s1--AC-2",
@@ -986,7 +758,7 @@ High (P1 NONE): `ticketscope--e2--R3`, `ticketscope--e2--R4`. Medium (P2 NONE): 
     },
     {
       "id": "ticketscope--e2-s2--AC-1",
-      "coverage": "PARTIAL"
+      "coverage": "FULL"
     },
     {
       "id": "ticketscope--e2-s2--AC-2",
@@ -1049,25 +821,95 @@ High (P1 NONE): `ticketscope--e2--R3`, `ticketscope--e2--R4`. Medium (P2 NONE): 
     {
       "id": "ticketscope--e2--R1",
       "kind": "requirement",
-      "coverage": "NONE",
-      "contributors": [],
+      "coverage": "FULL",
+      "contributors": [
+        {
+          "id": "ticketscope--e2-s1--AC-5",
+          "coverage": "FULL"
+        },
+        {
+          "id": "ticketscope--e2-s2--AC-5",
+          "coverage": "FULL"
+        }
+      ],
       "missingBehaviors": []
     },
     {
       "id": "ticketscope--e2--R2",
       "kind": "requirement",
-      "coverage": "NONE",
-      "contributors": [],
+      "coverage": "PARTIAL",
+      "contributors": [
+        {
+          "id": "ticketscope--e2-s1--AC-1",
+          "coverage": "FULL"
+        },
+        {
+          "id": "ticketscope--e2-s1--AC-2",
+          "coverage": "FULL"
+        },
+        {
+          "id": "ticketscope--e2-s1--AC-3",
+          "coverage": "FULL"
+        },
+        {
+          "id": "ticketscope--e2-s1--AC-4",
+          "coverage": "PARTIAL"
+        },
+        {
+          "id": "ticketscope--e2-s2--AC-1",
+          "coverage": "FULL"
+        },
+        {
+          "id": "ticketscope--e2-s2--AC-2",
+          "coverage": "FULL"
+        },
+        {
+          "id": "ticketscope--e2-s2--AC-3",
+          "coverage": "FULL"
+        },
+        {
+          "id": "ticketscope--e2-s2--AC-4",
+          "coverage": "FULL"
+        },
+        {
+          "id": "ticketscope--e2-s5--verify",
+          "coverage": "PARTIAL"
+        }
+      ],
       "missingBehaviors": []
     },
     {
       "id": "ticketscope--e2--R3",
       "kind": "requirement",
-      "coverage": "NONE",
+      "coverage": "PARTIAL",
       "contributors": [
+        {
+          "id": "ticketscope--e2-s2--AC-3",
+          "coverage": "FULL"
+        },
+        {
+          "id": "ticketscope--e2-s3--AC-1",
+          "coverage": "FULL"
+        },
+        {
+          "id": "ticketscope--e2-s3--AC-2",
+          "coverage": "FULL"
+        },
+        {
+          "id": "ticketscope--e2-s3--AC-3",
+          "coverage": "FULL"
+        },
+        {
+          "id": "ticketscope--e2-s3--AC-4",
+          "coverage": "NONE"
+        },
         {
           "id": "ticketscope--e2-s3--AC-5",
           "coverage": "NONE"
+        },
+        {
+          "id": "ticketscope--e2-s5--verify",
+          "coverage": "PARTIAL"
         }
       ],
       "missingBehaviors": []
@@ -1075,104 +917,30 @@ High (P1 NONE): `ticketscope--e2--R3`, `ticketscope--e2--R4`. Medium (P2 NONE): 
     {
       "id": "ticketscope--e2--R4",
       "kind": "requirement",
-      "coverage": "NONE",
-      "contributors": [],
+      "coverage": "PARTIAL",
+      "contributors": [
+        {
+          "id": "ticketscope--e2-s4--AC-1",
+          "coverage": "FULL"
+        },
+        {
+          "id": "ticketscope--e2-s4--AC-2",
+          "coverage": "FULL"
+        },
+        {
+          "id": "ticketscope--e2-s4--AC-3",
+          "coverage": "FULL"
+        },
+        {
+          "id": "ticketscope--e2-s4--AC-4",
+          "coverage": "FULL"
+        },
+        {
+          "id": "ticketscope--e2-s5--verify",
+          "coverage": "PARTIAL"
+        }
+      ],
       "missingBehaviors": []
-    },
-    {
-      "id": "ticketscope--e2-s1--AC-1",
-      "kind": "exception",
-      "coverage": "PARTIAL"
-    },
-    {
-      "id": "ticketscope--e2-s1--AC-2",
-      "kind": "exception",
-      "coverage": "FULL"
-    },
-    {
-      "id": "ticketscope--e2-s1--AC-3",
-      "kind": "exception",
-      "coverage": "FULL"
-    },
-    {
-      "id": "ticketscope--e2-s1--AC-4",
-      "kind": "exception",
-      "coverage": "PARTIAL"
-    },
-    {
-      "id": "ticketscope--e2-s1--AC-5",
-      "kind": "exception",
-      "coverage": "FULL"
-    },
-    {
-      "id": "ticketscope--e2-s2--AC-1",
-      "kind": "exception",
-      "coverage": "PARTIAL"
-    },
-    {
-      "id": "ticketscope--e2-s2--AC-2",
-      "kind": "exception",
-      "coverage": "FULL"
-    },
-    {
-      "id": "ticketscope--e2-s2--AC-3",
-      "kind": "exception",
-      "coverage": "FULL"
-    },
-    {
-      "id": "ticketscope--e2-s2--AC-4",
-      "kind": "exception",
-      "coverage": "FULL"
-    },
-    {
-      "id": "ticketscope--e2-s2--AC-5",
-      "kind": "exception",
-      "coverage": "FULL"
-    },
-    {
-      "id": "ticketscope--e2-s3--AC-1",
-      "kind": "exception",
-      "coverage": "FULL"
-    },
-    {
-      "id": "ticketscope--e2-s3--AC-2",
-      "kind": "exception",
-      "coverage": "FULL"
-    },
-    {
-      "id": "ticketscope--e2-s3--AC-3",
-      "kind": "exception",
-      "coverage": "FULL"
-    },
-    {
-      "id": "ticketscope--e2-s3--AC-4",
-      "kind": "exception",
-      "coverage": "NONE"
-    },
-    {
-      "id": "ticketscope--e2-s4--AC-1",
-      "kind": "exception",
-      "coverage": "FULL"
-    },
-    {
-      "id": "ticketscope--e2-s4--AC-2",
-      "kind": "exception",
-      "coverage": "FULL"
-    },
-    {
-      "id": "ticketscope--e2-s4--AC-3",
-      "kind": "exception",
-      "coverage": "FULL"
-    },
-    {
-      "id": "ticketscope--e2-s4--AC-4",
-      "kind": "exception",
-      "coverage": "FULL"
-    },
-    {
-      "id": "ticketscope--e2-s5--verify",
-      "kind": "exception",
-      "coverage": "PARTIAL"
     }
   ]
 }
@@ -1189,7 +957,7 @@ High (P1 NONE): `ticketscope--e2--R3`, `ticketscope--e2--R4`. Medium (P2 NONE): 
     "observed_at": "2026-11-07T21:27:27Z",
     "producer": "GitHub Actions ci run 42415340129 (workflow_dispatch, scripts/live_results.py) + local kind runs of scripts/fault-inject.sh and scripts/v1-parity.sh at the same commit (Claude Code); author-confirmed manual and document checks (user, 2026-11-07)",
     "read_error": "",
-    "current_source_sha": "3fe91b2a3d70da1ef41af93507812153622bb6ca"
+    "current_source_sha": "8d772e029c84d73ef4f325f024c90d63c8d7e590"
   },
   "liveRecords": [
     {

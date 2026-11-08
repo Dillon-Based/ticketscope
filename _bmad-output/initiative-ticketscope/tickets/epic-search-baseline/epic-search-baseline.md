@@ -8,6 +8,7 @@ companions: [_bmad-output/initiative-ticketscope/tickets/epic-search-baseline/te
 after: []
 refined: true
 risk: high
+status: done
 ---
 
 # Keyword search over Mojang issues, deployed on kind
@@ -115,3 +116,4 @@ A triage engineer pastes a vague or log-heavy ticket into the page on the kind-d
 - Decision: Story 13's ingest runs locally and is person-run: a person restores the dataset dump and runs the committed ingest, and the checksum, timed load and Release publish run from that machine. The 5.8 GB dump (about 60 GB restored) does not fit a GitHub-hosted runner, and the data is frozen at January 2022 (user, 2026-11-06).
 - Decision: `/v1` does not carry the readable Jira key for now; each issue's `url` already shows it. Revisit when epic-mcp-server is refined (user, 2026-11-06).
 - Note: The Jira switch invalidates part of the architecture spine: AD-6's snapshot fields (`state_reason`, `author_association`, timeline events) the Identifiers convention (a GitHub issue number in `kubernetes/kubernetes`), AD-10's `gen_ai.data_source.id=ticketscope-k8s-issues`, and the Provenance convention ("Public GitHub issues only"). `bmad-architecture` amends them before story 13's plan, as entry 13 records; the spine is not edited here.
+- Decision: Epic closed as done. The closure check verified every Done when line against implementation evidence: trace at `6400e5a` has R1–R7 FULL, and the integrated check passed in CI (run 42414691589, PR #20). The retrospective verdict is accepted-with-open-items. Six superseded GitHub-era criteria (stories 3, 4 and 14) are waived under W-001 (`_bmad-output/test-artifacts/gate-waivers.md`), with their remediation and the search latency threshold carried to epic-eval-gate (user, 2026-11-08).

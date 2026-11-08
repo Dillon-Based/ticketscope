@@ -153,7 +153,7 @@ Headless: proposed only, none written. No `adr-*.md` exists in the repository.
 
 ## Acceptance verdict
 
-**accepted-with-open-items** (interactive pass, criteria declared). This supersedes the first pass's `rejected`, kept below for the record.
+**accepted-with-open-items** (interactive pass, criteria declared). The user confirmed this verdict on 2026-11-08. It supersedes the first pass's `rejected`, which is kept below for the record. The two proposed decision records were not approved in this pass and stay unwritten.
 
 - **Criteria met:** the trace at `6400e5a` has R1–R7 FULL. The Done when line "integrated check passing in CI" is met by run 42414691589 on PR #20 (S1).
 - **Gate:** the derived FAIL is WAIVED by a human decision, W-001 (Dillon, Product Owner, 2026-11-07). It covers only superseded criteria, so it is the human override this verdict rests on.

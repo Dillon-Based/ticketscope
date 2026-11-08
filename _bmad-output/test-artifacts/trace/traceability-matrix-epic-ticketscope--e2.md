@@ -27,7 +27,7 @@ oracleSources:
 externalPointerStatus: not_used
 oracleGranularity: requirements
 collectionStatus: COLLECTED
-sourceSha: 8d772e029c84d73ef4f325f024c90d63c8d7e590
+sourceSha: 424291fa5b0bc6d538614440246249eaadeea1b3
 criterionLedger:
 - id: ticketscope--e2-s1--AC-1
   localId: AC-1
@@ -306,44 +306,55 @@ oracleLedger:
 
 # Traceability Matrix & Gate Decision — Epic 2: Retrieval is scored on every PR and regressions block the merge
 
-## Gate Decision: FAIL
+## Gate Decision: CONCERNS
 
-**Rationale:** P0 coverage is 50% (required: 100%). 1 critical requirement(s) below FULL coverage. Overall FULL coverage is 25% (minimum 80%); P1 is 0% (minimum 80%, PASS target 90%).
+**Rationale:** P0 coverage is 100% (required: 100%). 0 critical requirement(s) below FULL coverage. Overall FULL coverage is 100% (minimum 80%); P1 is 100% (minimum 80%, PASS target 90%). 1 requirement(s) (R3) are covered in part only by recorded live verification observed at 424291fa5b0bc6d538614440246249eaadeea1b3. Live evidence is a point-in-time observation with no artifact to re-run, so the run is capped at CONCERNS.
 
-**Date:** 2026-11-08. **Evaluator:** Claude Code / Master Test Architect. **Source:** `8d772e029c84d73ef4f325f024c90d63c8d7e590` (first trace of this epic; there is no previous trace).
+**Date:** 2026-11-08. **Evaluator:** Claude Code / Master Test Architect. **Source:** `424291fa5b0bc6d538614440246249eaadeea1b3` (re-trace; replaces the earlier run for this key).
 
-This re-trace follows the fixes in commit `8d772e0`: the plan criteria now name the requirements they prove, story 2.5 covers R2 to R4, and a pin test replaces the two false `git diff` clauses. The tests were already there; the gate moved from 43% to 50% P0. It is not 100% because two R2 contributors, story 1 AC-4 and story 5 verify, depend on a CI run that no recorded live result establishes at this commit. Those two also hold R3 and R4 at PARTIAL.
+This re-trace follows the fixes in commit `8d772e0` (plan criteria now name the requirements they prove, story 2.5 covers R2 to R4, a pin test replaces the two false `git diff` clauses) and four live records. P0 moved from 43% to 100%, P1 to 100%, overall to 100%. The decision is CONCERNS, not PASS, because step 5 caps a run at CONCERNS when a requirement rests partly on live verification alone: R3 does, through story 3 AC-4 and AC-5. A static test for those two (for example one asserting a tool outcome, or reading branch protection) would lift the cap.
+
+**Exception accepted by the user (2026-11-08, option 2).** Three of the four live records (story 1 AC-4, story 3 AC-4, story 5 verify) were observed in CI runs 42532155240 (ci) and 42532155256 (eval) at `4372cca`, PR #31's head, whose tree is identical to main `3fe91b2`. They are recorded against the commit under trace because this branch adds only tests and ticket-tree text, no product code. The workflow's freshness rule would otherwise class them stale; each record's evidence says so. The fourth, story 3 AC-5, is a repository setting read live and has no commit.
 
 ## Have the gaps been closed?
 
-The previous trace (same run key, replaced by this one) had 14 of 20 criteria FULL and all four requirements NONE. Now 16 of 20 are FULL, 2 PARTIAL and 2 NONE, and every criterion is linked, so there are no exception rows. Waiver W-001's remediation (this epic's Done-when line) is not yet closed.
+The previous trace (same run key, replaced by this one) had 14 of 20 criteria FULL and all four requirements NONE; the one before the plan fixes is in this branch's history. Now all 20 criteria are FULL and all four requirements are FULL.
 
 ## Coverage Summary
 
 | Priority | Total | FULL | Coverage |
 | --- | ---: | ---: | ---: |
-| P0 | 2 | 1 | 50% |
-| P1 | 2 | 0 | 0% |
+| P0 | 2 | 2 | 100% |
+| P1 | 2 | 2 | 100% |
 | P2 | 0 | 0 | 100% |
 | P3 | 0 | 0 | 100% |
-| Overall | 4 | 1 | 25% |
+| Overall | 4 | 4 | 100% |
 
-Gate rows: 1 FULL, 3 PARTIAL, 0 NONE, 0 UNIT-ONLY. Criteria: 16 FULL, 2 PARTIAL, 2 NONE. Accepted evidence: 35 unique test declarations across 13 files. Sanity run at HEAD: `uv run pytest tests/unit` 893 passed, 17 skipped; `ruff check`, `pyright` and `lint-imports` clean (informational, not counted as evidence). Kind tests (`tests/eval/`) are accepted as static e2e evidence under `collection_mode: contract_static`; this trace did not run them.
+Gate rows: 4 FULL, 0 PARTIAL, 0 NONE, 0 UNIT-ONLY. Criteria: 20 FULL, 0 PARTIAL, 0 NONE. Accepted evidence: 39 unique test declarations across 14 files. Sanity run at HEAD: `uv run pytest tests/unit` 895 passed, 17 skipped; `ruff check`, `pyright` and `lint-imports` clean (informational, not counted as evidence). Kind tests (`tests/eval/`) are accepted as static e2e evidence under `collection_mode: contract_static`; this trace did not run them.
 
-Oracle: formal epic requirements R1 to R4 with requirement granularity (v7 epic with `R<n>` lines, no duplicate ids). Confidence is high: every criterion now names its requirements. Criterion priorities are inferred from `test-design-epic-2.md`'s coverage plan (story 2.5's row is P1). Requirement priorities come from their contributors (the highest criterion priority). Supporting artifacts: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/test-design-epic-2.md`. No NFR audit exists for epic 2 (`_bmad-output/test-artifacts/nfr/nfr-assessment-epic-1.md` is epic 1's). Live results: `live-verification-results.json` holds only epic 1 records, all recorded at `6400e5a` and so stale at `8d772e0`; none names an epic 2 criterion and none is counted.
+Oracle: formal epic requirements R1 to R4 with requirement granularity (v7 epic with `R<n>` lines, no duplicate ids). Confidence is high: every criterion now names its requirements. Criterion priorities are inferred from `test-design-epic-2.md`'s coverage plan (story 2.5's row is P1). Requirement priorities come from their contributors (the highest criterion priority). Supporting artifacts: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/test-design-epic-2.md`. No NFR audit exists for epic 2 (`_bmad-output/test-artifacts/nfr/nfr-assessment-epic-1.md` is epic 1's). Live results: `live-verification-results.json` holds 22 epic 1 records recorded at `6400e5a` (stale at `424291f`, not part of this oracle, none counted) and 4 epic 2 records, all counted.
 
 ## Requirement Oracle Mapping
 
 | ID | Kind | Requirement | Priority | Coverage |
 | --- | --- | --- | --- | --- |
 | ticketscope--e2--R1 | requirement | Labelled duplicate pairs are derived deterministically from the pinned snapshot's in-subset duplicate links and committed per snapshot version. It is met when the committed pairs file regenerates byte-identical from the snapshot, with its pair counts reported for short and log-heavy queries. | P0 | FULL |
-| ticketscope--e2--R2 | requirement | An eval job scores every available mode in the core registry through the real Postgres adapter as the read-only role. It reports Recall@1, Recall@5, Recall@10, MRR@10 and p95 latency, split short versus log-heavy. It is met when the job on kind scores keyword over the full pair set, and a newly registered mode is scored with no change to the job. | P0 | PARTIAL |
-| ticketscope--e2--R3 | requirement | The eval runs on every PR as a required check. A Recall@10 or MRR@10 regression against the committed baseline blocks the merge, unless the same diff updates the baseline. It is met when a deliberately regressing PR fails the check, and passes once its diff updates the baseline. | P1 | PARTIAL |
-| ticketscope--e2--R4 | requirement | The README results table is generated from CI output and committed as-is, whatever it shows. It is met when a check fails if the README table differs from the table rendered from the committed CI results. | P1 | PARTIAL |
+| ticketscope--e2--R2 | requirement | An eval job scores every available mode in the core registry through the real Postgres adapter as the read-only role. It reports Recall@1, Recall@5, Recall@10, MRR@10 and p95 latency, split short versus log-heavy. It is met when the job on kind scores keyword over the full pair set, and a newly registered mode is scored with no change to the job. | P0 | FULL |
+| ticketscope--e2--R3 | requirement | The eval runs on every PR as a required check. A Recall@10 or MRR@10 regression against the committed baseline blocks the merge, unless the same diff updates the baseline. It is met when a deliberately regressing PR fails the check, and passes once its diff updates the baseline. | P1 | FULL |
+| ticketscope--e2--R4 | requirement | The README results table is generated from CI output and committed as-is, whatever it shows. It is met when a check fails if the README table differs from the table rendered from the committed CI results. | P1 | FULL |
 
 ## Criterion Status Changes Since Previous Trace
 
-None: first trace of this epic.
+| Criterion | Previous | Now | Why |
+| --- | --- | --- | --- |
+| ticketscope--e2-s1--AC-1 | PARTIAL | FULL | `tests/unit/test_eval_oracle_pinned.py:34` pins the red-commit bytes; the criterion's `git diff` clause was replaced |
+| ticketscope--e2-s1--AC-4 | PARTIAL | FULL | live record: `integrated-check / deploy` success |
+| ticketscope--e2-s2--AC-1 | PARTIAL | FULL | the same pin test covers the `7ea485a` clause |
+| ticketscope--e2-s3--AC-4 | NONE | FULL | live record: `checks` job success |
+| ticketscope--e2-s3--AC-5 | NONE | FULL | live record: `eval / deploy` is a required context on main |
+| ticketscope--e2-s5--verify | PARTIAL | FULL | live record: eval, `integrated-check` and `checks` success, baseline unchanged |
+
+The other 14 criteria are unchanged and FULL. Every criterion is now linked, so the 19 exception rows are gone and the four requirement rows carry the gate.
 
 ## Detailed Mapping
 
@@ -357,7 +368,7 @@ Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/epic-eval-ga
 
 Gaps: its only contributor is NONE, so the requirement is NONE.
 
-### ticketscope--e2--R2 (P0, requirement): PARTIAL
+### ticketscope--e2--R2 (P0, requirement): FULL
 
 An eval job scores every available mode in the core registry through the real Postgres adapter as the read-only role. It reports Recall@1, Recall@5, Recall@10, MRR@10 and p95 latency, split short versus log-heavy. It is met when the job on kind scores keyword over the full pair set, and a newly registered mode is scored with no change to the job.  
 Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/epic-eval-gate.md:32`. Contributors:
@@ -365,16 +376,16 @@ Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/epic-eval-ga
 - ticketscope--e2-s1--AC-1: FULL
 - ticketscope--e2-s1--AC-2: FULL
 - ticketscope--e2-s1--AC-3: FULL
-- ticketscope--e2-s1--AC-4: PARTIAL
+- ticketscope--e2-s1--AC-4: FULL
 - ticketscope--e2-s2--AC-1: FULL
 - ticketscope--e2-s2--AC-2: FULL
 - ticketscope--e2-s2--AC-3: FULL
 - ticketscope--e2-s2--AC-4: FULL
-- ticketscope--e2-s5--verify: PARTIAL
+- ticketscope--e2-s5--verify: FULL
 
 Gaps: its only contributor is NONE, so the requirement is NONE.
 
-### ticketscope--e2--R3 (P1, requirement): PARTIAL
+### ticketscope--e2--R3 (P1, requirement): FULL
 
 The eval runs on every PR as a required check. A Recall@10 or MRR@10 regression against the committed baseline blocks the merge, unless the same diff updates the baseline. It is met when a deliberately regressing PR fails the check, and passes once its diff updates the baseline.  
 Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/epic-eval-gate.md:33`. Contributors:
@@ -383,13 +394,13 @@ Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/epic-eval-ga
 - ticketscope--e2-s3--AC-1: FULL
 - ticketscope--e2-s3--AC-2: FULL
 - ticketscope--e2-s3--AC-3: FULL
-- ticketscope--e2-s3--AC-4: NONE
-- ticketscope--e2-s3--AC-5: NONE
-- ticketscope--e2-s5--verify: PARTIAL
+- ticketscope--e2-s3--AC-4: FULL
+- ticketscope--e2-s3--AC-5: FULL
+- ticketscope--e2-s5--verify: FULL
 
 Gaps: its only contributor is NONE, so the requirement is NONE.
 
-### ticketscope--e2--R4 (P1, requirement): PARTIAL
+### ticketscope--e2--R4 (P1, requirement): FULL
 
 The README results table is generated from CI output and committed as-is, whatever it shows. It is met when a check fails if the README table differs from the table rendered from the committed CI results.  
 Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/epic-eval-gate.md:34`. Contributors:
@@ -398,7 +409,7 @@ Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/epic-eval-ga
 - ticketscope--e2-s4--AC-2: FULL
 - ticketscope--e2-s4--AC-3: FULL
 - ticketscope--e2-s4--AC-4: FULL
-- ticketscope--e2-s5--verify: PARTIAL
+- ticketscope--e2-s5--verify: FULL
 
 Gaps: its only contributor is NONE, so the requirement is NONE.
 
@@ -455,7 +466,7 @@ Assertions:
 
 The workflow text establishes the mechanism the criterion relies on. No test fails a step on purpose and observes the upload.
 
-#### ticketscope--e2-s1--AC-4 (P1): PARTIAL
+#### ticketscope--e2-s1--AC-4 (P1): FULL
 
 Given the same PR, when `ci.yml` runs, then integrated-check passes (R2).  
 Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-tracer-keyword-is-scored-on-kind-and-ci-uploads-the-results-plan.md:85`. Priority basis: inferred. Declared links: R2.
@@ -463,14 +474,14 @@ Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/stor
 Tests:
 - `tests/unit/test_eval_workflow.py:68` (unit) test_ci_integrated_check_call_is_unchanged
 - `tests/unit/test_eval_workflow.py:44` (unit) test_every_kind_deploy_input_but_check_has_a_default
+- `:None` (live) PR ci.yml: integrated-check passes on the changed reusable workflow
 
 Assertions:
 - `tests/unit/test_eval_workflow.py:83` (the `integrated-check` call is byte-for-byte unchanged), `tests/unit/test_eval_workflow.py:84` (`ci.yml` does not mention `eval_enabled`)
 - `tests/unit/test_eval_workflow.py:50` (every `_kind-deploy.yml` input but `check` has a default)
+- Live `ticketscope--e2-LIVE-001` (pass, recorded at `424291f`): https://github.com/Dillon-Based/ticketscope/actions/runs/42532155240 - integrated-check / deploy success (6m28s); also eval / deploy success in https://github.com/Dillon-Based/ticketscope/actions/runs/42532155256. Observed at 4372cca (PR #31 head), whose tree is identical to main 3fe91b2; recorded against the commit under trace by the user's explicit acceptance (2026-11-08, 'option 2'): this branch adds only tests and ticket-tree text, no product code.
 
-The static tests prove the call is unchanged and the new inputs are optional. They cannot show the job passes.
-
-Gaps: No recorded run result for `integrated-check`. Informational only, not counted: `gh pr checks 31` reports `integrated-check / deploy` pass on PR #31.
+The static tests prove the call is unchanged and the new inputs are optional; the live record shows the job passing.
 
 #### ticketscope--e2-s1--AC-5 (P0): FULL
 
@@ -607,27 +618,31 @@ Tests:
 Assertions:
 - `tests/unit/test_eval_gate.py:111` (a changed `preprocessing_version` yields one failure), `tests/unit/test_eval_gate.py:112` (the failure names the field), `tests/unit/test_eval_gate.py:113` (the same change passes when the baseline is updated)
 
-#### ticketscope--e2-s3--AC-4 (P2): NONE
+#### ticketscope--e2-s3--AC-4 (P2): FULL
 
 Given `ruff`, `pyright`, `lint-imports` and `pytest tests/unit`, then all pass (R3).  
 Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-a-regressing-pr-cannot-merge-plan.md:75`. Priority basis: inferred. Declared links: R3.
 
-Tests: none.
+Tests:
+- `:None` (live) ruff, pyright, lint-imports and pytest tests/unit pass
 
-No test asserts a tool outcome, and no run result is recorded as live evidence.
+Assertions:
+- Live `ticketscope--e2-LIVE-002` (pass, recorded at `424291f`): https://github.com/Dillon-Based/ticketscope/actions/runs/42532155240 - checks job success; local run at the branch: ruff clean, pyright 0 errors, lint-imports 7 kept 0 broken, pytest tests/unit 895 passed 17 skipped. Observed at 4372cca (PR #31 head), whose tree is identical to main 3fe91b2; recorded against the commit under trace by the user's explicit acceptance (2026-11-08, 'option 2'): this branch adds only tests and ticket-tree text, no product code.
 
-Gaps: Informational only, not counted: at HEAD this trace's sanity run gave `ruff check` clean, `pyright` 0 errors, `lint-imports` 7 kept 0 broken, and `pytest tests/unit` 893 passed, 17 skipped.
+Established only by the live record: no test asserts a tool outcome.
 
-#### ticketscope--e2-s3--AC-5 (P1): NONE
+#### ticketscope--e2-s3--AC-5 (P1): FULL
 
 Given the merged workflow, a person makes `eval` required in branch protection (checked by the person, R3).  
 Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-a-regressing-pr-cannot-merge-plan.md:76`. Priority basis: inferred. Declared links: R3.
 
-Tests: none.
+Tests:
+- `:None` (live) eval is a required check in branch protection on main
 
-A human step in GitHub branch protection. No live record in `live-verification-results.json` or `live-verification-drafts.json` names it.
+Assertions:
+- Live `ticketscope--e2-LIVE-003` (pass, recorded at `424291f`): gh api repos/Dillon-Based/ticketscope/branches/main/protection: required_status_checks.contexts = [checks, integrated-check / deploy, eval / deploy], read on 2026-11-08. Observed against the live repository setting, not a commit.
 
-Gaps: Nothing establishes that `eval` is a required check on main.
+A human or repository-setting check, established only by the live record.
 
 #### ticketscope--e2-s4--AC-1 (P1): FULL
 
@@ -676,20 +691,20 @@ Tests:
 Assertions:
 - `tests/unit/test_readme_table.py:187` (the `checks` job runs `python3 scripts/render_readme_table.py --check`)
 
-#### ticketscope--e2-s5--verify (P1): PARTIAL
+#### ticketscope--e2-s5--verify (P1): FULL
 
 On a PR the eval check passes with eval/baseline.json unchanged, ci.yml and its integrated-check pass, import-linter keeps every contract, and tests/ has no time.sleep calls, enforced by a lint rule or a test (R2, R3, R4).  
 Source: `_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/tickets.toml:61`. Priority basis: inferred. Declared links: R2, R3, R4.
 
 Tests:
 - `tests/unit/test_no_sleep_in_tests.py:37` (unit) test_tests_never_call_time_sleep
+- `:None` (live) PR eval check passes with baseline unchanged, ci.yml and integrated-check pass, import-linter keeps every contract
 
 Assertions:
 - `tests/unit/test_no_sleep_in_tests.py:37` (declaration), `tests/unit/test_no_sleep_in_tests.py:43` (no `time.sleep` call anywhere in `tests/`)
+- Live `ticketscope--e2-LIVE-004` (pass, recorded at `424291f`): https://github.com/Dillon-Based/ticketscope/actions/runs/42532155256 - eval / deploy success (12m33s); https://github.com/Dillon-Based/ticketscope/actions/runs/42532155240 - checks, charts, integrated-check / deploy success; git diff d2313e9 3fe91b2 -- eval/baseline.json is empty; lint-imports 7 kept 0 broken. Observed at 4372cca (PR #31 head), whose tree is identical to main 3fe91b2; recorded against the commit under trace by the user's explicit acceptance (2026-11-08, 'option 2'): this branch adds only tests and ticket-tree text, no product code.
 
-Story 2.5 has no plan file; its single criterion is the entry's `verify` line, and its `covers` is now R2, R3, R4. The no-sleep clause is enforced by a test.
-
-Gaps: The clauses on the eval check, an unchanged `eval/baseline.json`, `integrated-check` and import-linter have no test or recorded result. Informational only, not counted: `git diff d2313e9 3fe91b2 -- eval/baseline.json` is empty, `lint-imports` keeps 7 of 7 contracts, and `gh pr checks 31` shows `eval / deploy`, `integrated-check / deploy` and `checks` passing.
+Story 2.5 has no plan file; its single criterion is the entry's `verify` line, and its `covers` is R2, R3, R4. The no-sleep clause is enforced by a test; the other clauses by the live record.
 
 ### Rejected evidence
 
@@ -709,13 +724,13 @@ The 20 criteria contribute as follows. R1: s1 AC-5, s2 AC-5. R2: s1 AC-1 to AC-4
 
 ## Gaps & Recommendations
 
-Critical (P0 below FULL): `ticketscope--e2--R2`.
+Critical (P0 below FULL): none.
 
-High (P1 NONE): none. Medium and low: none. Below FULL but not NONE: `ticketscope--e2--R2`, `ticketscope--e2--R3`, `ticketscope--e2--R4`.
+High, medium and low gaps: none. Every criterion and every requirement is FULL.
 
-- **URGENT** Run CI on this branch and record the results at the commit under trace. Story 1 AC-4 (`integrated-check` passes) and story 5's verify (the eval check and `integrated-check` pass, `eval/baseline.json` unchanged, import-linter keeps every contract) are the only R2 contributors below FULL, so they are what holds P0 at 50%. Their static evidence is complete; what is missing is a recorded run. The live results must carry the commit the trace reads (`git rev-parse HEAD`), so record them before committing the trace outputs.
-- **HIGH** Record story 3 AC-4 (ruff, pyright, lint-imports and unit pytest pass) and AC-5 (`eval / deploy` is a required check) the same way. Branch protection on main already lists `checks`, `integrated-check / deploy` and `eval / deploy` as required contexts (read with `gh api repos/Dillon-Based/ticketscope/branches/main/protection`), which is the observation AC-5 needs. These hold R3 at PARTIAL, a P1 row.
-- **MEDIUM** Story 5 is also a contributor to R3 and R4, so its recorded result lifts those rows to FULL together with R2.
+- **HIGH** Re-run CI on the final commit of the PR and re-record the three CI-derived live results (story 1 AC-4, story 3 AC-4, story 5 verify) there. They currently rest on runs at 4372cca, accepted by the user because the trees are equal; a run at the real head removes the exception.
+- **MEDIUM** Lift the CONCERNS cap on R3 by giving story 3 AC-4 and AC-5 static evidence: a test that reads the required-check list from branch protection (or a documented fixture) and one that asserts the CI jobs run ruff, pyright, lint-imports and unit pytest.
+- **MEDIUM** Have the product owner review the plan-criteria edits: the R tags on stories 2.1 to 2.4, the reworded oracle clauses of story 2.1 AC-1 and 2.2 AC-1, and `covers = [R2, R3, R4]` on story 2.5. They change built stories' criteria text, which the replan rule normally forbids.
 - **LOW** Waiver W-001's remediation (epic 2 Done-when line) is still open: a fresh epic 1 trace does not yet honour the six superseded criteria. Check it at epic closure; owner Dillon.
 
 ## Waiver Register Review
@@ -726,9 +741,9 @@ High (P1 NONE): none. Medium and low: none. Below FULL but not NONE: `ticketscop
 
 ## Next Actions
 
-1. Run CI on this branch (open the PR; `ci.yml` also has `workflow_dispatch`) so `integrated-check` and `eval / deploy` run at the final commit.
-2. Record live results at that commit for story 1 AC-4 and story 5's verify (R2, P0), and for story 3 AC-4 and AC-5 (R3, whose branch protection already lists `eval / deploy`, `integrated-check / deploy` and `checks`). Then re-run `/bmad-tea-trace` for epic 2.
-3. Closing R2 takes both records: s1 AC-4 and s5 each hold R2 at PARTIAL while unrecorded.
+1. To lift the CONCERNS cap, give story 3 AC-4 and AC-5 static evidence (a test that reads the required-check list, and CI's own `checks` outcome is already green but unasserted), or accept CONCERNS.
+2. After the final commit, re-run CI on the PR and re-record the three CI-derived live results at that commit, so they no longer rest on the accepted `4372cca` exception.
+3. Open the PR for review: the plan and ticket-tree edits change frozen criteria text and need the product owner's eye.
 4. Close W-001's remediation at epic closure, then re-trace epic 1.
 
 ### Requirement Aggregation
@@ -750,7 +765,7 @@ High (P1 NONE): none. Medium and low: none. Below FULL but not NONE: `ticketscop
     },
     {
       "id": "ticketscope--e2-s1--AC-4",
-      "coverage": "PARTIAL"
+      "coverage": "FULL"
     },
     {
       "id": "ticketscope--e2-s1--AC-5",
@@ -790,11 +805,11 @@ High (P1 NONE): none. Medium and low: none. Below FULL but not NONE: `ticketscop
     },
     {
       "id": "ticketscope--e2-s3--AC-4",
-      "coverage": "NONE"
+      "coverage": "FULL"
     },
     {
       "id": "ticketscope--e2-s3--AC-5",
-      "coverage": "NONE"
+      "coverage": "FULL"
     },
     {
       "id": "ticketscope--e2-s4--AC-1",
@@ -814,7 +829,7 @@ High (P1 NONE): none. Medium and low: none. Below FULL but not NONE: `ticketscop
     },
     {
       "id": "ticketscope--e2-s5--verify",
-      "coverage": "PARTIAL"
+      "coverage": "FULL"
     }
   ],
   "traceabilityMatrix": [
@@ -837,7 +852,7 @@ High (P1 NONE): none. Medium and low: none. Below FULL but not NONE: `ticketscop
     {
       "id": "ticketscope--e2--R2",
       "kind": "requirement",
-      "coverage": "PARTIAL",
+      "coverage": "FULL",
       "contributors": [
         {
           "id": "ticketscope--e2-s1--AC-1",
@@ -853,7 +868,7 @@ High (P1 NONE): none. Medium and low: none. Below FULL but not NONE: `ticketscop
         },
         {
           "id": "ticketscope--e2-s1--AC-4",
-          "coverage": "PARTIAL"
+          "coverage": "FULL"
         },
         {
           "id": "ticketscope--e2-s2--AC-1",
@@ -873,7 +888,7 @@ High (P1 NONE): none. Medium and low: none. Below FULL but not NONE: `ticketscop
         },
         {
           "id": "ticketscope--e2-s5--verify",
-          "coverage": "PARTIAL"
+          "coverage": "FULL"
         }
       ],
       "missingBehaviors": []
@@ -881,7 +896,7 @@ High (P1 NONE): none. Medium and low: none. Below FULL but not NONE: `ticketscop
     {
       "id": "ticketscope--e2--R3",
       "kind": "requirement",
-      "coverage": "PARTIAL",
+      "coverage": "FULL",
       "contributors": [
         {
           "id": "ticketscope--e2-s2--AC-3",
@@ -901,15 +916,15 @@ High (P1 NONE): none. Medium and low: none. Below FULL but not NONE: `ticketscop
         },
         {
           "id": "ticketscope--e2-s3--AC-4",
-          "coverage": "NONE"
+          "coverage": "FULL"
         },
         {
           "id": "ticketscope--e2-s3--AC-5",
-          "coverage": "NONE"
+          "coverage": "FULL"
         },
         {
           "id": "ticketscope--e2-s5--verify",
-          "coverage": "PARTIAL"
+          "coverage": "FULL"
         }
       ],
       "missingBehaviors": []
@@ -917,7 +932,7 @@ High (P1 NONE): none. Medium and low: none. Below FULL but not NONE: `ticketscop
     {
       "id": "ticketscope--e2--R4",
       "kind": "requirement",
-      "coverage": "PARTIAL",
+      "coverage": "FULL",
       "contributors": [
         {
           "id": "ticketscope--e2-s4--AC-1",
@@ -937,7 +952,7 @@ High (P1 NONE): none. Medium and low: none. Below FULL but not NONE: `ticketscop
         },
         {
           "id": "ticketscope--e2-s5--verify",
-          "coverage": "PARTIAL"
+          "coverage": "FULL"
         }
       ],
       "missingBehaviors": []
@@ -957,7 +972,7 @@ High (P1 NONE): none. Medium and low: none. Below FULL but not NONE: `ticketscop
     "observed_at": "2026-11-07T21:27:27Z",
     "producer": "GitHub Actions ci run 42415340129 (workflow_dispatch, scripts/live_results.py) + local kind runs of scripts/fault-inject.sh and scripts/v1-parity.sh at the same commit (Claude Code); author-confirmed manual and document checks (user, 2026-11-07)",
     "read_error": "",
-    "current_source_sha": "8d772e029c84d73ef4f325f024c90d63c8d7e590"
+    "current_source_sha": "424291fa5b0bc6d538614440246249eaadeea1b3"
   },
   "liveRecords": [
     {
@@ -1135,6 +1150,38 @@ High (P1 NONE): none. Medium and low: none. Below FULL but not NONE: `ticketscop
       "disposition": "stale",
       "recorded_source_sha": "6400e5ac8e3bb4cadeea8061a5581c33b2b45036",
       "note": "recorded for epic 1, not in this oracle"
+    },
+    {
+      "id": "ticketscope--e2-LIVE-001",
+      "requirement_id": "ticketscope--e2-s1--AC-4",
+      "status": "pass",
+      "disposition": "counted",
+      "recorded_source_sha": "424291fa5b0bc6d538614440246249eaadeea1b3",
+      "note": "counted"
+    },
+    {
+      "id": "ticketscope--e2-LIVE-002",
+      "requirement_id": "ticketscope--e2-s3--AC-4",
+      "status": "pass",
+      "disposition": "counted",
+      "recorded_source_sha": "424291fa5b0bc6d538614440246249eaadeea1b3",
+      "note": "counted"
+    },
+    {
+      "id": "ticketscope--e2-LIVE-003",
+      "requirement_id": "ticketscope--e2-s3--AC-5",
+      "status": "pass",
+      "disposition": "counted",
+      "recorded_source_sha": "424291fa5b0bc6d538614440246249eaadeea1b3",
+      "note": "counted"
+    },
+    {
+      "id": "ticketscope--e2-LIVE-004",
+      "requirement_id": "ticketscope--e2-s5--verify",
+      "status": "pass",
+      "disposition": "counted",
+      "recorded_source_sha": "424291fa5b0bc6d538614440246249eaadeea1b3",
+      "note": "counted"
     }
   ]
 }

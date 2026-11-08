@@ -157,6 +157,42 @@
       "title": "Grafana Explore shows the same span tree for the smoke trace (manual, human-visual)",
       "status": "pass",
       "evidence": "Author confirmed in Grafana Explore (Tempo datasource, port-forwarded) that the trace shows the ticketscope-api SERVER -> retrieval keyword -> db query span tree. Confirmed by the author (user) on 2026-11-07: \"Did Explore show ticketscope-api SERVER -> retrieval keyword -> db query spans for that trace id?\" \u2014 approved."
+    },
+    {
+      "id": "ticketscope--e2-LIVE-001",
+      "requirement_id": "ticketscope--e2-s1--AC-4",
+      "title": "PR ci.yml: integrated-check passes on the changed reusable workflow",
+      "status": "pass",
+      "evidence": "https://github.com/Dillon-Based/ticketscope/actions/runs/42532155240 - integrated-check / deploy success (6m28s); also eval / deploy success in https://github.com/Dillon-Based/ticketscope/actions/runs/42532155256. Observed at 4372cca (PR #31 head), whose tree is identical to main 3fe91b2; recorded against the commit under trace by the user's explicit acceptance (2026-11-08, 'option 2'): this branch adds only tests and ticket-tree text, no product code.",
+      "observed_at": "2026-11-08T23:37:00+00:00",
+      "source_sha": "424291fa5b0bc6d538614440246249eaadeea1b3"
+    },
+    {
+      "id": "ticketscope--e2-LIVE-002",
+      "requirement_id": "ticketscope--e2-s3--AC-4",
+      "title": "ruff, pyright, lint-imports and pytest tests/unit pass",
+      "status": "pass",
+      "evidence": "https://github.com/Dillon-Based/ticketscope/actions/runs/42532155240 - checks job success; local run at the branch: ruff clean, pyright 0 errors, lint-imports 7 kept 0 broken, pytest tests/unit 895 passed 17 skipped. Observed at 4372cca (PR #31 head), whose tree is identical to main 3fe91b2; recorded against the commit under trace by the user's explicit acceptance (2026-11-08, 'option 2'): this branch adds only tests and ticket-tree text, no product code.",
+      "observed_at": "2026-11-08T23:37:00+00:00",
+      "source_sha": "424291fa5b0bc6d538614440246249eaadeea1b3"
+    },
+    {
+      "id": "ticketscope--e2-LIVE-003",
+      "requirement_id": "ticketscope--e2-s3--AC-5",
+      "title": "eval is a required check in branch protection on main",
+      "status": "pass",
+      "evidence": "gh api repos/Dillon-Based/ticketscope/branches/main/protection: required_status_checks.contexts = [checks, integrated-check / deploy, eval / deploy], read on 2026-11-08. Observed against the live repository setting, not a commit.",
+      "observed_at": "2026-11-08T23:37:00+00:00",
+      "source_sha": "424291fa5b0bc6d538614440246249eaadeea1b3"
+    },
+    {
+      "id": "ticketscope--e2-LIVE-004",
+      "requirement_id": "ticketscope--e2-s5--verify",
+      "title": "PR eval check passes with baseline unchanged, ci.yml and integrated-check pass, import-linter keeps every contract",
+      "status": "pass",
+      "evidence": "https://github.com/Dillon-Based/ticketscope/actions/runs/42532155256 - eval / deploy success (12m33s); https://github.com/Dillon-Based/ticketscope/actions/runs/42532155240 - checks, charts, integrated-check / deploy success; git diff d2313e9 3fe91b2 -- eval/baseline.json is empty; lint-imports 7 kept 0 broken. Observed at 4372cca (PR #31 head), whose tree is identical to main 3fe91b2; recorded against the commit under trace by the user's explicit acceptance (2026-11-08, 'option 2'): this branch adds only tests and ticket-tree text, no product code.",
+      "observed_at": "2026-11-08T23:37:00+00:00",
+      "source_sha": "424291fa5b0bc6d538614440246249eaadeea1b3"
     }
   ]
 }

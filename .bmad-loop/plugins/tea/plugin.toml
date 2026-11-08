@@ -28,6 +28,10 @@
 #   CONCERNS  -> at most `accepted-with-open-items`, concerns as action items.
 #   PASS / WAIVED -> no constraint.
 #
+# After the retrospective session, the plugin commits any gate report still dirty
+# under test_artifacts itself (on_post_session), before bmad-loop's dirty check:
+# on epic 1 the session left three reports uncommitted and the run paused.
+#
 # Requirements:
 #   * [gates] retrospective = "auto" in .bmad-loop/policy.toml (validated).
 #   * bmad-retrospective in the retro adapter's project skill tree
@@ -41,7 +45,7 @@
 
 [plugin]
 name = "tea"
-version = "2.0.0"
+version = "2.1.0"
 api_version = 1
 description = "BMAD v7 Test Architect: automate tests per ticket; test review, NFR and trace as the release gate at each epic's retrospective."
 author = "ticketscope"

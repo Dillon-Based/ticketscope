@@ -5,9 +5,10 @@
 #   scripts/loop-story-pr.sh 2.1            # epic taken from the ref's epic id
 #   NO_MERGE=1 scripts/loop-story-pr.sh 2.1 # stop after CI is green; merge by hand
 #
-# Needs: bmad-loop with [scm] isolation = "worktree" (the story builds in its own
-# worktree and is merged into the branch checked out here), gh authenticated, and
-# branch protection on main requiring the CI checks.
+# Needs: a clean main checkout, bmad-loop with [scm] isolation = "none" (the loop
+# builds in place on the story branch this script creates; worktree mode would
+# need a Codex trust grant per worktree for the review sessions), gh
+# authenticated, and branch protection on main requiring the CI checks.
 set -euo pipefail
 
 ref="${1:?usage: $0 <ticket ref, e.g. 2.1>}"

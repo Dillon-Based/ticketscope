@@ -4,7 +4,7 @@ title: "Retrieval is scored on every PR and regressions block the merge"
 parent: initiative-ticketscope
 covers: [R6, R7]
 sources: []
-companions: []
+companions: [_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/test-design-epic-2.md]
 after: []
 refined: true
 risk: high
@@ -35,10 +35,12 @@ A reviewer sees retrieval scores that CI produced on labelled data, and a regres
 
 ## Constraints
 
-- **Hit definition:** a query's relevant set is its duplicate cluster, the connected component over in-subset duplicate links, minus the query itself. Recall@k counts a hit when any member is in the top k. MRR@10 uses the first member's rank, and 0 past 10. The query issue is excluded from its own results (core's `Retriever.search` takes `exclude`).
-- **Queries:** one query per in-subset duplicate link, from its duplicate side; 10,473 on snapshot 2026.11.1 (10,164 short, 309 log-heavy). The full set is scored on every PR.
+- **Hit definition:** a query's relevant set is its duplicate cluster, the connected component over every in-subset `duplicate_links` entry of every issue, in both directions, minus the query itself. Recall@k counts a hit when any member is in the top k. MRR@10 uses the first member's rank, and 0 past 10. Overall metrics are computed over all queries, not as the mean of the two kind means. The query issue is excluded from its own results (core's `Retriever.search` takes `exclude`).
+- **Queries:** one pair per duplicate issue whose `core.duplicate_target` is in the snapshot, counted under the duplicate issue's kind (spine AD-26); 10,473 on snapshot 2026.11.1 (10,164 short, 309 log-heavy), matching the Release notes. The full set is scored on every PR.
 - **Metrics:** Recall@10 and MRR@10 are gated; Recall@1 and Recall@5 are reported, not gated. p95 latency is reported and never gated (spine AD-12).
-- **Gate tolerance:** 0.005 absolute, per metric, per mode, per ticket kind.
+- **Gate tolerance:** 0.005 absolute, per metric, per mode, per ticket kind, inclusive: a drop of exactly 0.005 passes.
+- **Mode-set changes:** a gated mode missing from the run fails unless the same diff updates the baseline; a mode new to the run passes and is reported.
+- **Baseline provenance:** a changed `eval/baseline.json` must equal the PR's own CI results within the tolerance, so the baseline and README only carry numbers a CI run produced.
 - **Baseline lineage:** `eval/baseline.json` records the snapshot version, the embedding model id and the preprocessing version. A PR that changes any of them, or intentionally moves scores, updates it in the same diff (spine AD-12).
 - **Kind floor:** a change to the kind threshold reports the pairs by kind. Below about 200 log-heavy pairs, the change needs the author's decision before it merges (spine AD-12).
 - **Determinism:** pair derivation is a pure core function of the snapshot; the same snapshot always yields the same file.
@@ -62,7 +64,8 @@ A reviewer sees retrieval scores that CI produced on labelled data, and a regres
 ## References
 
 - parent — _bmad-output/initiative-ticketscope/initiative-ticketscope.md, section Requirements (R6, R7)
-- architecture spine — _bmad-output/initiative-ticketscope/architecture-ticketscope/architecture-ticketscope.md, AD-1, AD-2, AD-4, AD-6, AD-7, AD-8, AD-12, AD-17, AD-19, AD-22
+- architecture spine — _bmad-output/initiative-ticketscope/architecture-ticketscope/architecture-ticketscope.md, AD-1, AD-2, AD-4, AD-6, AD-7, AD-8, AD-12, AD-17, AD-19, AD-21, AD-22, AD-26
+- test design — _bmad-output/initiative-ticketscope/tickets/epic-eval-gate/test-design-epic-2.md, Test Coverage Plan (the Owner column names the story that writes each test), Independent Oracles, Risk Assessment (R-001, R-003, R-005)
 
 ## Notes
 
@@ -85,3 +88,8 @@ A reviewer sees retrieval scores that CI produced on labelled data, and a regres
 - Decision: No separate closing integrated-check story. `eval.yml` on kind is this epic's integrated check, and every story keeps ci.yml's integrated-check passing (user, 2026-11-08).
 - Decision: Waiver W-001's remediation is checked at this epic's closure; owner Dillon, per the waiver (user, 2026-11-08).
 - Decision: Story 1 is likely over 800 added lines. It is flagged for the independent review rather than split further (epic-search-baseline retro, finding Z4) (user, 2026-11-08).
+- Decision: The TEA test design `test-design-epic-2.md` is adopted as a companion (PR #21). Each story writes the tests the design assigns it, and its Proposed Story Updates are applied to stories 1–5 (user, 2026-11-08).
+- Decision: The pair rule follows spine AD-26: one pair per duplicate issue whose `core.duplicate_target` is in the snapshot. The earlier "one query per in-subset duplicate link" wording contradicted AD-26 and is replaced. The counts are unchanged (test design C-1; user, 2026-11-08).
+- Decision: The test design's clarifications are settled as stated. The cluster uses every in-subset link in both directions (C-2). A missing gated mode fails unless the same diff updates the baseline, and a new mode passes and is reported (C-3). The tolerance is inclusive (C-4). README numbers use three fixed decimals (C-5) (user, 2026-11-08).
+- Decision: A changed `eval/baseline.json` must equal the PR's own CI results within the tolerance (test design R-004) (user, 2026-11-08).
+- Decision: Before story 1's build, a `bmad-tea-automate` red-mode session commits the hand-computed oracle fixture and failing P0 tests; before story 2's build, it adds the cluster oracle. The independent review on story 1 checks that the oracle fixture is unchanged since its red commit (test design R-005) (user, 2026-11-08).

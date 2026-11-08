@@ -75,5 +75,13 @@ A reviewer sees retrieval scores that CI produced on labelled data, and a regres
 - Decision: Waiver W-001's remediation is a Done when line, made as a ticket-tree and TEA tooling change outside the build loop, not a product story (user, 2026-11-08).
 - Decision: Stories land through a branch and a PR each, so the required check gates them. PR #20 merges before the epic starts (user, 2026-11-08; epic-search-baseline retro actions 6 and 11).
 - Decision: Every story's verify names the R ids it proves (epic-search-baseline retro action 7; user, 2026-11-08).
-- Assumption: The query text is the query issue's title and description, the text a triage engineer would paste; comments are left out.
-- Assumption: The README table is rendered from the committed `eval/baseline.json`, which is the CI results artifact committed by a baseline update. The README check compares against that render.
+- Decision (was an assumption, confirmed by user 2026-11-08): The query text is the query issue's title and description, the text a triage engineer would paste; comments are left out.
+- Decision (was an assumption, confirmed by user 2026-11-08): The README table is rendered from the committed `eval/baseline.json`, which is the CI results artifact committed by a baseline update. The README check compares against that render.
+- Decision: Stories planned (5 entries). Story 1, "Tracer: keyword is scored on kind and CI uploads the results", is the tracer bullet: snapshot to pairs, then the eval Job on kind, then eval.yml's artifact. The stories run in one lane, because each touches jobs.eval, the eval Job or eval.yml. The refactor sweep closes the epic (user, 2026-11-08).
+- Decision: Story 1 scores against the linked target only. Story 2 replaces that with the Hit definition's cluster relevance, so the Hit definition binds from story 2 onward (user, 2026-11-08).
+- Decision: The gate (story 3) is the least certain story, but it needs story 2's per-kind metrics, so story 2 stays second (user, 2026-11-08).
+- Decision: Kind floor: the gate fails below 200 log-heavy pairs unless `eval/baseline.json` carries a `kind_floor_decision` with the author's dated reason (user, 2026-11-08).
+- Decision: `eval/baseline.json` is the full CI results JSON, so it carries lineage and every reported metric for the README table (user, 2026-11-08).
+- Decision: No separate closing integrated-check story. `eval.yml` on kind is this epic's integrated check, and every story keeps ci.yml's integrated-check passing (user, 2026-11-08).
+- Decision: Waiver W-001's remediation is checked at this epic's closure; owner Dillon, per the waiver (user, 2026-11-08).
+- Decision: Story 1 is likely over 800 added lines. It is flagged for the independent review rather than split further (epic-search-baseline retro, finding Z4) (user, 2026-11-08).

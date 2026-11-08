@@ -23,3 +23,17 @@ A published snapshot is never overwritten: each run publishes the next version. 
 2. runs `scripts/publish-snapshot.sh`, which publishes a new version without the issue;
 3. opens a pull request that bumps `snapshot.version` and `snapshot.sha256` in [`deploy/charts/ticketscope/values.yaml`](deploy/charts/ticketscope/values.yaml) to the new Release, so every environment loads it;
 4. deletes the assets of the earlier Releases that hold the issue. This is the one exception to "never overwritten", and a person does it by hand.
+
+## Retrieval results
+
+This table is generated from `eval/baseline.json` by `scripts/render_readme_table.py` and is not edited by hand.
+
+<!-- eval-results:start -->
+Snapshot version: 2026.11.1
+
+| Mode | Kind | Pairs | Recall@1 | Recall@5 | Recall@10 | MRR@10 | p95 ms |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| keyword | short | 10164 | 0.439 | 0.692 | 0.769 | 0.547 | 21.278 |
+| keyword | log_heavy | 309 | 0.605 | 0.780 | 0.822 | 0.679 | 70.917 |
+| keyword | overall | 10473 | 0.444 | 0.695 | 0.771 | 0.550 | 22.567 |
+<!-- eval-results:end -->

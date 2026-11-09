@@ -117,6 +117,9 @@ jobs:
           docker build --platform ${{ matrix.platform }}
           -f images/postgres.Dockerfile -t ticketscope-postgres:18-${{ github.sha }} .
 
+  # Once a person merges the embeddings pin (values.yaml embeddings.assetVersion and sha256),
+  # kind-up's load downloads that Release asset and bulk-loads it, and the dense checks in
+  # tests/integrated run on their own: issue_embedding holds one row per issue, nothing computed.
   integrated-check:
     # One kind cluster per PR. The integrated suite runs first, on the freshly deployed
     # state, before smoke's upgrades and forced reloads.

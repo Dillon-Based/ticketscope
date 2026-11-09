@@ -36,12 +36,21 @@ telemetry:
   recordQueryText: false
 
 # Embeddings (AD-21). `modelId` names the model baked into the app image; it equals the
-# Dockerfile's EMBEDDING_MODEL_ID. Only kind computes them, and only when computeOnKind is
-# true: then api and load get the model id and load computes the vectors. Off, no model env
-# is set, api is Ready on a keyword-only corpus and dense is unavailable.
+# Dockerfile's EMBEDDING_MODEL_ID. Two sources, and a pinned asset always wins:
+#   - assetVersion and sha256 pin the embedding asset, a `embeddings-<assetVersion>-<model>-
+#     <preprocessing>` Release that scripts/publish-snapshot.sh builds from the pinned
+#     snapshot. load downloads it, checks the checksum and loads the vectors; it computes
+#     nothing. assetVersion is the snapshot version the asset was built from and must equal
+#     snapshot.version. Both are set here only (AD-25), by a person, after publishing.
+#   - with no pin, computeOnKind true makes load compute them with the baked model (kind
+#     only, scripts/kind-up.sh EMBEDDINGS_COMPUTE=1).
+# With neither, no model env is set, api is Ready on a keyword-only corpus and dense is
+# unavailable.
 embeddings:
   computeOnKind: false
   modelId: "BAAI/bge-small-en-v1.5"
+  assetVersion: ""
+  sha256: ""
   # The load Job's memory limit when it computes embeddings (jobs.resources otherwise).
   loadMemoryLimit: 2Gi
 

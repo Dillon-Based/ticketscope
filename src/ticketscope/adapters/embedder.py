@@ -5,6 +5,7 @@ offline). `core` never imports this: the `embeddings {model}` span is emitted he
 AD-10).
 """
 
+import hashlib
 from collections.abc import Iterable, Sequence
 from pathlib import Path
 from threading import Lock
@@ -54,3 +55,34 @@ class TracedEmbedder:
     def embed(self, texts: Sequence[str]) -> list[list[float]]:
         with telemetry.embeddings_span(self._tracer, self.model_id):
             return self._inner.embed(texts)
+
+
+def model_file_sha256(model_id: str, cache_dir: Path) -> str:
+    """SHA-256 of the ONNX file fastembed loads for `model_id` from `cache_dir`.
+
+    The embedding asset's manifest records it beside the model id: fastembed ships its own
+    export, so a revision change moves the vectors under the same id (test design C-7).
+    """
+    from fastembed import TextEmbedding  # pyright: ignore[reportMissingTypeStubs]
+
+    factory = cast(Any, TextEmbedding)
+    supported = cast(list[dict[str, Any]], factory.list_supported_models())
+    entry = next((m for m in supported if m.get("model") == model_id), None)
+    if entry is None:
+        raise ValueError(f"fastembed does not list the model {model_id!r}")
+    file_name = Path(str(entry["model_file"])).name
+    hf_repo = str(cast(dict[str, Any], entry.get("sources") or {}).get("hf") or "")
+    repo_dir = f"models--{hf_repo.replace('/', '--')}" if hf_repo else ""
+    # Several models share a file name; only a path under this model's own repo directory counts.
+    found = sorted(
+        p
+        for p in cache_dir.rglob(file_name)
+        if p.is_file() and (not repo_dir or repo_dir in p.parts)
+    )
+    if not found:
+        raise FileNotFoundError(f"no {file_name} for {model_id} under {cache_dir}")
+    digest = hashlib.sha256()
+    with found[0].open("rb") as f:
+        while chunk := f.read(1 << 20):
+            digest.update(chunk)
+    return digest.hexdigest()

@@ -11,6 +11,11 @@
 # ticketscope_ro role as CNPG would, runs migrate, then times load.
 # Logs go to stderr; the last line on stdout is the load time in seconds.
 #
+# With EMBEDDINGS_FILE (a file in <snapshot-dir> named as the embedding asset is) and
+# EMBEDDING_MODEL_ID, load also takes the pinned embedding asset: it is served from
+# 127.0.0.1 and downloaded by load as from a Release, so the time covers the asset
+# download, its checksum, and the bulk load of the vectors (story 4).
+#
 # Env overrides:
 #   POSTGRES_IMAGE  image to run (default: ticketscope-postgres:18-local, built
 #                   from images/postgres.Dockerfile if missing)
@@ -31,6 +36,17 @@ else
   SHA256="$(shasum -a 256 "$ASSET" | cut -d' ' -f1)"
 fi
 
+EMBEDDINGS_FILE="${EMBEDDINGS_FILE:-}"
+if [[ -n "$EMBEDDINGS_FILE" ]]; then
+  [[ -f "${SNAPSHOT_DIR}/${EMBEDDINGS_FILE}" ]] || { echo "missing ${EMBEDDINGS_FILE}" >&2; exit 2; }
+  [[ -n "${EMBEDDING_MODEL_ID:-}" ]] || { echo "EMBEDDING_MODEL_ID is required" >&2; exit 2; }
+  if command -v sha256sum >/dev/null; then
+    EMB_SHA256="$(sha256sum "${SNAPSHOT_DIR}/${EMBEDDINGS_FILE}" | cut -d' ' -f1)"
+  else
+    EMB_SHA256="$(shasum -a 256 "${SNAPSHOT_DIR}/${EMBEDDINGS_FILE}" | cut -d' ' -f1)"
+  fi
+fi
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
@@ -47,7 +63,13 @@ if ! docker image inspect "$POSTGRES_IMAGE" >/dev/null 2>&1; then
   docker build -f images/postgres.Dockerfile -t "$POSTGRES_IMAGE" . >&2
 fi
 
-cleanup() { docker rm -f "$CONTAINER" >/dev/null 2>&1 || true; }
+WORK=""
+SERVER_PID=""
+cleanup() {
+  docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
+  if [[ -n "$SERVER_PID" ]]; then kill "$SERVER_PID" 2>/dev/null || true; fi
+  if [[ -n "$WORK" ]]; then rm -rf "$WORK"; fi
+}
 trap cleanup EXIT
 
 log "starting ${POSTGRES_IMAGE}"
@@ -87,6 +109,31 @@ export TICKETSCOPE_MIGRATIONS_DIR="${ROOT}/migrations"
 export TICKETSCOPE_SNAPSHOT_DIR="$SNAPSHOT_DIR"
 export TICKETSCOPE_SNAPSHOT_VERSION="$VERSION"
 export TICKETSCOPE_SNAPSHOT_SHA256="$SHA256"
+
+if [[ -n "$EMBEDDINGS_FILE" ]]; then
+  # load finds the snapshot locally and downloads the embedding asset from a loopback
+  # server laid out as a Release is: <tag>/<asset>.
+  WORK="$(mktemp -d)"
+  mkdir -p "${WORK}/snapshots" "${WORK}/serve/${EMBEDDINGS_FILE%.jsonl.gz}"
+  cp "$ASSET" "${WORK}/snapshots/"
+  ln -s "${SNAPSHOT_DIR}/${EMBEDDINGS_FILE}" "${WORK}/serve/${EMBEDDINGS_FILE%.jsonl.gz}/${EMBEDDINGS_FILE}"
+  python3 -u -m http.server 0 --bind 127.0.0.1 --directory "${WORK}/serve" \
+    >"${WORK}/server.log" 2>&1 &
+  SERVER_PID=$!
+  disown "$SERVER_PID" 2>/dev/null || true
+  for _ in $(seq 1 50); do
+    grep -q "port" "${WORK}/server.log" 2>/dev/null && break
+    sleep 0.2
+  done
+  SERVE_PORT="$(sed -n 's/.*port \([0-9][0-9]*\).*/\1/p' "${WORK}/server.log" | head -n1)"
+  [[ -n "$SERVE_PORT" ]] || { echo "asset server did not start" >&2; exit 1; }
+  export TICKETSCOPE_SNAPSHOT_DIR="${WORK}/snapshots"
+  export TICKETSCOPE_SNAPSHOT_BASE_URL="http://127.0.0.1:${SERVE_PORT}"
+  export TICKETSCOPE_EMBEDDING_MODEL_ID="$EMBEDDING_MODEL_ID"
+  export TICKETSCOPE_EMBEDDINGS_ASSET_VERSION="$VERSION"
+  export TICKETSCOPE_EMBEDDINGS_SHA256="$EMB_SHA256"
+  log "embeddings: ${EMBEDDINGS_FILE} served on 127.0.0.1:${SERVE_PORT}"
+fi
 
 log "migrate"
 $RUN ticketscope-migrate >&2

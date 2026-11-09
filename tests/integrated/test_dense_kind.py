@@ -1,7 +1,9 @@
-"""Opt-in tracer checks: TICKETSCOPE_DENSE_ENABLED=1 (or 0 after flag-off kind-up).
+"""Dense checks on kind. They run when values.yaml pins an embedding asset (then `load` has
+bulk-loaded it and computed nothing), or when TICKETSCOPE_DENSE_ENABLED is 1 (local
+computeOnKind) or 0 (flag-off kind-up). With no pin and no variable they skip, as keyword-only
+CI does before a person merges the pin.
 
-Run with -m kind and Gateway environment variables. Default keyword-only CI skips
-these checks; local embeddings-on runs exercise the real baked model and Tempo.
+Run with -m kind and Gateway environment variables.
 """
 
 import json
@@ -13,14 +15,24 @@ import httpx2
 import pytest
 
 from tests.smoke.test_gateway import _gateway, _kubectl, _spans, _sql, _tempo
+from tests.target import embeddings_pin
 from tests.waiting import eventually
 from ticketscope.contract.search import SearchResponse
+
+PINNED = bool(embeddings_pin()["assetVersion"])
+
+
+def _dense_enabled() -> bool:
+    if PINNED:  # a pinned asset always wins in the chart, whatever the flag says
+        return True
+    return os.environ.get("TICKETSCOPE_DENSE_ENABLED") == "1"
+
 
 pytestmark = [
     pytest.mark.kind,
     pytest.mark.skipif(
-        os.environ.get("TICKETSCOPE_DENSE_ENABLED") not in {"0", "1"},
-        reason="set TICKETSCOPE_DENSE_ENABLED to the deployed computeOnKind flag",
+        not PINNED and os.environ.get("TICKETSCOPE_DENSE_ENABLED") not in {"0", "1"},
+        reason="no embeddings pin in values.yaml; set TICKETSCOPE_DENSE_ENABLED to the flag",
     ),
 ]
 
@@ -44,7 +56,7 @@ def test_dense_gateway_queries_and_tempo(query: str) -> None:
         headers={"Host": host, "traceparent": f"00-{trace_id}-{secrets.token_hex(8)}-01"},
         timeout=60,
     )
-    if os.environ["TICKETSCOPE_DENSE_ENABLED"] == "0":
+    if not _dense_enabled():
         assert response.status_code == 503, response.text
         assert response.headers["content-type"].startswith("application/problem+json")
         assert "not available" in response.json()["detail"]
@@ -84,7 +96,7 @@ def test_dense_gateway_queries_and_tempo(query: str) -> None:
 
 
 def test_concurrent_dense_requests() -> None:
-    if os.environ["TICKETSCOPE_DENSE_ENABLED"] == "0":
+    if not _dense_enabled():
         pytest.skip("concurrent inference needs computeOnKind")
     url, host = _gateway()
 
@@ -107,7 +119,7 @@ def test_concurrent_dense_requests() -> None:
 
 
 def test_dense_corpus_readiness_and_api_budget() -> None:
-    enabled = os.environ["TICKETSCOPE_DENSE_ENABLED"] == "1"
+    enabled = _dense_enabled()
     row = _sql(
         "SELECT (SELECT count(*) FROM issue),"
         " (SELECT count(*) FROM issue_embedding),"
@@ -117,6 +129,12 @@ def test_dense_corpus_readiness_and_api_budget() -> None:
     assert int(issues) > 0
     assert int(embeddings) == (int(issues) if enabled else 0)
     assert model == (MODEL if enabled else "")
+    if PINNED:
+        # The pinned asset was loaded; nothing was computed (the load report has no
+        # embedding_seconds, and the Job log has no model-load line).
+        log = _kubectl("logs", "job/ticketscope-load")
+        assert "embeddings_loaded=" in log or "no-op" in log, log[-2000:]
+        assert "embedding_seconds=" not in log
     deployment = json.loads(_kubectl("get", "deploy/ticketscope-api", "-o", "json"))
     container = deployment["spec"]["template"]["spec"]["containers"][0]
     assert container["resources"]["limits"]["memory"] == "384Mi"
@@ -165,7 +183,7 @@ def test_hybrid_gateway_queries_and_tempo(query: str) -> None:
         headers={"Host": host, "traceparent": f"00-{trace_id}-{secrets.token_hex(8)}-01"},
         timeout=60,
     )
-    if os.environ["TICKETSCOPE_DENSE_ENABLED"] == "0":
+    if not _dense_enabled():
         assert response.status_code == 503, response.text
         assert "not available" in response.json()["detail"]
         return

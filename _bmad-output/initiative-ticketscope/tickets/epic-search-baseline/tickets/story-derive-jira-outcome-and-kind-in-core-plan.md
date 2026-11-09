@@ -90,6 +90,8 @@ deferred:
 **Acceptance Criteria:**
 - Given the unit suite, when `uv run pytest tests/unit/test_derive_jira.py -v` runs, then one passing case exists per outcome class from a Jira resolution, an unmapped resolution reading unknown, an answered and a not-answered Question case, and kind cases with `{code}` and `{noformat}` blocks on either side of the threshold. (R2)
 - Given story 4's suite, when `uv run pytest tests/unit/test_derive.py` runs, then every GitHub-rule case still passes.
+
+**Superseded (waiver W-001, recorded 2026-11-09):** AC-2 above ('every GitHub-rule case still passes') was retired when the refactor sweep (story 10) removed that code. It is left as built, not rewritten. Register: `_bmad-output/test-artifacts/gate-waivers.md`.
 - Given the defaults, when `derivation_version()` is called, then it returns `kind2-t3.outcome3`, not story 4's `kind1-t3.outcome2`. (R2)
 
 ## Implementation Notes

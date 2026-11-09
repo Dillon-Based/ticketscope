@@ -121,3 +121,9 @@ F1 is carried as the open item, which matches how epic 1 was closed. Closing the
 ## Open questions
 
 - Does R3 mean "blocks everyone" or "blocks non-admin merges"? (F7)
+
+## Follow-up applied after the retro (2026-11-09, Sofia)
+
+- **Action 2 done (F4):** the 2.5 plan content now lives in `tickets/story-refactor-sweep-plan.md` with `status: done`; `plan-2-5-refactor-sweep.md` is removed.
+- **Action 1 half done (F1):** each of the six superseded criteria now carries a dated "Superseded (waiver W-001)" note in the epic 1 plans for 1.3 (AC-1..3), 1.4 (AC-1..2) and 1.14 (AC-2). The criterion text is untouched. **Still open:** the fresh epic 1 trace that honours the notes is TEA's (`bmad-tea-trace`, gate type `epic`); until it runs, the epic 1 gate stays `WAIVED`.
+- Not mine to change, still open: actions 3, 4, 5, 7 (Dillon / the loop config) and 6 (template change, toolsmith).

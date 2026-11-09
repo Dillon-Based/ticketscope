@@ -31,7 +31,7 @@ from tests import eval_oracle as oracle
 from ticketscope.core import modes
 from ticketscope.core.fakes import InMemoryCorpusStore
 from ticketscope.core.model import IssueRecord, Scored
-from ticketscope.core.ports import CorpusStore, Retriever
+from ticketscope.core.ports import CorpusStore, Embedder, Retriever
 
 KINDS = ("short", "log_heavy", "overall")
 METRICS = ("recall@1", "recall@5", "recall@10", "mrr@10")
@@ -93,10 +93,10 @@ class ScriptedRetriever:
 
 
 def _scripted_keyword(rankings: Mapping[int, tuple[int, ...]], calls: list[Call]) -> modes.Mode:
-    def build(_store: CorpusStore) -> Retriever:
+    def build(_store: CorpusStore, _embedder: Embedder | None) -> Retriever:
         return ScriptedRetriever(rankings, calls)
 
-    def available(_store: CorpusStore) -> bool:
+    def available(_store: CorpusStore, _embedder: Embedder | None) -> bool:
         return True
 
     return modes.Mode(name="keyword", score_kind="bm25", build=build, available=available)

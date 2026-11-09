@@ -18,6 +18,10 @@ KIND_RULE_VERSION = "kind2"
 OUTCOME_RULE_VERSION = "outcome3"
 # How `search_text` builds an issue's indexed text. Bump it when that changes.
 PREPROCESSING_RULE_VERSION = "pre1"
+# How `embedding_text` builds the text a model embeds. Bump it when that changes.
+EMBEDDING_RULE_VERSION = "emb1"
+# Embedding text is cut at this many characters; the model's token limit is the backstop.
+EMBEDDING_MAX_CHARS = 2000
 
 
 @dataclass(frozen=True, slots=True)
@@ -39,17 +43,34 @@ def derivation_version(threshold: int = DEFAULT_KIND_THRESHOLD) -> str:
     return f"{KIND_RULE_VERSION}-t{threshold}.{OUTCOME_RULE_VERSION}"
 
 
-def preprocessing_version() -> str:
+def preprocessing_version(embeddings: bool = False) -> str:
     """What `load` records in `corpus_meta`, e.g. `pre1.kind2-t3.outcome3` (AD-21).
 
     A change to the search text or to any derivation changes it, which forces a reload.
+    With `embeddings`, the embedding rule version is appended (`...outcome3.emb1`); without,
+    the string is the one keyword-only loads have always written.
     """
-    return f"{PREPROCESSING_RULE_VERSION}.{derivation_version()}"
+    base = f"{PREPROCESSING_RULE_VERSION}.{derivation_version()}"
+    return f"{base}.{EMBEDDING_RULE_VERSION}" if embeddings else base
 
 
 def search_text(issue: SnapshotIssueV2) -> str:
     """The text that keyword search ranks: the title, a blank line, then the body."""
     return f"{issue.title}\n\n{issue.body or ''}"
+
+
+def cut_for_embedding(text: str) -> str:
+    """The one cut documents and queries share: at most `EMBEDDING_MAX_CHARS` characters."""
+    return text[:EMBEDDING_MAX_CHARS]
+
+
+def embedding_text(title: str, body: str | None) -> str:
+    """The text a model embeds for an issue: the title, a blank line, then the body, cut.
+
+    A query goes through `cut_for_embedding` alone, so the same text embeds the same way
+    whether it is stored or searched.
+    """
+    return cut_for_embedding(f"{title}\n\n{body or ''}")
 
 
 # --- outcome -------------------------------------------------------------------------------

@@ -23,6 +23,13 @@ class Settings(BaseSettings):
     # Retrieval (AD-25: the chart's values.yaml sets the real default).
     default_mode: str = "keyword"
 
+    # Embeddings (AD-21). An empty model id means no embeddings: dense is unavailable.
+    # `embeddings_compute` lets `load` compute them (kind only; the chart sets it).
+    embedding_model_id: str = ""
+    embeddings_compute: bool = False
+    # Where the baked model lives; the runtime is offline (HF_HUB_OFFLINE=1).
+    embedding_cache_dir: Path = Path("/models")
+
     # Traces (AD-10): OTLP/HTTP base URL of the in-cluster collector; empty exports nothing.
     otlp_endpoint: str = ""
     # Query text goes on the retrieval span only when this is true.

@@ -6,6 +6,7 @@ field, including `exclude`, is ignored on the HTTP surface), a null issue body, 
 readiness 503 staying a plain body, and the keyword over-fetch arithmetic.
 """
 
+from collections.abc import Sequence
 from http import HTTPStatus
 from typing import Any
 
@@ -69,6 +70,15 @@ class _BrokenStore:
     def corpus_version(self) -> str | None:
         raise ConnectionError("database down at 10.0.0.5")
 
+    def dense_search(self, model_id: str, vector: Sequence[float], k: int) -> list[Scored]:
+        raise ConnectionError("database down at 10.0.0.5")
+
+    def has_embeddings(self, model_id: str) -> bool:
+        raise ConnectionError("database down at 10.0.0.5")
+
+    def embedding_model_id(self) -> str | None:
+        raise ConnectionError("database down at 10.0.0.5")
+
 
 def test_search_store_failure_is_a_500_problem_without_the_error_text() -> None:
     client = TestClient(
@@ -128,16 +138,16 @@ def test_a_json_array_body_is_422(client: TestClient) -> None:
 def test_unknown_mode_is_checked_before_the_corpus() -> None:
     # An empty store is not loaded (503), but an invalid request is still the caller's 422.
     client = TestClient(create_app(store=InMemoryCorpusStore(), settings=Settings()))
-    _problem(client.post("/v1/search", json=search_payload("x", mode="dense")), 422)
+    _problem(client.post("/v1/search", json=search_payload("x", mode="hybrid")), 422)
     _problem(client.post("/v1/search", json=search_payload("x", k=51)), 422)
 
 
 def test_a_server_default_outside_the_registry_is_a_422_problem(
     fixture_store: InMemoryCorpusStore,
 ) -> None:
-    client = TestClient(create_app(store=fixture_store, settings=Settings(default_mode="dense")))
+    client = TestClient(create_app(store=fixture_store, settings=Settings(default_mode="hybrid")))
     problem = _problem(client.post("/v1/search", json=search_payload(TARGET_QUERY)), 422)
-    assert problem.detail == "mode: unknown mode: dense"
+    assert problem.detail == "mode: unknown mode: hybrid"
 
 
 @pytest.mark.parametrize("number", [-1, 0, 2**40])
@@ -307,17 +317,17 @@ def test_exclude_never_returns_more_than_k() -> None:
 
 
 def test_keyword_retriever_satisfies_the_retriever_port() -> None:
-    retriever: Retriever = REGISTRY["keyword"].build(_spy(3))
+    retriever: Retriever = REGISTRY["keyword"].build(_spy(3), None)
     assert [h.issue.number for h in retriever.search("alpha", 2)] == [1, 2]
 
 
 def test_available_takes_a_store_and_is_true_for_an_empty_one() -> None:
-    assert REGISTRY["keyword"].available(InMemoryCorpusStore()) is True
+    assert REGISTRY["keyword"].available(InMemoryCorpusStore(), None) is True
 
 
 def test_the_registry_cannot_be_mutated() -> None:
     with pytest.raises(TypeError):
-        REGISTRY["dense"] = REGISTRY["keyword"]  # type: ignore[index]
+        REGISTRY["hybrid"] = REGISTRY["keyword"]  # type: ignore[index]
     with pytest.raises(AttributeError):
         REGISTRY["keyword"].name = "x"  # type: ignore[misc]
 

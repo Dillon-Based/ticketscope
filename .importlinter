@@ -49,6 +49,9 @@ forbidden_modules =
     ticketscope.jobs
     fastapi
     uvicorn
+# telemetry.instrument_app names FastAPI for type checking only; adapters never load it.
+ignore_imports =
+    ticketscope.telemetry -> fastapi
 
 [importlinter:contract:http]
 name = http imports core and contract, never adapters (composition root excepted) or jobs
@@ -61,6 +64,7 @@ forbidden_modules =
     psycopg
 ignore_imports =
     ticketscope.http.app -> ticketscope.adapters.postgres
+    ticketscope.http.app -> ticketscope.adapters.embedder
 
 [importlinter:contract:jobs]
 name = jobs import core, contract and driven adapters, never http

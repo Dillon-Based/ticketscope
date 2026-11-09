@@ -54,6 +54,25 @@ WHERE number = %(number)s
 """
 
 
+# Exact scan over one model's rows: `<=>` is cosine distance, so the score is `1 - distance`.
+# The vector travels as a text literal (no pgvector Python package).
+_DENSE_SQL = """
+SELECT i.number, i.title, i.url, i.kind, i.state,
+       i.outcome_status, i.outcome_summary, i.outcome_source, i.outcome_ref,
+       1 - (e.embedding <=> %(vector)s::vector) AS score
+FROM issue_embedding e
+JOIN issue i ON i.number = e.issue_number
+WHERE e.model_id = %(model)s
+ORDER BY e.embedding <=> %(vector)s::vector, i.number
+LIMIT %(k)s
+"""
+
+
+def vector_literal(vector: Sequence[float]) -> str:
+    """A pgvector text literal, e.g. `[0.1,0.2]`."""
+    return "[" + ",".join(repr(float(x)) for x in vector) + "]"
+
+
 def _issue_record(row: Sequence[Any]) -> IssueRecord:
     """The first nine columns of a `_KEYWORD_SQL` or `_ISSUE_SQL` row."""
     return IssueRecord(
@@ -91,6 +110,26 @@ class PostgresCorpusStore:
         with psycopg.connect(self._conninfo) as conn:
             row = conn.execute("SELECT snapshot_version FROM corpus_meta LIMIT 1").fetchone()
         return None if row is None else str(row[0])
+
+    def dense_search(self, model_id: str, vector: Sequence[float], k: int) -> list[Scored]:
+        if k <= 0:
+            return []
+        params = {"model": model_id, "vector": vector_literal(vector), "k": k}
+        with psycopg.connect(self._conninfo) as conn:
+            rows = conn.execute(_DENSE_SQL, params).fetchall()
+        return [Scored(issue=_issue_record(row), score=float(row[9])) for row in rows]
+
+    def has_embeddings(self, model_id: str) -> bool:
+        with psycopg.connect(self._conninfo) as conn:
+            row = conn.execute(
+                "SELECT EXISTS (SELECT 1 FROM issue_embedding WHERE model_id = %s)", (model_id,)
+            ).fetchone()
+        return bool(row and row[0])
+
+    def embedding_model_id(self) -> str | None:
+        with psycopg.connect(self._conninfo) as conn:
+            row = conn.execute("SELECT embedding_model_id FROM corpus_meta LIMIT 1").fetchone()
+        return None if row is None else _text(row[0])
 
 
 # --- job side: migrate and load connect as the app owner (AD-7) ---------------------
@@ -193,6 +232,18 @@ _COPY_SQL = (
 
 
 @dataclass(frozen=True, slots=True)
+class EmbeddingRow:
+    """One row of `issue_embedding` as `load` writes it."""
+
+    issue_number: int
+    model_id: str
+    vector: Sequence[float]
+
+
+_COPY_EMBEDDING_SQL = "COPY issue_embedding (issue_number, model_id, embedding) FROM STDIN"
+
+
+@dataclass(frozen=True, slots=True)
 class CorpusMeta:
     """The single `corpus_meta` row's identity: what decides whether `load` reloads."""
 
@@ -226,19 +277,29 @@ def _text(value: object) -> str | None:
     return str(value)
 
 
-def replace_corpus(conninfo: str, meta: CorpusMeta, rows: Iterable[IssueRow]) -> int:
-    """Replace every issue row and the single `corpus_meta` row in one transaction.
+def replace_corpus(
+    conninfo: str,
+    meta: CorpusMeta,
+    rows: Iterable[IssueRow],
+    embeddings: Iterable[EmbeddingRow] | None = None,
+) -> int:
+    """Replace every issue row, every embedding row and the single `corpus_meta` row in one
+    transaction. `embeddings` is consumed after the issues are copied (the foreign key).
 
     On any error the transaction rolls back and the previous corpus stays.
     """
     count = 0
     with psycopg.connect(conninfo) as conn, conn.transaction():
-        conn.execute("TRUNCATE issue")
+        conn.execute("TRUNCATE issue, issue_embedding")
         with conn.cursor().copy(_COPY_SQL) as copy:
             for row in rows:
                 values: tuple[Any, ...] = tuple(getattr(row, c) for c in _ISSUE_COLUMNS)
                 copy.write_row(values)
                 count += 1
+        if embeddings is not None:
+            with conn.cursor().copy(_COPY_EMBEDDING_SQL) as copy:
+                for emb in embeddings:
+                    copy.write_row((emb.issue_number, emb.model_id, vector_literal(emb.vector)))
         conn.execute("DELETE FROM corpus_meta")
         conn.execute(
             "INSERT INTO corpus_meta"

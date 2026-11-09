@@ -45,6 +45,9 @@ spec:
             - name: TICKETSCOPE_DEFAULT_MODE
               value: {{ .Values.retrieval.defaultMode | quote }}
             {{- include "ticketscope.otlpEnv" . | nindent 12 }}
+            {{- with include "ticketscope.embeddingEnv" . }}
+            {{- . | nindent 12 }}
+            {{- end }}
             - name: TICKETSCOPE_TRACE_QUERY_TEXT
               value: {{ .Values.telemetry.recordQueryText | quote }}
           livenessProbe:

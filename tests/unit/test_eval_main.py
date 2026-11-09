@@ -20,7 +20,7 @@ from ticketscope.core import modes
 from ticketscope.core.fakes import InMemoryCorpusStore
 from ticketscope.core.model import IssueRecord, Scored
 from ticketscope.core.pairs import Pair, pairs_jsonl
-from ticketscope.core.ports import CorpusStore, Retriever
+from ticketscope.core.ports import CorpusStore, Embedder, Retriever
 from ticketscope.core.snapshot import JiraComment
 from ticketscope.jobs.eval import main as eval_main
 from ticketscope.jobs.eval import score
@@ -88,7 +88,7 @@ def test_results_line_carries_scores_lineage_pairs_file_and_wall_seconds(
     assert results["pairs_file"] == str(pairs_dir / "2026.99.1.jsonl")
     assert isinstance(results["wall_seconds"], float)
     assert results["relevance"] == "cluster"
-    assert results["skipped_modes"] == []
+    assert results["skipped_modes"] == ["dense"]  # eval has no embedder
     keyword = results["modes"]["keyword"]  # pyright: ignore[reportIndexIssue]
     assert keyword["overall"]["recall@1"] == 1.0
     assert keyword["overall"]["mrr@10"] == 1.0
@@ -192,10 +192,10 @@ def test_query_text_is_title_and_description_without_comments(
             texts.append(query)
             return []
 
-    def build(_store: CorpusStore) -> Retriever:
+    def build(_store: CorpusStore, _embedder: Embedder | None) -> Retriever:
         return Spy()
 
-    spy_mode = modes.Mode("spy", "bm25", build, lambda _store: True)
+    spy_mode = modes.Mode("spy", "bm25", build, lambda _store, _embedder: True)
     monkeypatch.setattr(modes, "REGISTRY", {"spy": spy_mode})
 
     score(store, [PAIR])
@@ -205,17 +205,21 @@ def test_query_text_is_title_and_description_without_comments(
 
 
 def test_unavailable_modes_are_skipped_and_named(monkeypatch: pytest.MonkeyPatch) -> None:
-    off = modes.Mode("off", "cosine", modes.KeywordRetriever, lambda _store: False)
+    off = modes.Mode(
+        "off", "cosine", lambda s, _e: modes.KeywordRetriever(s), lambda _store, _embedder: False
+    )
     monkeypatch.setattr(modes, "REGISTRY", {**modes.REGISTRY, "off": off})
     results = score(_store(), [PAIR])
     assert list(results["modes"]) == ["keyword"]
-    assert results["skipped_modes"] == ["off"]
+    assert results["skipped_modes"] == ["dense", "off"]
 
 
 def test_a_mode_registered_after_import_is_scored_with_no_job_change(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    second = modes.Mode("second", "cosine", modes.KeywordRetriever, lambda _store: True)
+    second = modes.Mode(
+        "second", "cosine", lambda s, _e: modes.KeywordRetriever(s), lambda _store, _embedder: True
+    )
     monkeypatch.setattr(modes, "REGISTRY", {**modes.REGISTRY, "second": second})
     results = score(_store(), [PAIR])
     assert sorted(results["modes"]) == ["keyword", "second"]
@@ -337,7 +341,9 @@ def test_modes_keep_separate_ranks_and_latency_samples(monkeypatch: pytest.Monke
         def search(self, query: str, k: int, exclude: frozenset[int] = frozenset()) -> list[Scored]:
             return []
 
-    second = modes.Mode("miss", "cosine", lambda _store: Miss(), lambda _store: True)
+    second = modes.Mode(
+        "miss", "cosine", lambda _store, _embedder: Miss(), lambda _store, _embedder: True
+    )
     monkeypatch.setattr(modes, "REGISTRY", {**modes.REGISTRY, "miss": second})
     ticks = iter([0.0, 0.004, 1.0, 1.020])
     monkeypatch.setattr(

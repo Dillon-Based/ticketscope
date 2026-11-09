@@ -18,6 +18,7 @@ from starlette.concurrency import run_in_threadpool
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from ticketscope import telemetry
+from ticketscope.adapters.embedder import FastEmbedEmbedder, TracedEmbedder
 from ticketscope.contract.search import (
     Issue,
     IssueDetail,
@@ -29,7 +30,7 @@ from ticketscope.contract.search import (
 )
 from ticketscope.core.model import IssueRecord, Scored
 from ticketscope.core.modes import REGISTRY
-from ticketscope.core.ports import CorpusStore
+from ticketscope.core.ports import CorpusStore, Embedder
 from ticketscope.http import page
 from ticketscope.settings import Settings
 
@@ -130,9 +131,12 @@ def create_app(
     store: CorpusStore | None = None,
     settings: Settings | None = None,
     tracer_provider: TracerProvider | None = None,
+    embedder: Embedder | None = None,
 ) -> FastAPI:
     """Build the app. Without a `store`, wire the Postgres adapter as `ticketscope_ro`.
-    Without a `tracer_provider`, spans go to the global one (`telemetry.setup` in `main`)."""
+    Without a `tracer_provider`, spans go to the global one (`telemetry.setup` in `main`).
+    Without an `embedder` but with `settings.embedding_model_id`, load the baked model now,
+    so a missing model fails startup rather than the first dense search."""
     settings = settings or Settings()
     if store is None:
         from ticketscope.adapters.postgres import PostgresCorpusStore
@@ -142,6 +146,11 @@ def create_app(
     default_mode = settings.default_mode
     record_query_text = settings.trace_query_text
     tracer = telemetry.get_tracer(tracer_provider)
+    model_id = settings.embedding_model_id
+    if embedder is None and model_id:
+        embedder = FastEmbedEmbedder(model_id, settings.embedding_cache_dir)
+    # The `embeddings {model}` span comes from the adapter side, whoever the embedder is.
+    query_embedder = TracedEmbedder(embedder, tracer) if embedder is not None else None
 
     app = FastAPI(title="ticketscope", version="1")
     app.add_exception_handler(StarletteHTTPException, _http_problem)
@@ -159,12 +168,12 @@ def create_app(
             query=query,
             record_query_text=record_query_text,
         ) as span:
-            hits = REGISTRY[mode_name].build(corpus).search(query, k)
+            hits = REGISTRY[mode_name].build(corpus, query_embedder).search(query, k)
             span.result_count(len(hits))
         return hits
 
     @app.get("/healthz")
-    def healthz() -> dict[str, str]:  # pyright: ignore[reportUnusedFunction]
+    async def healthz() -> dict[str, str]:  # pyright: ignore[reportUnusedFunction]
         return {"status": "ok"}
 
     @app.get("/readyz")
@@ -179,6 +188,21 @@ def create_app(
         if version is None:
             response.status_code = 503
             return {"status": "corpus not loaded"}
+        if model_id:
+            # The api embeds queries with `model_id`: it must be the model `load` used.
+            try:
+                with telemetry.untraced():
+                    stored = corpus.embedding_model_id()
+            except Exception as exc:
+                log.warning("readiness check failed: %s", exc)
+                stored = None
+            if stored != model_id:
+                response.status_code = 503
+                return {
+                    "status": "embedding model mismatch",
+                    "reason": f"api model is {model_id!r}, corpus_meta embedding model is "
+                    f"{stored!r}",
+                }
         return {"status": "ready", "corpus_version": version}
 
     @app.post("/v1/search")
@@ -200,6 +224,8 @@ def create_app(
         version = corpus.corpus_version()
         if version is None:
             raise HTTPException(status_code=503, detail="corpus not loaded")
+        if not mode.available(corpus, query_embedder):
+            raise HTTPException(status_code=503, detail=f"mode {mode.name} is not available")
         hits = retrieve(mode.name, request.query, request.k, version)
         return SearchResponse(
             mode=mode.name,  # pyright: ignore[reportArgumentType]

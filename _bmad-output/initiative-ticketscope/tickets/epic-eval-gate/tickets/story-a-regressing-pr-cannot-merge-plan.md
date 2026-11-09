@@ -3,7 +3,7 @@ title: 'A regressing PR cannot merge'
 type: 'feature'
 ticket: '3'
 created: '2026-11-08'
-status: 'built'
+status: done
 baseline_revision: '9a62dbceb82950119c6c881e080e4293e6900f1c'
 route: 'full'
 route_source: 'auto'

@@ -3,7 +3,7 @@ title: 'Tracer: keyword is scored on kind and CI uploads the results'
 type: 'feature'
 ticket: '1'
 created: '2026-11-08'
-status: 'built'
+status: done
 baseline_revision: '42ac66fa2e2e165a6acf0ea4572d06088c696eab'
 route: 'full'
 route_source: 'auto'

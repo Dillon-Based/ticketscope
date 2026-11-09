@@ -88,7 +88,7 @@ def test_results_line_carries_scores_lineage_pairs_file_and_wall_seconds(
     assert results["pairs_file"] == str(pairs_dir / "2026.99.1.jsonl")
     assert isinstance(results["wall_seconds"], float)
     assert results["relevance"] == "cluster"
-    assert results["skipped_modes"] == ["dense"]  # eval has no embedder
+    assert results["skipped_modes"] == ["dense", "hybrid"]  # eval has no embedder
     keyword = results["modes"]["keyword"]  # pyright: ignore[reportIndexIssue]
     assert keyword["overall"]["recall@1"] == 1.0
     assert keyword["overall"]["mrr@10"] == 1.0
@@ -211,7 +211,7 @@ def test_unavailable_modes_are_skipped_and_named(monkeypatch: pytest.MonkeyPatch
     monkeypatch.setattr(modes, "REGISTRY", {**modes.REGISTRY, "off": off})
     results = score(_store(), [PAIR])
     assert list(results["modes"]) == ["keyword"]
-    assert results["skipped_modes"] == ["dense", "off"]
+    assert results["skipped_modes"] == ["dense", "hybrid", "off"]
 
 
 def test_a_mode_registered_after_import_is_scored_with_no_job_change(

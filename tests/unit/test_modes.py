@@ -10,8 +10,8 @@ def _issue(number: int) -> IssueRecord:
     return IssueRecord(number=number, title=f"t{number}", url="u", kind="short", state="closed")
 
 
-def test_registry_holds_keyword_and_dense() -> None:
-    assert set(REGISTRY) == {"keyword", "dense"}
+def test_registry_holds_keyword_dense_and_hybrid() -> None:
+    assert set(REGISTRY) == {"keyword", "dense", "hybrid"}
     mode = REGISTRY["keyword"]
     assert mode.name == "keyword"
     assert mode.score_kind == "bm25"

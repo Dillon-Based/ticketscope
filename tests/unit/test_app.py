@@ -12,6 +12,8 @@ from tests.target import NO_MATCH_QUERY, SNAPSHOT_DIR, TARGET_NUMBER, TARGET_QUE
 from ticketscope.contract.search import IssueResponse, Problem, SearchResponse
 from ticketscope.core.fakes import InMemoryCorpusStore
 from ticketscope.core.model import IssueDetail, Scored
+from ticketscope.core.modes import REGISTRY
+from ticketscope.http import app as app_module
 from ticketscope.http.app import create_app
 from ticketscope.settings import Settings
 
@@ -71,7 +73,11 @@ def test_unknown_mode_is_422(client: TestClient) -> None:
     assert problem.errors[0].loc == ["body", "mode"]
 
 
-def test_mode_outside_the_registry_is_422(client: TestClient) -> None:
+def test_mode_outside_the_registry_is_422(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # `hybrid` is a contract mode: take it out of the registry to reach the registry check.
+    monkeypatch.setattr(app_module, "REGISTRY", {"keyword": REGISTRY["keyword"]})
     response = client.post("/v1/search", json=search_payload(TARGET_QUERY, mode="hybrid"))
     problem = _problem(response, 422)
     assert problem.detail == "mode: unknown mode: hybrid"

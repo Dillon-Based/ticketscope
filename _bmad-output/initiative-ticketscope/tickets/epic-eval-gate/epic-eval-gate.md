@@ -8,6 +8,7 @@ companions: [_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/test-des
 after: []
 refined: true
 risk: high
+status: done
 ---
 
 # Retrieval is scored on every PR and regressions block the merge
@@ -93,3 +94,4 @@ A reviewer sees retrieval scores that CI produced on labelled data, and a regres
 - Decision: The test design's clarifications are settled as stated. The cluster uses every in-subset link in both directions (C-2). A missing gated mode fails unless the same diff updates the baseline, and a new mode passes and is reported (C-3). The tolerance is inclusive (C-4). README numbers use three fixed decimals (C-5) (user, 2026-11-08).
 - Decision: A changed `eval/baseline.json` must equal the PR's own CI results within the tolerance (test design R-004) (user, 2026-11-08).
 - Decision: Before story 1's build, a `bmad-tea-automate` red-mode session commits the hand-computed oracle fixture and failing P0 tests; before story 2's build, it adds the cluster oracle. The independent review on story 1 checks that the oracle fixture is unchanged since its red commit (test design R-005) (user, 2026-11-08).
+- Decision: Epic closed as done with one Done when line left unmet. The closure check found stories 2.1-2.5 done, the integrated check and eval passing in CI (PR #32), the epic 2 trace gate at CONCERNS (R3 is covered only by recorded live verification, the branch-protection step), and waiver W-001 marked superseded in the ticket tree. The fresh epic 1 trace that honours W-001 is not run: the trace workflow cost too much to get working. Waiver W-001 stays in force until its expiry of 2027-11-07 (user, 2026-11-08).

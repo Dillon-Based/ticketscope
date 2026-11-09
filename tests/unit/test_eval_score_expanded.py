@@ -117,7 +117,11 @@ def test_any_cluster_member_counts_and_the_query_is_excluded_from_the_search(
 
 def test_the_results_report_the_relevance_and_cutoff() -> None:
     out = score(_store(3), [])
-    assert (out["k"], out["relevance"], out["skipped_modes"]) == (10, "cluster", ["dense"])
+    assert (out["k"], out["relevance"], out["skipped_modes"]) == (
+        10,
+        "cluster",
+        ["dense", "hybrid"],
+    )
 
 
 def test_a_missing_query_issue_raises(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -135,7 +139,7 @@ def test_skipped_modes_are_listed_sorted(monkeypatch: pytest.MonkeyPatch) -> Non
         for n in ("zeta", "alpha")
     }
     monkeypatch.setattr(modes, "REGISTRY", {**modes.REGISTRY, **extra})
-    assert score(_store(3), [])["skipped_modes"] == ["alpha", "dense", "zeta"]
+    assert score(_store(3), [])["skipped_modes"] == ["alpha", "dense", "hybrid", "zeta"]
 
 
 def test_p95_nearest_rank_at_the_ceiling_boundaries() -> None:

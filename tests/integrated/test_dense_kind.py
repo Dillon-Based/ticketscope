@@ -146,3 +146,45 @@ def test_dense_corpus_readiness_and_api_budget() -> None:
     # The kernel can reclaim cache at the limit without an OOM. Successful requests
     # and zero restarts above establish that touching the limit did not kill the api.
     assert peak <= 384 * 1024 * 1024
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "my world disappears when I try to play",
+        "Launcher crash java.lang.NullPointerException\n"
+        "at net.minecraft.client.main.Main.main(Main.java:1)\n" * 100,
+    ],
+)
+def test_hybrid_gateway_queries_and_tempo(query: str) -> None:
+    url, host = _gateway()
+    trace_id = secrets.token_hex(16)
+    response = httpx2.post(
+        f"{url}/v1/search",
+        json={"query": query, "mode": "hybrid", "k": 10},
+        headers={"Host": host, "traceparent": f"00-{trace_id}-{secrets.token_hex(8)}-01"},
+        timeout=60,
+    )
+    if os.environ["TICKETSCOPE_DENSE_ENABLED"] == "0":
+        assert response.status_code == 503, response.text
+        assert "not available" in response.json()["detail"]
+        return
+    assert response.status_code == 200, response.text
+    body = SearchResponse.model_validate(response.json())
+    assert body.mode == "hybrid" and body.score_kind == "rrf"
+    assert len(body.results) == 10
+    assert [r.rank for r in body.results] == list(range(1, 11))
+    assert [(-r.score, r.issue.number) for r in body.results] == sorted(
+        (-r.score, r.issue.number) for r in body.results
+    )
+    assert all(r.outcome.status for r in body.results)
+
+    def trace_has_embeddings() -> None:
+        status, text = _tempo(trace_id)
+        assert status == 200, text
+        spans = _spans(json.loads(text))
+        [retrieval] = [s for s in spans if s["name"] == "retrieval hybrid"]
+        [embedding] = [s for s in spans if s["name"] == f"embeddings {MODEL}"]
+        assert embedding["parentSpanId"] == retrieval["spanId"]
+
+    eventually(trace_has_embeddings, timeout=60, interval=2)

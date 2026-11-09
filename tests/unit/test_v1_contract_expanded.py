@@ -21,6 +21,7 @@ from ticketscope.core.fakes import InMemoryCorpusStore
 from ticketscope.core.model import IssueDetail, IssueRecord, Scored
 from ticketscope.core.modes import REGISTRY, KeywordRetriever
 from ticketscope.core.ports import Retriever
+from ticketscope.http import app as app_module
 from ticketscope.http.app import create_app
 from ticketscope.settings import Settings
 
@@ -135,7 +136,8 @@ def test_a_json_array_body_is_422(client: TestClient) -> None:
     assert problem.errors
 
 
-def test_unknown_mode_is_checked_before_the_corpus() -> None:
+def test_unknown_mode_is_checked_before_the_corpus(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(app_module, "REGISTRY", {"keyword": REGISTRY["keyword"]})
     # An empty store is not loaded (503), but an invalid request is still the caller's 422.
     client = TestClient(create_app(store=InMemoryCorpusStore(), settings=Settings()))
     _problem(client.post("/v1/search", json=search_payload("x", mode="hybrid")), 422)
@@ -143,8 +145,9 @@ def test_unknown_mode_is_checked_before_the_corpus() -> None:
 
 
 def test_a_server_default_outside_the_registry_is_a_422_problem(
-    fixture_store: InMemoryCorpusStore,
+    fixture_store: InMemoryCorpusStore, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    monkeypatch.setattr(app_module, "REGISTRY", {"keyword": REGISTRY["keyword"]})
     client = TestClient(create_app(store=fixture_store, settings=Settings(default_mode="hybrid")))
     problem = _problem(client.post("/v1/search", json=search_payload(TARGET_QUERY)), 422)
     assert problem.detail == "mode: unknown mode: hybrid"

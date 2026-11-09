@@ -52,7 +52,8 @@ metadata:
     helm.sh/hook-delete-policy: before-hook-creation
 spec:
   backoffLimit: 2
-  activeDeadlineSeconds: 900
+  # Computing embeddings on CPU takes far longer than copying the snapshot.
+  activeDeadlineSeconds: {{ ternary 3000 900 .Values.embeddings.computeOnKind }}
   template:
     metadata:
       labels:
@@ -77,11 +78,22 @@ spec:
             # The image user (10001) cannot write /app; the asset is fetched here.
             - name: TICKETSCOPE_SNAPSHOT_DIR
               value: /snapshots
+            {{- with include "ticketscope.embeddingEnv" . }}
+            {{- . | nindent 12 }}
+            - name: TICKETSCOPE_EMBEDDINGS_COMPUTE
+              value: "true"
+            {{- end }}
           volumeMounts:
             - name: snapshots
               mountPath: /snapshots
           resources:
+            {{- if .Values.embeddings.computeOnKind }}
+            {{- $res := deepCopy .Values.jobs.resources }}
+            {{- $_ := set $res.limits "memory" .Values.embeddings.loadMemoryLimit }}
+            {{- toYaml $res | nindent 12 }}
+            {{- else }}
             {{- toYaml .Values.jobs.resources | nindent 12 }}
+            {{- end }}
       volumes:
         - name: snapshots
           emptyDir: {}

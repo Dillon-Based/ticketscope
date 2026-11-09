@@ -10,8 +10,8 @@ def _issue(number: int) -> IssueRecord:
     return IssueRecord(number=number, title=f"t{number}", url="u", kind="short", state="closed")
 
 
-def test_registry_holds_keyword_only() -> None:
-    assert set(REGISTRY) == {"keyword"}
+def test_registry_holds_keyword_and_dense() -> None:
+    assert set(REGISTRY) == {"keyword", "dense"}
     mode = REGISTRY["keyword"]
     assert mode.name == "keyword"
     assert mode.score_kind == "bm25"
@@ -19,7 +19,7 @@ def test_registry_holds_keyword_only() -> None:
 
 def test_registry_builds_a_keyword_retriever() -> None:
     store = InMemoryCorpusStore([(_issue(7), "alpha beta"), (_issue(9), "unrelated")])
-    retriever = REGISTRY["keyword"].build(store)
+    retriever = REGISTRY["keyword"].build(store, None)
     assert isinstance(retriever, KeywordRetriever)
     hits = retriever.search("alpha beta", k=10)
     assert [(hit.issue.number, hit.score) for hit in hits] == [(7, 2.0)]
@@ -80,4 +80,4 @@ def test_exclude_on_the_fixture_drops_the_target(fixture_store: InMemoryCorpusSt
 
 
 def test_keyword_is_always_available() -> None:
-    assert REGISTRY["keyword"].available(InMemoryCorpusStore()) is True
+    assert REGISTRY["keyword"].available(InMemoryCorpusStore(), None) is True

@@ -16,7 +16,7 @@ from ticketscope.core.pairs import (
     pairs_jsonl,
     read_pairs,
 )
-from ticketscope.core.ports import CorpusStore
+from ticketscope.core.ports import CorpusStore, Embedder
 from ticketscope.core.snapshot import DuplicateLink
 from ticketscope.jobs.eval import score
 from ticketscope.jobs.eval.score import K, p95
@@ -44,10 +44,10 @@ def _scripted(monkeypatch: pytest.MonkeyPatch, ranking_for: dict[int, list[int]]
                 for n in ranking_for[number]
             ]
 
-    def build(_store: CorpusStore) -> Scripted:
+    def build(_store: CorpusStore, _embedder: Embedder | None) -> Scripted:
         return Scripted()
 
-    mode = modes.Mode("scripted", "bm25", build, lambda _s: True)
+    mode = modes.Mode("scripted", "bm25", build, lambda _s, _e: True)
     monkeypatch.setattr(modes, "REGISTRY", {"scripted": mode})
     return seen
 
@@ -117,7 +117,7 @@ def test_any_cluster_member_counts_and_the_query_is_excluded_from_the_search(
 
 def test_the_results_report_the_relevance_and_cutoff() -> None:
     out = score(_store(3), [])
-    assert (out["k"], out["relevance"], out["skipped_modes"]) == (10, "cluster", [])
+    assert (out["k"], out["relevance"], out["skipped_modes"]) == (10, "cluster", ["dense"])
 
 
 def test_a_missing_query_issue_raises(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -127,12 +127,15 @@ def test_a_missing_query_issue_raises(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_skipped_modes_are_listed_sorted(monkeypatch: pytest.MonkeyPatch) -> None:
-    def never(_s: CorpusStore) -> bool:
+    def never(_s: CorpusStore, _e: Embedder | None) -> bool:
         return False
 
-    extra = {n: modes.Mode(n, "cosine", modes.KeywordRetriever, never) for n in ("zeta", "alpha")}
+    extra = {
+        n: modes.Mode(n, "cosine", lambda s, _e: modes.KeywordRetriever(s), never)
+        for n in ("zeta", "alpha")
+    }
     monkeypatch.setattr(modes, "REGISTRY", {**modes.REGISTRY, **extra})
-    assert score(_store(3), [])["skipped_modes"] == ["alpha", "zeta"]
+    assert score(_store(3), [])["skipped_modes"] == ["alpha", "dense", "zeta"]
 
 
 def test_p95_nearest_rank_at_the_ceiling_boundaries() -> None:

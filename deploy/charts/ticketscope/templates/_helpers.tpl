@@ -40,6 +40,14 @@ helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version }}
   value: {{ .Values.jobs.dbWaitTimeoutSeconds | quote }}
 {{- end }}
 
+{{/* The embedding model id for api and load; rendered only when embeddings are on (AD-21). */}}
+{{- define "ticketscope.embeddingEnv" -}}
+{{- if .Values.embeddings.computeOnKind -}}
+- name: TICKETSCOPE_EMBEDDING_MODEL_ID
+  value: {{ required "embeddings.modelId is required" .Values.embeddings.modelId | quote }}
+{{- end -}}
+{{- end }}
+
 {{/* OTLP export for every app process (AD-10). */}}
 {{- define "ticketscope.otlpEnv" -}}
 - name: TICKETSCOPE_OTLP_ENDPOINT

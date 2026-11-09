@@ -202,6 +202,20 @@ def retrieval_span(
 
 
 @contextmanager
+def embeddings_span(tracer: Tracer, model: str) -> Generator[None]:
+    """The AD-10 INTERNAL `embeddings {model}` span, a child of the current span. An
+    exception sets status ERROR and is recorded on the span, then propagates."""
+    attributes: dict[str, str] = {
+        "gen_ai.operation.name": "embeddings",
+        "gen_ai.request.model": model,
+    }
+    with tracer.start_as_current_span(
+        f"embeddings {model}", kind=SpanKind.INTERNAL, attributes=attributes
+    ):
+        yield
+
+
+@contextmanager
 def job_span(provider: TracerProvider, name: str) -> Generator[Callable[[], None]]:
     """One INTERNAL span around a job's body. Yields `failed()`, which sets status ERROR
     for a job that handles its own error and returns non-zero."""

@@ -1,6 +1,7 @@
 """The plan's I/O matrix through `create_app`, with the fake store injected."""
 
 import json
+from collections.abc import Sequence
 
 import httpx2
 import pytest
@@ -71,11 +72,11 @@ def test_unknown_mode_is_422(client: TestClient) -> None:
 
 
 def test_mode_outside_the_registry_is_422(client: TestClient) -> None:
-    response = client.post("/v1/search", json=search_payload(TARGET_QUERY, mode="dense"))
+    response = client.post("/v1/search", json=search_payload(TARGET_QUERY, mode="hybrid"))
     problem = _problem(response, 422)
-    assert problem.detail == "mode: unknown mode: dense"
+    assert problem.detail == "mode: unknown mode: hybrid"
     assert problem.errors
-    assert [(e.loc, e.msg) for e in problem.errors] == [(["body", "mode"], "unknown mode: dense")]
+    assert [(e.loc, e.msg) for e in problem.errors] == [(["body", "mode"], "unknown mode: hybrid")]
 
 
 def test_malformed_json_body_is_422_naming_the_body(client: TestClient) -> None:
@@ -206,6 +207,15 @@ class _BrokenStore:
         raise ConnectionError("database down")
 
     def corpus_version(self) -> str | None:
+        raise ConnectionError("database down")
+
+    def dense_search(self, model_id: str, vector: Sequence[float], k: int) -> list[Scored]:
+        raise ConnectionError("database down")
+
+    def has_embeddings(self, model_id: str) -> bool:
+        raise ConnectionError("database down")
+
+    def embedding_model_id(self) -> str | None:
         raise ConnectionError("database down")
 
 

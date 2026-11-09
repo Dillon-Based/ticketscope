@@ -1,5 +1,6 @@
 """The ports `core` reaches the outside through (AD-1, AD-19)."""
 
+from collections.abc import Sequence
 from typing import Protocol
 
 from ticketscope.core.model import IssueDetail, Scored
@@ -18,6 +19,32 @@ class CorpusStore(Protocol):
 
     def corpus_version(self) -> str | None:
         """Return the loaded snapshot version, or None when no corpus is loaded."""
+        ...
+
+    def dense_search(self, model_id: str, vector: Sequence[float], k: int) -> list[Scored]:
+        """Return up to `k` nearest issues of `model_id` by cosine, best first.
+
+        `score` is cosine similarity (1 - cosine distance), higher is better; ties
+        break on issue number.
+        """
+        ...
+
+    def has_embeddings(self, model_id: str) -> bool:
+        """Whether any issue has an embedding from `model_id`."""
+        ...
+
+    def embedding_model_id(self) -> str | None:
+        """The `corpus_meta` embedding model id, or None when none was computed."""
+        ...
+
+
+class Embedder(Protocol):
+    """Turns text into vectors of one model (AD-1: the model stays behind this port)."""
+
+    model_id: str
+
+    def embed(self, texts: Sequence[str]) -> list[list[float]]:
+        """Return one vector per text, in order."""
         ...
 
 

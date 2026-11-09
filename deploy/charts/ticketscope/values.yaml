@@ -35,14 +35,25 @@ telemetry:
   otlpEndpoint: "http://otel-collector.platform.svc:4318"
   recordQueryText: false
 
+# Embeddings (AD-21). `modelId` names the model baked into the app image; it equals the
+# Dockerfile's EMBEDDING_MODEL_ID. Only kind computes them, and only when computeOnKind is
+# true: then api and load get the model id and load computes the vectors. Off, no model env
+# is set, api is Ready on a keyword-only corpus and dense is unavailable.
+embeddings:
+  computeOnKind: false
+  modelId: "BAAI/bge-small-en-v1.5"
+  # The load Job's memory limit when it computes embeddings (jobs.resources otherwise).
+  loadMemoryLimit: 2Gi
+
 api:
   replicas: 1
+  # kind: model startup peaks near 258Mi; allow headroom for dense requests.
   resources:
     requests:
       cpu: 50m
-      memory: 128Mi
-    limits:
       memory: 256Mi
+    limits:
+      memory: 384Mi
 
 jobs:
   resources:

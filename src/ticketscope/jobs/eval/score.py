@@ -137,8 +137,9 @@ def score(store: CorpusStore, pairs: Iterable[Pair | Mapping[str, Any]]) -> Resu
     retrievers: dict[str, Retriever] = {}
     skipped: list[str] = []
     for name, mode in registry.items():
-        if mode.available(store):
-            retrievers[name] = mode.build(store)
+        # Eval carries no embedder: dense (and anything needing one) is skipped.
+        if mode.available(store, None):
+            retrievers[name] = mode.build(store, None)
         else:
             skipped.append(name)
     tallies = {name: _ModeTally() for name in retrievers}

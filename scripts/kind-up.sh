@@ -14,6 +14,8 @@
 #   CLUSTER_NAME   kind cluster name (default: ticketscope)
 #   EVAL_ENABLED=1 render the eval Job (a hook after load; eval.yml only) and give
 #                  Helm longer to wait for it (default: off)
+#   EMBEDDINGS_COMPUTE=1  set embeddings.computeOnKind: load computes embeddings with the baked
+#                  model and api serves mode=dense; Helm waits longer for the load (default: off)
 #
 # When $GITHUB_ENV is set, exports TICKETSCOPE_GATEWAY_URL,
 # TICKETSCOPE_GATEWAY_HOST and TICKETSCOPE_KIND_UP_TO_READY_SECONDS to later steps.
@@ -121,6 +123,13 @@ if [[ "${EVAL_ENABLED:-0}" == 1 ]]; then
   log "installing ticketscope (hooks: migrate, then load, then eval)"
 else
   log "installing ticketscope (hooks: migrate, then load)"
+fi
+# EMBEDDINGS_COMPUTE=1: load computes embeddings on the CPU and api loads the model, so
+# Helm waits longer for the load hook.
+if [[ "${EMBEDDINGS_COMPUTE:-0}" == 1 ]]; then
+  EVAL_ARGS+=(--set embeddings.computeOnKind=true)
+  HELM_TIMEOUT=50m
+  log "embeddings on: load computes them, api serves mode=dense"
 fi
 helm --kube-context "$KCTX" upgrade --install ticketscope deploy/charts/ticketscope \
   --namespace "$APP_NS" --create-namespace \

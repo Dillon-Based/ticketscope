@@ -1,0 +1,97 @@
+# epic-hybrid-retrieval stories, in build order. `id` is permanent, never reused.
+# Lanes: 1 is the tracer and owns the shared setup (Embedder port, migration, fastembed, image, readiness check).
+# 2 (core/modes.py) and 3 (a spike, no product code) can run in parallel after 1; 4 waits on the spike's model.
+# Sizing (epic-search-baseline retro): each story fits one agent session; one likely to add more than
+# about 800 lines is flagged in its notes for the independent review.
+# Tests: each story writes its own; the closing integrated check is the only test story.
+
+[[entry]]
+id = 1
+type = "story"
+title = "Tracer: dense search answers through /v1 on kind"
+description = "Lays the thinnest path from loaded issue to a dense result. Adds a core Embedder port with a deterministic hash fake, a fastembed adapter with bge-small-en-v1.5 baked into the app image at build time, the next ordered migration creating issue_embedding(issue_number, model_id, embedding) with an unsized vector column, and the CorpusStore dense_search through the Postgres adapter. load writes embeddings and corpus_meta.embedding_model_id only when embeddings.computeOnKind is set (off by default, switched on by a kind-up.sh flag) and no asset is pinned. A DenseRetriever registers in core.modes.REGISTRY as score_kind cosine, available only when the store holds embeddings for api's configured model id. /v1 accepts mode=dense, api fails readiness when its model id differs from corpus_meta, and dense emits the embeddings {model} span under retrieval {mode} (spine AD-10). The preprocessing version records the title-plus-description cut. api's memory limit is raised just enough to load the model. CI stays keyword-only: the default load computes nothing, so PR runs are not slowed."
+verify = "On kind with computeOnKind set, POST /v1/search with mode=dense returns ranked issues with outcomes for a vague query and for a log-heavy query (R2); with computeOnKind off, dense is absent from the registry's available modes and keyword is unchanged (R2); api is not Ready when its configured model id differs from corpus_meta, and Ready when they match (R1); a trace in Tempo for a dense search shows retrieval {mode} with a child embeddings {model} span (R2); unit tests with the hash fake pass with no model or database; import-linter keeps every contract; ci.yml and its integrated-check pass on the PR (R1, R2)."
+covers = ["R1", "R2"]
+after = ["1.5", "1.9", "2.5"]
+hitl = false
+risk = "high"
+plan_checkpoint = true
+notes = ["Likely more than 800 added lines (port, adapter, migration, image, load, retriever, readiness, chart): run the independent review on it."]
+
+[[entry]]
+id = 2
+type = "story"
+title = "Hybrid search fuses keyword and dense"
+description = "Adds a HybridRetriever in core that takes at least k + |exclude| candidates from keyword and from dense, fuses them by reciprocal rank fusion with equal weights and a fixed constant, breaks ties by issue number so ranking is reproducible, and registers as score_kind rrf. It is available only when keyword and dense both are. /v1 accepts mode=hybrid, and the span tree gains retrieval {mode} with both children. It is written against the ports and the fakes, so it needs no real model."
+verify = "Unit tests with the fakes pass a hand-computed fusion case (a known pair of rankings fuses to a known order), a tie broken by issue number, an excluded issue never scoring itself with a slot lost, and k larger than either side's hits (R2); on kind, mode=hybrid returns ranked issues with outcomes for a vague query and a log-heavy query (R2); registering it needs no change to jobs.eval (R4)."
+covers = ["R2"]
+after = [1]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 3
+type = "spike"
+title = "Choose the embedding model"
+description = "Compares two or three small fastembed models, including story 1's default, by running the eval locally on kind with each. Records Recall@10 and MRR@10 by ticket kind and overall, embedding time per issue and for the whole snapshot, peak memory in api and in the embedding step, and image size, with the title-plus-description cut tested at the model's token limit. Writes the findings beside the epic and names the chosen model and preprocessing version. If the pick differs from the default, the follow-up is a one-line change recorded here."
+verify = "A findings file in the spike's folder holds the comparison table, the chosen model id and preprocessing version, and the reason; a person reads it and records the choice as a Decision line in the epic's Notes (R3)."
+covers = ["R3"]
+after = [1]
+hitl = true # a person reads the scores and chooses
+risk = "medium"
+
+[[entry]]
+id = 4
+type = "story"
+title = "Embeddings load from a published Release asset"
+description = "Extends the committed publish script to compute the chosen model's embeddings from the snapshot on a person's machine and attach them as a Release asset keyed by snapshot, model and preprocessing, with a SHA-256, under the existing guards (clean main, never overwrites, timed load under 10 minutes, generated notes with the attribution). values.yaml pins the asset version and checksum beside the snapshot pin. load downloads, verifies and bulk-loads it into issue_embedding and records the model id in corpus_meta, idempotent against corpus_meta (spine AD-22). It computes nothing on kind or EKS when the asset is pinned. Embedding text is masked per the Provenance convention. A person runs the publish script and then merges the pin."
+verify = "A person runs the publish script and the Release shows the embedding asset with its checksum and notes (R1); load on kind with the pin fills issue_embedding for every loaded issue from the asset with no embedding computed, and a second load is a no-op (R1); a wrong checksum fails the load with its reason (R1); the timed load stays under 10 minutes (R1); ci.yml's integrated-check passes loading the asset (R1)."
+covers = ["R1"]
+after = [3]
+hitl = true # a person runs the publish script
+risk = "high"
+plan_checkpoint = true
+
+[[entry]]
+id = 5
+type = "story"
+title = "CI scores keyword, dense and hybrid side by side"
+description = "The eval job scores dense and hybrid beside keyword on every pair, embedding each query's text live through the Embedder, and the run's cost is checked against the Job's 1800s deadline, which is raised if the run needs it. eval/baseline.json is updated whole from a CI run's results, with the model id and preprocessing version in its lineage, as epic-eval-gate's provenance rule requires. The README table is regenerated by the existing script and shows all three modes by ticket kind, committed whatever it shows."
+verify = "On a PR the eval artifact holds Recall@1, @5, @10, MRR@10 and p95 for keyword, dense and hybrid split short, log-heavy and overall, with the lineage's model id (R4); the gate passes with the updated baseline and fails a deliberately regressed dense ranking (R4); the README table check passes and shows all three modes (R4); the run's wall-clock cost is in the job summary and under the deadline (R4)."
+covers = ["R4"]
+after = [2, 4, "2.3"]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 6
+type = "story"
+title = "Chart defaults carry the model's needs and the best mode"
+description = "Sets api's CPU and memory requests and limits and the load Job's resources in values.yaml from the measured needs of story 3's model and story 5's run, and records the embedding time beside them. Sets defaultMode to the mode with the best overall MRR@10 in story 5's baseline, hybrid on a tie, and records the number it chose by. mcp keeps no mode default."
+verify = "On kind, api is Ready and answers a dense search under the new resource limits without an OOM kill (R5); POST /v1/search with no mode returns the default mode's score_kind, and the mode matches the best overall MRR@10 in eval/baseline.json (R5); values.yaml comments name the measured memory and embedding time (R5)."
+covers = ["R5"]
+after = [5]
+hitl = false
+risk = "low"
+
+[[entry]]
+id = 7
+type = "story"
+title = "Refactor sweep"
+description = "Cleanup only, scoped at its start from the plans' deferred items and review findings in this epic: duplicated helpers across the retrievers and the postgres adapter, and test structure. Behaviour and scores do not change: baseline.json is untouched."
+verify = "On a PR the eval check passes with eval/baseline.json unchanged, ci.yml and its integrated-check pass, and import-linter keeps every contract (R2, R4)."
+covers = []
+after = [1, 2, 3, 4, 5, 6]
+hitl = false
+risk = "low"
+
+[[entry]]
+id = 8
+type = "story"
+title = "Integrated check on kind"
+description = "Extends the kind smoke tests to prove the epic end to end on a fresh cluster: load from the pinned embedding asset, dense and hybrid answers for a vague and a log-heavy query, the omitted-mode default, readiness on a model mismatch, and the eval artifact with all three modes."
+verify = "On a fresh kind cluster the integrated-check passes in CI covering each Done when line of the epic (R1, R2, R3, R4, R5)."
+covers = ["R1", "R2", "R3", "R4", "R5"]
+after = [7]
+hitl = false
+risk = "medium"

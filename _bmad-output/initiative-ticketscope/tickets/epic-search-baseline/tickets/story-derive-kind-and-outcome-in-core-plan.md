@@ -80,6 +80,8 @@ deferred: []
 - Given the unit suite, when `uv run pytest tests/unit/test_derive.py -v` runs, then one named case passes for each outcome branch (duplicate, fixed, not_planned, stale, answered, unknown), the duplicate-also-fixed tie, the CONTRIBUTOR-only support issue, the unmerged cross-referenced PR, and kind cases at `threshold-1` and `threshold`.
 - Given the default threshold, when `derive_kind` runs over each issue in `snapshot/fixture.jsonl`, then it returns the kind in `snapshot/fixture-kinds.json` (checked by hand in Implementation Notes; story 5 owns the committed test).
 
+**Superseded (waiver W-001, recorded 2026-11-09):** AC-1 and AC-2 above describe story 4's GitHub outcome and kind rules, replaced by story 14's Jira derivation (`kind2-t3.outcome3`). Their intent is carried by story 14 AC-1 and AC-3. They are left as built, not rewritten. Register: `_bmad-output/test-artifacts/gate-waivers.md`.
+
 ## Implementation Notes
 
 - Fixture kinds checked by hand at the default threshold (3): `kind_score` gives 900001 0, 900002 7, 900003 5, 900004 0, 900005 6, 900006 0, 900007 0, 900008 4. All eight `derive_kind` results match `snapshot/fixture-kinds.json`. Not committed as a test (story 5 owns it).

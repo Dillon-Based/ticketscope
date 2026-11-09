@@ -92,6 +92,8 @@ context: []
 - Given a completed run, when the outputs are listed, then `<version>.jsonl.gz`, `<version>.jsonl.gz.sha256` (matching `sha256sum -c`), `<version>-kinds.json` and `report.json` exist.
 - Given `snapshot.yml` is dispatched on main (person's step), when it finishes, then a `snapshot-YYYY.MM.N` Release holds the asset and checksum, and its notes state window, count, kind split, load seconds ≤ 600, attribution and the takedown path; a second dispatch publishes `N+1` and leaves the first unchanged.
 
+**Superseded (waiver W-001, recorded 2026-11-09):** AC-1, AC-2 and AC-3 above describe the GitHub ingest (recordings, github.com URLs, `snapshot.yml`). Spike 12 switched the corpus to The Public Jira Dataset v7 and story 13 replaced the ingest; their intent is carried by story 13 AC-1..4. They are left as built, not rewritten, and no current test can establish them. Register: `_bmad-output/test-artifacts/gate-waivers.md`.
+
 ## Design Notes
 
 - **Listing.** `GET /repos/kubernetes/kubernetes/issues?state=closed&sort=updated&direction=desc&since=<window start>&per_page=100`. `since` filters `updated_at`, which is ≥ `closed_at`, so it is a superset. Filter PRs and `closed_at`, sort by `closed_at` desc, then number desc, cap. The selected list is checkpointed before enrichment.

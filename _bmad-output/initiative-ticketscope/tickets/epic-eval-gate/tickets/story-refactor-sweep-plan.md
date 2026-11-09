@@ -3,7 +3,7 @@ title: 'Refactor sweep: dedupe pin parser and kinds, keep time.sleep out of test
 type: 'refactor'
 ticket: '5'
 created: '2026-11-08'
-status: 'built'
+status: done
 baseline_revision: 'd2313e946d2dfda99f330da3db3e989c5746fb5b'
 route: 'oneshot'
 route_source: 'auto'
@@ -65,5 +65,3 @@ Oneshot: about 80 changed lines across five files, all mechanical. `scripts/rend
 **Verification.** `ruff check`, `ruff format`, `pyright`, `lint-imports` (7 kept, 0 broken) clean; `pytest tests/unit` 910 passed; `render_readme_table.py --check` passes; `eval/baseline.json` has no diff.
 
 **Residual risks.** The PR's eval check and ci.yml's integrated-check have not run here; orchestrator verification is outstanding. The `base.sha` rerun deferral in `deferred-work.md` was left as is. `tickets.py mark` was not run.
-
-status: built

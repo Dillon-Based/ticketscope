@@ -129,6 +129,18 @@ def build_results(
             )
         )
 
+    elif unit is not None and kind is None and job("integrated-check") in ("skipped", "success"):
+        # No kind-relevant path changed (.github/kind-paths.yml), so no cluster was deployed.
+        out.append(
+            (
+                f"{EPIC}-s1--AC-1",
+                "PR ci.yml: ruff, pyright, pytest, lint-imports pass; "
+                "_kind-deploy brings up both releases and passes smoke",
+                "skipped",
+                f"{run_url} — {jobs}; kind deploy skipped: no path it depends on changed",
+            )
+        )
+
     images = job("images")
     if images in ("success", "failure", "skipped"):
         out.append(

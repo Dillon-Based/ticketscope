@@ -15,9 +15,24 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    runs-on: ubuntu-24.04
+    outputs:
+      kind: ${{ steps.kind.outputs.kind }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dorny/paths-filter@v4
+        id: kind
+        with:
+          filters: .github/kind-paths.yml
+
   eval:
+    needs: changes
     uses: ./.github/workflows/_kind-deploy.yml
     with:
+      # Skipped inside the reusable workflow, so the required check keeps its name,
+      # `eval / deploy`, and reports skipped when no kind-relevant path changed.
+      enabled: ${{ needs.changes.outputs.kind == 'true' }}
       eval_enabled: true
       base_sha: ${{ github.event.pull_request.base.sha }}
       # The gate runs after the eval check, on the results file it wrote, and diffs

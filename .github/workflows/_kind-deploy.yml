@@ -30,6 +30,14 @@ on:
         type: string
         required: false
         default: ""
+      enabled:
+        description: >-
+          Run the deploy job. False skips it, and a skipped `deploy` still reports its own
+          check (`<caller> / deploy`), so a required check of that name is satisfied.
+          Callers set it from .github/kind-paths.yml.
+        type: boolean
+        required: false
+        default: true
 
 permissions:
   contents: read
@@ -41,6 +49,7 @@ env:
 
 jobs:
   deploy:
+    if: inputs.enabled
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:

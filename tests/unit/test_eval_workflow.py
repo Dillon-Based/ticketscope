@@ -65,14 +65,44 @@ def test_reports_upload_runs_always_after_the_check() -> None:
     assert "path: reports/" in upload_step
 
 
-def test_ci_integrated_check_call_is_unchanged() -> None:
+def test_kind_jobs_skip_inside_the_reusable_workflow_when_no_kind_path_changed() -> None:
+    # The skip sits in `deploy`, not on the caller, so a skipped run still reports the
+    # `<caller> / deploy` check name that branch protection may require.
+    assert "    if: inputs.enabled\n" in KIND_DEPLOY.read_text(encoding="utf-8")
+    eval_text = EVAL.read_text(encoding="utf-8")
+    assert "needs: changes" in eval_text
+    assert "enabled: ${{ needs.changes.outputs.kind == 'true' }}" in eval_text
+    for workflow in (EVAL, CI):
+        assert "filters: .github/kind-paths.yml" in workflow.read_text(encoding="utf-8")
+
+
+def test_kind_paths_cover_what_a_kind_deploy_depends_on() -> None:
+    paths = (REPO / ".github" / "kind-paths.yml").read_text(encoding="utf-8")
+    for needed in ("src/**", "migrations/**", "deploy/**", "images/**", "eval/**", "uv.lock"):
+        assert f"'{needed}'" in paths, needed
+    for needed in (
+        "tests/eval/**",
+        "tests/integrated/**",
+        "tests/smoke/**",
+        ".github/workflows/**",
+    ):
+        assert f"'{needed}'" in paths, needed
+    assert "_bmad-output" not in paths and ".bmad-loop" not in paths
+
+
+def test_ci_integrated_check_call_only_gains_the_path_filter() -> None:
     text = CI.read_text(encoding="utf-8")
     expected = (
         "  integrated-check:\n"
         "    # One kind cluster per PR. The integrated suite runs first, on the freshly deployed\n"
         "    # state, before smoke's upgrades and forced reloads.\n"
+        "    needs: changes\n"
         "    uses: ./.github/workflows/_kind-deploy.yml\n"
         "    with:\n"
+        "      # Skipped inside the reusable workflow, so the check still reports as\n"
+        "      # `integrated-check / deploy`. A manual dispatch always runs it.\n"
+        "      enabled: ${{ needs.changes.outputs.kind == 'true' ||"
+        " github.event_name == 'workflow_dispatch' }}\n"
         "      check: uv run pytest -m kind tests/integrated tests/smoke"
         " --junitxml=reports/kind.xml\n"
         "      # Story 10 AC-4: the first smoke run after an in-place upgrade passes (3).\n"

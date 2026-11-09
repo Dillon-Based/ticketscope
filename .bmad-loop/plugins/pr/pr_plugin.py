@@ -39,6 +39,7 @@ SHARED_HISTORY = "pr_history"
 # A ticket-tree ref: `<epic id>.<entry id>`, the entry id possibly carrying letters.
 TICKET_REF = re.compile(r"^\d+\.[0-9A-Za-z]+$")
 LANDED = frozenset({"built", "done"})
+DONE_STATES = frozenset({"done", "dropped"})
 COMMAND_TIMEOUT_S = 300
 FAILING_BUCKETS = frozenset({"fail", "cancel"})
 
@@ -101,7 +102,7 @@ class PrFlow:
     def current_branch(self) -> str:
         return self._ok("read branch", ["git", "rev-parse", "--abbrev-ref", "HEAD"]).strip()
 
-    def ticket_status(self, ref: str) -> str:
+    def _find(self, ref: str) -> dict[str, Any]:
         out = self._ok(
             "find ticket",
             [
@@ -121,7 +122,28 @@ class PrFlow:
             raise FlowError(f"find ticket {ref}: not JSON: {out.strip()[-200:]}") from e
         if not isinstance(data, dict) or "error" in data:
             raise FlowError(f"find ticket {ref}: {data}")
-        return str(data.get("status") or "")
+        return data
+
+    def ticket_status(self, ref: str) -> str:
+        return str(self._find(ref).get("status") or "")
+
+    def unmet_prerequisites(self, ref: str) -> list[str]:
+        """Entry prerequisites of `ref` that are not done on the checked-out base branch.
+
+        Read after the base branch is updated, so a prerequisite counts only once its
+        merge (which carries the plan's `done` mark) has reached the base. A whole-epic
+        `epic-<slug>` prerequisite is not judged here.
+        """
+        epic = ref.split(".", 1)[0]
+        unmet: list[str] = []
+        for item in self._find(ref).get("after") or []:
+            dep = f"{epic}.{item}" if isinstance(item, int) else str(item)
+            if not TICKET_REF.match(dep):
+                continue
+            state = str(self._find(dep).get("state") or "")
+            if state not in DONE_STATES:
+                unmet.append(f"{dep} ({state or 'unset'})")
+        return unmet
 
     def pr_state(self, branch: str) -> dict[str, Any] | None:
         rc, out = self._run(
@@ -164,6 +186,12 @@ class PrFlow:
                 f"tracked changes in {self.root}; commit or stash them before story {ref}"
             )
         self.update_base()
+        unmet = self.unmet_prerequisites(ref)
+        if unmet:
+            raise FlowError(
+                f"story {ref} needs {', '.join(unmet)} merged into {self.base} first; "
+                f"merge its PR, then `bmad-loop resume`"
+            )
         rc, _ = self._run(
             ["git", "rev-parse", "--verify", "--quiet", f"refs/heads/{branch}"],
             self.root,
@@ -288,11 +316,20 @@ class PrPlugin(Plugin):
         history = ctx.shared.setdefault(SHARED_HISTORY, [])
         if isinstance(history, list):
             history.append(record)
-        if record.get("status") in ("failed", "open"):
+        status = record.get("status")
+        where = record.get("url") or record.get("branch", "")
+        if status in ("failed", "open"):
             ctx.shared[SHARED_PENDING] = record
-            where = record.get("url") or record.get("branch", "")
             note_attention(
                 ctx.run_dir,
                 f"story {ref} did not land ({record.get('reason')}): {where}. "
                 "The next story pauses until it is merged.",
+            )
+        elif status == "merged":
+            note_attention(ctx.run_dir, f"story {ref} merged: {where}")
+        else:
+            # Skipped (the ticket is not built or done): nothing to wait on, but say so,
+            # so a story that was never pushed is not silent.
+            note_attention(
+                ctx.run_dir, f"story {ref} was not pushed ({record.get('reason')}): {where}"
             )

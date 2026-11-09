@@ -135,6 +135,7 @@ def test_branch_name_turns_dots_into_dashes(pr: Any) -> None:
 
 def test_prepare_updates_main_and_creates_the_story_branch(pr: Any) -> None:
     runner = FakeRunner(
+        ticket("planned"),
         answer(("git", "status"), OK),
         on_branch("main"),
         answer(("git", "rev-parse", "--verify"), (1, "")),
@@ -148,6 +149,7 @@ def test_prepare_updates_main_and_creates_the_story_branch(pr: Any) -> None:
 
 def test_prepare_reuses_an_existing_story_branch(pr: Any) -> None:
     runner = FakeRunner(
+        ticket("planned"),
         answer(("git", "status"), OK),
         on_branch("main"),
         answer(("git", "rev-parse", "--verify"), OK),
@@ -168,6 +170,54 @@ def test_prepare_refuses_tracked_changes(pr: Any) -> None:
     with pytest.raises(pr.FlowError, match="tracked changes"):
         flow(pr, runner).prepare("2.2")
     assert not runner.ran("git", "switch")
+
+
+def tickets_table(rows: dict[str, dict[str, Any]]) -> Handler:
+    """Answer `tickets.py find <ref>` from a table of rows; an unknown ref is an error."""
+
+    def handler(call: tuple[str, ...]) -> Reply | None:
+        if call[:2] != ("uv", "run"):
+            return None
+        row = rows.get(call[-1])
+        return (0, json.dumps(row)) if row else (1, json.dumps({"error": "not found"}))
+
+    return handler
+
+
+def test_prepare_waits_for_an_unmerged_prerequisite_and_makes_no_branch(pr: Any) -> None:
+    runner = FakeRunner(
+        tickets_table({"3.2": {"after": [1]}, "3.1": {"state": "review"}}),
+        answer(("git", "status"), OK),
+        on_branch("main"),
+        answer(("git",), OK),
+    )
+    with pytest.raises(pr.FlowError, match=r"3\.1 \(review\).*merged into main"):
+        flow(pr, runner).prepare("3.2")
+    assert ("git", "switch", "-c", "story-3-2") not in runner.calls
+
+
+def test_prepare_starts_once_prerequisites_are_done_or_dropped(pr: Any) -> None:
+    rows = {
+        "3.2": {"after": [1, "1.5", 3, "epic-search-baseline"]},
+        "3.1": {"state": "done"},
+        "1.5": {"state": "done"},
+        "3.3": {"state": "dropped"},
+    }
+    runner = FakeRunner(
+        tickets_table(rows),
+        answer(("git", "status"), OK),
+        on_branch("main"),
+        answer(("git", "rev-parse", "--verify"), (1, "")),
+        answer(("git",), OK),
+    )
+    flow(pr, runner).prepare("3.2")
+    assert runner.calls[-1] == ("git", "switch", "-c", "story-3-2")
+
+
+def test_prepare_on_its_own_branch_does_not_recheck_prerequisites(pr: Any) -> None:
+    runner = FakeRunner(answer(("git", "status"), OK), on_branch("story-3-2"), tickets_table({}))
+    flow(pr, runner).prepare("3.2")
+    assert not runner.ran("uv")
 
 
 def land_runner(status: str, *check_replies: Reply, pr_view: Reply | None = None) -> FakeRunner:
@@ -296,6 +346,18 @@ def test_post_story_records_a_failure_for_the_next_story_and_in_attention(
     plugin(pr, land_runner("built", checks("fail"))).on_post_story(ctx)
     assert ctx.shared["pr_pending"]["status"] == "failed"
     assert "story 2.2 did not land" in (tmp_path / "ATTENTION").read_text()
+
+
+def test_post_story_says_when_a_story_was_not_pushed_and_when_it_merged(
+    pr: Any, tmp_path: Path
+) -> None:
+    skipped = FakeContext("2.2", run_dir=str(tmp_path))
+    plugin(pr, land_runner("in-progress")).on_post_story(skipped)
+    assert "pr_pending" not in skipped.shared
+    assert "story 2.2 was not pushed" in (tmp_path / "ATTENTION").read_text()
+    merged = FakeContext("2.2", run_dir=str(tmp_path))
+    plugin(pr, land_runner("built", checks("pass"))).on_post_story(merged)
+    assert "story 2.2 merged" in (tmp_path / "ATTENTION").read_text()
 
 
 def test_post_story_never_raises(pr: Any, tmp_path: Path) -> None:

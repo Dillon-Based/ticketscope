@@ -21,6 +21,7 @@ import pytest
 from tests.eval.conftest import EVAL_JOB, RESULTS_PATH
 from tests.smoke.test_gateway import _corpus_meta, _kubectl
 from tests.target import REPO
+from ticketscope.core.modes import REGISTRY
 from ticketscope.core.pairs import read_pairs
 
 pytestmark = pytest.mark.kind
@@ -75,7 +76,11 @@ def _recompute(ranks: list[list[Any]], kinds: dict[int, str], kind: str) -> dict
 def test_keyword_is_scored_on_clusters_split_by_kind(eval_results: dict[str, Any]) -> None:
     assert eval_results["k"] == 10
     assert eval_results["relevance"] == "cluster"
-    assert eval_results["skipped_modes"] == []
+    # Every registered mode is either scored or named as skipped, so a mode whose
+    # embeddings are not loaded (dense, hybrid) is skipped without failing this check.
+    assert "keyword" not in eval_results["skipped_modes"]
+    assert set(eval_results["modes"]) | set(eval_results["skipped_modes"]) == set(REGISTRY)
+    assert not set(eval_results["modes"]) & set(eval_results["skipped_modes"])
     keyword = eval_results["modes"]["keyword"]
     assert {kind: keyword[kind]["pairs_scored"] for kind in KINDS} == {
         "short": SHORT,

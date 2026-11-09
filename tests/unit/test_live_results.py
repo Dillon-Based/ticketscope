@@ -141,6 +141,21 @@ def test_missing_evidence_is_left_out_not_guessed(tmp_path: Path) -> None:
     assert set(results) == {"ticketscope--e1-s1--AC-2"}
 
 
+def test_a_skipped_kind_deploy_is_recorded_as_skipped_not_left_out(
+    reports: dict[str, list[object]],
+) -> None:
+    only_unit = {"unit.xml": reports["unit.xml"]}
+    needs = {**NEEDS_OK, "integrated-check": "skipped"}
+    results = _by_criterion(live_results.build_results(only_unit, needs, None, "https://run"))
+    assert results["ticketscope--e1-s1--AC-1"]["status"] == "skipped"
+    assert "kind deploy skipped" in results["ticketscope--e1-s1--AC-1"]["evidence"]
+    # A kind job that failed before it wrote a report is not turned into a skip.
+    failed = {**NEEDS_OK, "integrated-check": "failure"}
+    assert "ticketscope--e1-s1--AC-1" not in _by_criterion(
+        live_results.build_results(only_unit, failed, None, "u")
+    )
+
+
 def test_runner_fit_without_ready_time_fails(reports: dict[str, list[object]]) -> None:
     fit = {**FIT, "kind_up_to_api_ready_seconds": "n/a"}
     results = _by_criterion(live_results.build_results(reports, NEEDS_OK, fit, "u"))

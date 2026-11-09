@@ -76,6 +76,7 @@ jobs:
     runs-on: ubuntu-24.04
     outputs:
       images: ${{ steps.filter.outputs.images }}
+      kind: ${{ steps.kind.outputs.kind }}
     steps:
       - uses: actions/checkout@v7
       - uses: dorny/paths-filter@v4
@@ -84,6 +85,11 @@ jobs:
           filters: |
             images:
               - 'images/**'
+      # The kind deploy runs only when a path it depends on changed (.github/kind-paths.yml).
+      - uses: dorny/paths-filter@v4
+        id: kind
+        with:
+          filters: .github/kind-paths.yml
 
   images:
     # AD-16: both images for both arches, on native runners (no QEMU). A manual dispatch
@@ -114,8 +120,12 @@ jobs:
   integrated-check:
     # One kind cluster per PR. The integrated suite runs first, on the freshly deployed
     # state, before smoke's upgrades and forced reloads.
+    needs: changes
     uses: ./.github/workflows/_kind-deploy.yml
     with:
+      # Skipped inside the reusable workflow, so the check still reports as
+      # `integrated-check / deploy`. A manual dispatch always runs it.
+      enabled: ${{ needs.changes.outputs.kind == 'true' || github.event_name == 'workflow_dispatch' }}
       check: uv run pytest -m kind tests/integrated tests/smoke --junitxml=reports/kind.xml
       # Story 10 AC-4: the first smoke run after an in-place upgrade passes (3).
       upgrade_check: uv run pytest -m kind tests/smoke --junitxml=reports/kind-upgrade.xml

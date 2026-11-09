@@ -1,0 +1,18 @@
+# Paths a kind deploy can depend on. A PR that changes none of them skips the kind jobs
+# (ci.yml's integrated-check and eval.yml's eval), which together take about 15 minutes.
+# Read by dorny/paths-filter in both workflows' `changes` job; keep it the one list.
+kind:
+  - 'src/**'
+  - 'migrations/**'
+  - 'deploy/**'
+  - 'images/**'
+  - 'eval/**'
+  - 'scripts/**'
+  - 'tests/integrated/**'
+  - 'tests/smoke/**'
+  - 'tests/eval/**'
+  - 'tests/*.py'
+  - 'pyproject.toml'
+  - 'uv.lock'
+  - '.github/workflows/**'
+  - '.github/kind-paths.yml'

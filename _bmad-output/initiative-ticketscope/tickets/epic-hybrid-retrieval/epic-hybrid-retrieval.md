@@ -75,3 +75,4 @@ The eval table compares keyword, dense and hybrid retrieval on short and log-hea
 - Decision: This epic starts after epic-eval-gate's stories 3 and 5 are done, so `eval/baseline.json` is not edited from two lanes (user, 2026-11-08).
 - Decision: Tracer bullet is story 1, dense mode answering through `/v1` on kind, with `load` computing embeddings locally. CI stays keyword-only until the asset story lands, so PR runs never embed the corpus (user, 2026-11-08).
 - Decision: A closing "Integrated check on kind" story follows the refactor sweep, as in epic-search-baseline (user, 2026-11-08).
+- Decision: Embedding model is `BAAI/bge-small-en-v1.5` with preprocessing `pre1.kind2-t3.outcome3.emb1`, chosen by spike 3.3 (hybrid Recall@10 0.817, MRR@10 0.594, against keyword 0.771 / 0.550). Findings: `tickets/spike-choose-the-embedding-model-findings.md` (user, 2026-11-09).

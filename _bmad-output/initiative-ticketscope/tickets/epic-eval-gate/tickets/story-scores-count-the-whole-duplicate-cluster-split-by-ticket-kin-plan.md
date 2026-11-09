@@ -72,11 +72,11 @@ deferred: []
 - [x] `tests/unit/` -- activate the cluster oracle; fake second mode; unavailable mode named; empty-kind row; cluster derivation vs `EXPECTED_CLUSTERS`; pairs format and rejection rows; two runs identical; tie-break SQL (and a Postgres tie test where the repo's tier allows); summary writer. Update `test_eval_main.py`/`test_pairs.py` for the new `Pair`.
 
 **Acceptance Criteria:**
-- Given the oracle fixture, when the cluster scaffold runs, then every metric short, log-heavy and overall equals `CLUSTER_EXPECTED` (overall differs from the mean of the kind means), a sibling counts as a hit, and the query never scores itself; `git diff 7ea485a -- tests/eval_oracle.py` is empty.
-- Given `modes.REGISTRY` replaced after import with a fake second mode, when `score` runs, then the mode appears in the results with no change to `jobs.eval`; an unavailable mode is named in `skipped_modes`.
-- Given the same corpus scored twice, then the metrics and ranks are identical.
-- Given a PR, when `eval.yml` runs, then `reports-kind`'s `eval-results.json` holds, for keyword, every metric split short, log-heavy and overall, pair counts 10,164 / 309 / 10,473, each query's first-member rank (an independent recompute matches), and `wall_seconds`, which the job summary also shows.
-- Given the pinned snapshot, when pairs regenerate, then the file is byte-identical and `derive_pairs.py` prints `10473 pairs: 10164 short, 309 log_heavy`.
+- Given the oracle fixture, when the cluster scaffold runs, then every metric short, log-heavy and overall equals `CLUSTER_EXPECTED` (overall differs from the mean of the kind means), a sibling counts as a hit, and the query never scores itself; the fixture still starts with the bytes its red commit `7ea485a` wrote (R2).
+- Given `modes.REGISTRY` replaced after import with a fake second mode, when `score` runs, then the mode appears in the results with no change to `jobs.eval`; an unavailable mode is named in `skipped_modes` (R2).
+- Given the same corpus scored twice, then the metrics and ranks are identical (R2, R3).
+- Given a PR, when `eval.yml` runs, then `reports-kind`'s `eval-results.json` holds, for keyword, every metric split short, log-heavy and overall, pair counts 10,164 / 309 / 10,473, each query's first-member rank (an independent recompute matches), and `wall_seconds`, which the job summary also shows (R2).
+- Given the pinned snapshot, when pairs regenerate, then the file is byte-identical and `derive_pairs.py` prints `10473 pairs: 10164 short, 309 log_heavy` (R1).
 
 ## Implementation Notes
 

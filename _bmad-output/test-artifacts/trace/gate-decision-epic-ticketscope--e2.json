@@ -1,0 +1,24 @@
+{
+  "schema_version": "0.1.0",
+  "evaluated_at": "2026-11-08T23:37:38.667494+00:00",
+  "repo": "ticketscope",
+  "target": {
+    "type": "epic",
+    "id": "ticketscope--e2",
+    "label": "Epic 2: Retrieval is scored on every PR and regressions block the merge"
+  },
+  "collection_status": "COLLECTED",
+  "gate_basis": "priority_thresholds",
+  "gate_status": "CONCERNS",
+  "rationale": "P0 coverage is 100% (required: 100%). 0 critical requirement(s) below FULL coverage. Overall FULL coverage is 100% (minimum 80%); P1 is 100% (minimum 80%, PASS target 90%). 1 requirement(s) (R3) are covered in part only by recorded live verification observed at 424291fa5b0bc6d538614440246249eaadeea1b3. Live evidence is a point-in-time observation with no artifact to re-run, so the run is capped at CONCERNS.",
+  "p0_status": "MET",
+  "p1_status": "MET",
+  "overall_status": "MET",
+  "critical_open": 0,
+  "links": {
+    "trace_report_path": "_bmad-output/test-artifacts/trace/traceability-matrix-epic-ticketscope--e2.md",
+    "trace_report_url": "",
+    "artifact_url": "",
+    "journey_evidence_url": ""
+  }
+}

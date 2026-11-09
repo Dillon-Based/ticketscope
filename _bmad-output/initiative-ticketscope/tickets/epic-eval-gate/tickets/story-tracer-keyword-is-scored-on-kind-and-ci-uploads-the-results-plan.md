@@ -79,11 +79,11 @@ context:
 - [x] `tests/unit/test_eval_oracle.py` -- remove only the skip block.
 
 **Acceptance Criteria:**
-- Given the oracle fixture, when the scaffold runs, then it passes, and `git diff b7be713 -- tests/eval_oracle.py` is empty.
-- Given a PR, when `eval.yml` runs, then the eval Job completes after load as `ticketscope_ro`, and the `reports-kind` artifact holds `eval-results.json` with keyword's Recall@10 and MRR@10 over 10,473 pairs and lineage equal to `corpus_meta`.
-- Given a step after the results are written fails, when the workflow ends, then the artifact is still uploaded.
-- Given the same PR, when `ci.yml` runs, then integrated-check passes.
-- Given the pinned snapshot, when the pairs are regenerated, then the file is byte-identical and the printed counts are 10,473 / 10,164 / 309.
+- Given the oracle fixture, when the scaffold runs, then it passes (story 2.2 replaced the target-only scaffold with the cluster test on the same fixture), and the fixture still starts with the bytes its red commit `b7be713` wrote (R2).
+- Given a PR, when `eval.yml` runs, then the eval Job completes after load as `ticketscope_ro`, and the `reports-kind` artifact holds `eval-results.json` with keyword's Recall@10 and MRR@10 over 10,473 pairs and lineage equal to `corpus_meta` (R2).
+- Given a step after the results are written fails, when the workflow ends, then the artifact is still uploaded (R2).
+- Given the same PR, when `ci.yml` runs, then integrated-check passes (R2).
+- Given the pinned snapshot, when the pairs are regenerated, then the committed `eval/pairs/2026.11.1.jsonl` is byte-identical and the printed counts are 10,473 / 10,164 / 309 (R1).
 
 ## Implementation Notes
 

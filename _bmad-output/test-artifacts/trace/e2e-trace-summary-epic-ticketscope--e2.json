@@ -1,0 +1,410 @@
+{
+  "schema_version": "0.3.0",
+  "snapshot_at": "2026-11-08T23:37:38.667494+00:00",
+  "repo": "ticketscope",
+  "collection_mode": "contract_static",
+  "collection_status": "COLLECTED",
+  "inventory_basis": "acceptance_criteria",
+  "gate_basis": "priority_thresholds",
+  "source_sha": "424291fa5b0bc6d538614440246249eaadeea1b3",
+  "target": {
+    "type": "epic",
+    "id": "ticketscope--e2",
+    "label": "Epic 2: Retrieval is scored on every PR and regressions block the merge"
+  },
+  "decision_mode": "deterministic",
+  "evaluator": "Claude Code / Master Test Architect",
+  "confidence": "high",
+  "oracle": {
+    "resolution_mode": "formal_requirements",
+    "confidence": "high",
+    "granularity": "requirements",
+    "sources": [
+      "_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/epic-eval-gate.md",
+      "_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-tracer-keyword-is-scored-on-kind-and-ci-uploads-the-results-plan.md",
+      "_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-scores-count-the-whole-duplicate-cluster-split-by-ticket-kin-plan.md",
+      "_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-a-regressing-pr-cannot-merge-plan.md",
+      "_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/story-readme-results-table-is-generated-from-ci-output-plan.md",
+      "_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/tickets/tickets.toml",
+      "_bmad-output/initiative-ticketscope/tickets/epic-eval-gate/test-design-epic-2.md"
+    ],
+    "external_pointer_status": "not_used",
+    "synthetic": false
+  },
+  "gate_status": "CONCERNS",
+  "coverage": {
+    "inventory": {
+      "covered": 4,
+      "total": 4,
+      "pct": 100
+    },
+    "priority_breakdown": {
+      "P0": {
+        "total": 2,
+        "covered": 2,
+        "pct": 100
+      },
+      "P1": {
+        "total": 2,
+        "covered": 2,
+        "pct": 100
+      },
+      "P2": {
+        "total": 0,
+        "covered": 0,
+        "pct": 100
+      },
+      "P3": {
+        "total": 0,
+        "covered": 0,
+        "pct": 100
+      }
+    },
+    "criteria": {
+      "total": 20,
+      "full": 20,
+      "pct": 100
+    },
+    "by_level": {
+      "e2e": {
+        "tests": 7,
+        "criteria_covered": 4
+      },
+      "api": {
+        "tests": 0,
+        "criteria_covered": 0
+      },
+      "component": {
+        "tests": 0,
+        "criteria_covered": 0
+      },
+      "unit": {
+        "tests": 27,
+        "criteria_covered": 18
+      },
+      "live": {
+        "tests": 4,
+        "criteria_covered": 4
+      },
+      "other": {
+        "tests": 1,
+        "criteria_covered": 1
+      }
+    }
+  },
+  "tests": {
+    "files": 14,
+    "cases": 39,
+    "skipped_cases": 0,
+    "fixme_cases": 0,
+    "pending_cases": 0
+  },
+  "risk_summary": {
+    "critical_open": 0,
+    "high_open": 0,
+    "medium_open": 0,
+    "low_open": 0
+  },
+  "heuristics": {
+    "endpoint_gaps": 0,
+    "auth_negative_path_status": "not_applicable",
+    "error_path_status": "present",
+    "ui_journey_status": "not_applicable",
+    "ui_state_status": "not_applicable"
+  },
+  "live_evidence": {
+    "present": true,
+    "results_file": "_bmad-output/test-artifacts/live-verification-results.json",
+    "freshness": "mixed",
+    "recorded_source_sha": "424291fa5b0bc6d538614440246249eaadeea1b3",
+    "current_source_sha": "424291fa5b0bc6d538614440246249eaadeea1b3",
+    "producer": "GitHub Actions ci run 42415340129 (workflow_dispatch, scripts/live_results.py) + local kind runs of scripts/fault-inject.sh and scripts/v1-parity.sh at the same commit (Claude Code); author-confirmed manual and document checks (user, 2026-11-07)",
+    "counted": 4,
+    "stale": 22,
+    "unverifiable": 0,
+    "failed": 0,
+    "contradicted": 0,
+    "blocked": 0,
+    "skipped": 0,
+    "unmatched": 0,
+    "invalid": 0,
+    "requirements_live_only": 1
+  },
+  "gate_criteria": {
+    "p0_coverage_required": "100%",
+    "p0_coverage_actual": "100%",
+    "p0_status": "MET",
+    "p1_coverage_target": "90%",
+    "p1_coverage_minimum": "80%",
+    "p1_coverage_actual": "100%",
+    "p1_status": "MET",
+    "overall_coverage_minimum": "80%",
+    "overall_coverage_actual": "100%",
+    "overall_status": "MET"
+  },
+  "blockers": [
+    {
+      "id": "ticketscope--e1-LIVE-001",
+      "severity": "high",
+      "reason": "Live result recorded against 6400e5ac8e3bb4cadeea8061a5581c33b2b45036, which is not the commit under trace (424291fa5b0bc6d538614440246249eaadeea1b3). It names an epic 1 criterion and is not part of this oracle.",
+      "test_file": "",
+      "test_title": "ticketscope--e1-LIVE-001"
+    },
+    {
+      "id": "ticketscope--e1-LIVE-002",
+      "severity": "high",
+      "reason": "Live result recorded against 6400e5ac8e3bb4cadeea8061a5581c33b2b45036, which is not the commit under trace (424291fa5b0bc6d538614440246249eaadeea1b3). It names an epic 1 criterion and is not part of this oracle.",
+      "test_file": "",
+      "test_title": "ticketscope--e1-LIVE-002"
+    },
+    {
+      "id": "ticketscope--e1-LIVE-003",
+      "severity": "high",
+      "reason": "Live result recorded against 6400e5ac8e3bb4cadeea8061a5581c33b2b45036, which is not the commit under trace (424291fa5b0bc6d538614440246249eaadeea1b3). It names an epic 1 criterion and is not part of this oracle.",
+      "test_file": "",
+      "test_title": "ticketscope--e1-LIVE-003"
+    },
+    {
+      "id": "ticketscope--e1-LIVE-004",
+      "severity": "high",
+      "reason": "Live result recorded against 6400e5ac8e3bb4cadeea8061a5581c33b2b45036, which is not the commit under trace (424291fa5b0bc6d538614440246249eaadeea1b3). It names an epic 1 criterion and is not part of this oracle.",
+      "test_file": "",
+      "test_title": "ticketscope--e1-LIVE-004"
+    },
+    {
+      "id": "ticketscope--e1-LIVE-005",
+      "severity": "high",
+      "reason": "Live result recorded against 6400e5ac8e3bb4cadeea8061a5581c33b2b45036, which is not the commit under trace (424291fa5b0bc6d538614440246249eaadeea1b3). It names an epic 1 criterion and is not part of this oracle.",
+      "test_file": "",
+      "test_title": "ticketscope--e1-LIVE-005"
+    },
+    {
+      "id": "ticketscope--e1-LIVE-006",
+      "severity": "high",
+      "reason": "Live result recorded against 6400e5ac8e3bb4cadeea8061a5581c33b2b45036, which is not the commit under trace (424291fa5b0bc6d538614440246249eaadeea1b3). It names an epic 1 criterion and is not part of this oracle.",
+      "test_file": "",
+      "test_title": "ticketscope--e1-LIVE-006"
+    },
+    {
+      "id": "ticketscope--e1-LIVE-007",
+      "severity": "high",
+      "reason": "Live result recorded against 6400e5ac8e3bb4cadeea8061a5581c33b2b45036, which is not the commit under trace (424291fa5b0bc6d538614440246249eaadeea1b3). It names an epic 1 criterion and is not part of this oracle.",
+      "test_file": "",
+      "test_title": "ticketscope--e1-LIVE-007"
+    },
+    {
+      "id": "ticketscope--e1-LIVE-008",
+      "severity": "high",
+      "reason": "Live result recorded against 6400e5ac8e3bb4cadeea8061a5581c33b2b45036, which is not the commit under trace (424291fa5b0bc6d538614440246249eaadeea1b3). It names an epic 1 criterion and is not part of this oracle.",
+      "test_file": "",
+      "test_title": "ticketscope--e1-LIVE-008"
+    },
+    {
+      "id": "ticketscope--e1-LIVE-009",
+      "severity": "high",
+      "reason": "Live result recorded against 6400e5ac8e3bb4cadeea8061a5581c33b2b45036, which is not the commit under trace (424291fa5b0bc6d538614440246249eaadeea1b3). It names an epic 1 criterion and is not part of this oracle.",
+      "test_file": "",
+      "test_title": "ticketscope--e1-LIVE-009"
+    },
+    {
+      "id": "ticketscope--e1-LIVE-010",
+      "severity": "high",
+      "reason": "Live result recorded against 6400e5ac8e3bb4cadeea8061a5581c33b2b45036, which is not the commit under trace (424291fa5b0bc6d538614440246249eaadeea1b3). It names an epic 1 criterion and is not part of this oracle.",
+      "test_file": "",
+      "test_title": "ticketscope--e1-LIVE-010"
+    },
+    {
+      "id": "ticketscope--e1-LIVE-011",
+      "severity": "high",
+      "reason": "Live result recorded against 6400e5ac8e3bb4cadeea8061a5581c33b2b45036, which is not the commit under trace (424291fa5b0bc6d538614440246249eaadeea1b3). It names an epic 1 criterion and is not part of this oracle.",
+      "test_file": "",
+      "test_title": "ticketscope--e1-LIVE-011"
+    },
+    {
+      "id": "ticketscope--e1-LIVE-012",
+      "severity": "high",
+      "reason": "Live result recorded against 6400e5ac8e3bb4cadeea8061a5581c33b2b45036, which is not the commit under trace (424291fa5b0bc6d538614440246249eaadeea1b3). It names an epic 1 criterion and is not part of this oracle.",
+      "test_file": "",
+      "test_title": "ticketscope--e1-LIVE-012"
+    },
+    {
+      "id": "ticketscope--e1-LIVE-013",
+      "severity": "high",
+      "reason": "Live result recorded against 6400e5ac8e3bb4cadeea8061a5581c33b2b45036, which is not the commit under trace (424291fa5b0bc6d538614440246249eaadeea1b3). It names an epic 1 criterion and is not part of this oracle.",
+      "test_file": "",
+      "test_title": "ticketscope--e1-LIVE-013"
+    },
+    {
+      "id": "ticketscope--e1-LIVE-014",
+      "severity": "high",
+      "reason": "Live result recorded against 6400e5ac8e3bb4cadeea8061a5581c33b2b45036, which is not the commit under trace (424291fa5b0bc6d538614440246249eaadeea1b3). It names an epic 1 criterion and is not part of this oracle.",
+      "test_file": "",
+      "test_title": "ticketscope--e1-LIVE-014"
+    },
+    {
+      "id": "ticketscope--e1-LIVE-015",
+      "severity": "high",
+      "reason": "Live result recorded against 6400e5ac8e3bb4cadeea8061a5581c33b2b45036, which is not the commit under trace (424291fa5b0bc6d538614440246249eaadeea1b3). It names an epic 1 criterion and is not part of this oracle.",
+      "test_file": "",
+      "test_title": "ticketscope--e1-LIVE-015"
+    },
+    {
+      "id": "ticketscope--e1-LIVE-016",
+      "severity": "high",
+      "reason": "Live result recorded against 6400e5ac8e3bb4cadeea8061a5581c33b2b45036, which is not the commit under trace (424291fa5b0bc6d538614440246249eaadeea1b3). It names an epic 1 criterion and is not part of this oracle.",
+      "test_file": "",
+      "test_title": "ticketscope--e1-LIVE-016"
+    },
+    {
+      "id": "ticketscope--e1-LIVE-017",
+      "severity": "high",
+      "reason": "Live result recorded against 6400e5ac8e3bb4cadeea8061a5581c33b2b45036, which is not the commit under trace (424291fa5b0bc6d538614440246249eaadeea1b3). It names an epic 1 criterion and is not part of this oracle.",
+      "test_file": "",
+      "test_title": "ticketscope--e1-LIVE-017"
+    },
+    {
+      "id": "ticketscope--e1-LIVE-018",
+      "severity": "high",
+      "reason": "Live result recorded against 6400e5ac8e3bb4cadeea8061a5581c33b2b45036, which is not the commit under trace (424291fa5b0bc6d538614440246249eaadeea1b3). It names an epic 1 criterion and is not part of this oracle.",
+      "test_file": "",
+      "test_title": "ticketscope--e1-LIVE-018"
+    },
+    {
+      "id": "ticketscope--e1-LIVE-019",
+      "severity": "high",
+      "reason": "Live result recorded against 6400e5ac8e3bb4cadeea8061a5581c33b2b45036, which is not the commit under trace (424291fa5b0bc6d538614440246249eaadeea1b3). It names an epic 1 criterion and is not part of this oracle.",
+      "test_file": "",
+      "test_title": "ticketscope--e1-LIVE-019"
+    },
+    {
+      "id": "ticketscope--e1-LIVE-020",
+      "severity": "high",
+      "reason": "Live result recorded against 6400e5ac8e3bb4cadeea8061a5581c33b2b45036, which is not the commit under trace (424291fa5b0bc6d538614440246249eaadeea1b3). It names an epic 1 criterion and is not part of this oracle.",
+      "test_file": "",
+      "test_title": "ticketscope--e1-LIVE-020"
+    },
+    {
+      "id": "ticketscope--e1-LIVE-021",
+      "severity": "high",
+      "reason": "Live result recorded against 6400e5ac8e3bb4cadeea8061a5581c33b2b45036, which is not the commit under trace (424291fa5b0bc6d538614440246249eaadeea1b3). It names an epic 1 criterion and is not part of this oracle.",
+      "test_file": "",
+      "test_title": "ticketscope--e1-LIVE-021"
+    },
+    {
+      "id": "ticketscope--e1-LIVE-022",
+      "severity": "high",
+      "reason": "Live result recorded against 6400e5ac8e3bb4cadeea8061a5581c33b2b45036, which is not the commit under trace (424291fa5b0bc6d538614440246249eaadeea1b3). It names an epic 1 criterion and is not part of this oracle.",
+      "test_file": "",
+      "test_title": "ticketscope--e1-LIVE-022"
+    }
+  ],
+  "rejected_evidence": [
+    {
+      "requirement_id": "ticketscope--e2-s1--AC-1",
+      "test_id": "tests/eval/test_eval_kind.py:45",
+      "file": "tests/eval/test_eval_kind.py",
+      "line": 45,
+      "level": "e2e",
+      "title": "test_eval_job_completed_after_load",
+      "reason": "Carries `@pytest.mark.criterion(\"ticketscope--e2-s1--AC-1\")`, but story 1's AC-1 is the oracle-fixture diff check by position in the plan. Its assertions establish the Job, lineage, role, secret or pair-regeneration clauses of AC-2 and AC-5, where it is mapped as evidence. It asserts nothing about the oracle fixture."
+    },
+    {
+      "requirement_id": "ticketscope--e2-s1--AC-1",
+      "test_id": "tests/eval/test_eval_kind.py:111",
+      "file": "tests/eval/test_eval_kind.py",
+      "line": 111,
+      "level": "e2e",
+      "title": "test_lineage_equals_corpus_meta",
+      "reason": "Carries `@pytest.mark.criterion(\"ticketscope--e2-s1--AC-1\")`, but story 1's AC-1 is the oracle-fixture diff check by position in the plan. Its assertions establish the Job, lineage, role, secret or pair-regeneration clauses of AC-2 and AC-5, where it is mapped as evidence. It asserts nothing about the oracle fixture."
+    },
+    {
+      "requirement_id": "ticketscope--e2-s1--AC-1",
+      "test_id": "tests/eval/test_eval_kind.py:121",
+      "file": "tests/eval/test_eval_kind.py",
+      "line": 121,
+      "level": "e2e",
+      "title": "test_eval_job_reads_as_ticketscope_ro",
+      "reason": "Carries `@pytest.mark.criterion(\"ticketscope--e2-s1--AC-1\")`, but story 1's AC-1 is the oracle-fixture diff check by position in the plan. Its assertions establish the Job, lineage, role, secret or pair-regeneration clauses of AC-2 and AC-5, where it is mapped as evidence. It asserts nothing about the oracle fixture."
+    },
+    {
+      "requirement_id": "ticketscope--e2-s1--AC-1",
+      "test_id": "tests/eval/test_eval_kind.py:133",
+      "file": "tests/eval/test_eval_kind.py",
+      "line": 133,
+      "level": "e2e",
+      "title": "test_uploaded_results_hold_no_secret_value",
+      "reason": "Carries `@pytest.mark.criterion(\"ticketscope--e2-s1--AC-1\")`, but story 1's AC-1 is the oracle-fixture diff check by position in the plan. Its assertions establish the Job, lineage, role, secret or pair-regeneration clauses of AC-2 and AC-5, where it is mapped as evidence. It asserts nothing about the oracle fixture."
+    },
+    {
+      "requirement_id": "ticketscope--e2-s1--AC-1",
+      "test_id": "tests/eval/test_eval_kind.py:142",
+      "file": "tests/eval/test_eval_kind.py",
+      "line": 142,
+      "level": "e2e",
+      "title": "test_pairs_regenerate_byte_identical_with_the_release_counts",
+      "reason": "Carries `@pytest.mark.criterion(\"ticketscope--e2-s1--AC-1\")`, but story 1's AC-1 is the oracle-fixture diff check by position in the plan. Its assertions establish the Job, lineage, role, secret or pair-regeneration clauses of AC-2 and AC-5, where it is mapped as evidence. It asserts nothing about the oracle fixture."
+    }
+  ],
+  "recommendations": [
+    {
+      "priority": "HIGH",
+      "action": "Re-run CI on the final commit of the PR and re-record the three CI-derived live results (story 1 AC-4, story 3 AC-4, story 5 verify) there. They currently rest on runs at 4372cca, accepted by the user because the trees are equal; a run at the real head removes the exception.",
+      "requirements": [
+        "R2",
+        "R3"
+      ]
+    },
+    {
+      "priority": "MEDIUM",
+      "action": "Lift the CONCERNS cap on R3 by giving story 3 AC-4 and AC-5 static evidence: a test that reads the required-check list from branch protection (or a documented fixture) and one that asserts the CI jobs run ruff, pyright, lint-imports and unit pytest.",
+      "requirements": [
+        "R3"
+      ]
+    },
+    {
+      "priority": "MEDIUM",
+      "action": "Have the product owner review the plan-criteria edits: the R tags on stories 2.1 to 2.4, the reworded oracle clauses of story 2.1 AC-1 and 2.2 AC-1, and `covers = [R2, R3, R4]` on story 2.5. They change built stories' criteria text, which the replan rule normally forbids.",
+      "requirements": [
+        "R1",
+        "R2",
+        "R3",
+        "R4"
+      ]
+    },
+    {
+      "priority": "LOW",
+      "action": "Waiver W-001's remediation (epic 2 Done-when line) is still open: a fresh epic 1 trace does not yet honour the six superseded criteria. Check it at epic closure; owner Dillon.",
+      "requirements": []
+    }
+  ],
+  "links": {
+    "trace_report_path": "_bmad-output/test-artifacts/trace/traceability-matrix-epic-ticketscope--e2.md",
+    "trace_report_url": "",
+    "artifact_url": "",
+    "journey_evidence_url": ""
+  },
+  "waivers": {
+    "register": "_bmad-output/test-artifacts/gate-waivers.md",
+    "read_error": "",
+    "filed": 1,
+    "valid": 1,
+    "invalid": 0,
+    "entries": [
+      {
+        "id": "W-001",
+        "title": "Retired GitHub-era criteria of stories 1.3, 1.4 and 1.14",
+        "covers": [
+          "ticketscope--e1-s3--AC-1",
+          "ticketscope--e1-s3--AC-2",
+          "ticketscope--e1-s3--AC-3",
+          "ticketscope--e1-s4--AC-1",
+          "ticketscope--e1-s4--AC-2",
+          "ticketscope--e1-s14--AC-2"
+        ],
+        "priority": "P0",
+        "valid": true,
+        "failed_checks": []
+      }
+    ]
+  }
+}

@@ -69,10 +69,10 @@ context:
 - [ ] `.github/workflows/eval.yml`, `_kind-deploy.yml` -- pass `base_sha`, fetch it, run the gate; write the report to `$GITHUB_STEP_SUMMARY` -- gate in CI
 
 **Acceptance Criteria:**
-- Given a PR that worsens keyword ranking, when eval runs, then the gate step fails with the metric named.
-- Given the same PR also updates `eval/baseline.json` to its run's results, then the gate passes.
-- Given a preprocessing-version change with no baseline update, then the gate fails with a lineage message.
-- Given `ruff`, `pyright`, `lint-imports` and `pytest tests/unit`, then all pass.
+- Given a PR that worsens keyword ranking, when eval runs, then the gate step fails with the metric named (R3).
+- Given the same PR also updates `eval/baseline.json` to its run's results, then the gate passes (R3).
+- Given a preprocessing-version change with no baseline update, then the gate fails with a lineage message (R3).
+- Given `ruff`, `pyright`, `lint-imports` and `pytest tests/unit`, then all pass (R3).
 - Given the merged workflow, a person makes `eval` required in branch protection (checked by the person, R3).
 
 ## Implementation Notes

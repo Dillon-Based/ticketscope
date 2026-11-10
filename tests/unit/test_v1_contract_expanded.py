@@ -14,7 +14,7 @@ import httpx2
 import pytest
 from fastapi.testclient import TestClient
 
-from tests.factories import search_payload
+from tests.factories import issue_record, search_payload
 from tests.target import TARGET_NUMBER, TARGET_QUERY
 from ticketscope.contract.search import IssueResponse, Problem, SearchRequest, SearchResponse
 from ticketscope.core.fakes import InMemoryCorpusStore
@@ -24,10 +24,6 @@ from ticketscope.core.ports import Retriever
 from ticketscope.http import app as app_module
 from ticketscope.http.app import create_app
 from ticketscope.settings import Settings
-
-
-def _issue(number: int) -> IssueRecord:
-    return IssueRecord(number=number, title=f"t{number}", url="u", kind="short", state="closed")
 
 
 @pytest.fixture
@@ -98,7 +94,7 @@ class _SearchFailsStore(InMemoryCorpusStore):
 
 
 def test_failure_after_the_version_check_is_a_500_problem() -> None:
-    store = _SearchFailsStore([(_issue(1), "alpha")], corpus_version="v")
+    store = _SearchFailsStore([(issue_record(1), "alpha")], corpus_version="v")
     client = TestClient(create_app(store=store, settings=Settings()), raise_server_exceptions=False)
     response = client.post("/v1/search", json=search_payload("alpha", mode="keyword"))
     _problem(response, 500)
@@ -209,7 +205,9 @@ def test_exclude_is_not_on_the_http_surface(client: TestClient) -> None:
 
 def test_default_k_is_ten() -> None:
     assert SearchRequest(query="q").k == 10
-    store = InMemoryCorpusStore([(_issue(n), "alpha") for n in range(1, 21)], corpus_version="v")
+    store = InMemoryCorpusStore(
+        [(issue_record(n), "alpha") for n in range(1, 21)], corpus_version="v"
+    )
     client = TestClient(create_app(store=store, settings=Settings(default_mode="keyword")))
     results = SearchResponse.model_validate(
         client.post("/v1/search", json=search_payload("alpha")).json()
@@ -218,7 +216,9 @@ def test_default_k_is_ten() -> None:
 
 
 def test_k_50_returns_50_when_the_corpus_has_them() -> None:
-    store = InMemoryCorpusStore([(_issue(n), "alpha") for n in range(1, 61)], corpus_version="v")
+    store = InMemoryCorpusStore(
+        [(issue_record(n), "alpha") for n in range(1, 61)], corpus_version="v"
+    )
     client = TestClient(create_app(store=store, settings=Settings(default_mode="keyword")))
     response = client.post("/v1/search", json=search_payload("alpha", k=50))
     assert response.status_code == 200
@@ -283,7 +283,7 @@ class _SpyStore(InMemoryCorpusStore):
 
 
 def _spy(n: int) -> _SpyStore:
-    return _SpyStore([(_issue(i), "alpha " * (20 - i)) for i in range(1, n + 1)])
+    return _SpyStore([(issue_record(i), "alpha " * (20 - i)) for i in range(1, n + 1)])
 
 
 def test_keyword_over_fetches_by_the_exclude_size() -> None:
@@ -339,9 +339,9 @@ def test_the_registry_cannot_be_mutated() -> None:
 
 
 def test_fake_get_issue_returns_none_for_an_unknown_number() -> None:
-    assert InMemoryCorpusStore([(_issue(1), "a")]).get_issue(2) is None
+    assert InMemoryCorpusStore([(issue_record(1), "a")]).get_issue(2) is None
 
 
 def test_fake_get_issue_keeps_the_issue_record_and_body() -> None:
-    store = InMemoryCorpusStore([(_issue(1), "a")], bodies={1: "b"})
-    assert store.get_issue(1) == IssueDetail(issue=_issue(1), body="b")
+    store = InMemoryCorpusStore([(issue_record(1), "a")], bodies={1: "b"})
+    assert store.get_issue(1) == IssueDetail(issue=issue_record(1), body="b")

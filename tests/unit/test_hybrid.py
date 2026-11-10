@@ -8,19 +8,15 @@ from opentelemetry.sdk.trace import ReadableSpan, TracerProvider
 from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
-from tests.factories import search_payload
+from tests.factories import issue_record, search_payload
 from ticketscope.contract.search import Problem, SearchResponse
 from ticketscope.core.fakes import HashEmbedder, InMemoryCorpusStore
-from ticketscope.core.model import IssueRecord, Scored
+from ticketscope.core.model import Scored
 from ticketscope.core.modes import REGISTRY, RRF_K, HybridRetriever
 from ticketscope.http.app import create_app
 from ticketscope.settings import Settings
 
 MODEL = "hash-fake"
-
-
-def _issue(number: int) -> IssueRecord:
-    return IssueRecord(number=number, title=f"t{number}", url="u", kind="short", state="closed")
 
 
 class Ranked:
@@ -33,7 +29,7 @@ class Ranked:
     def search(self, query: str, k: int, exclude: frozenset[int] = frozenset()) -> list[Scored]:
         self.asked.append((k, exclude))
         kept = [n for n in self._numbers if n not in exclude]
-        return [Scored(issue=_issue(n), score=0.0) for n in kept[:k]]
+        return [Scored(issue=issue_record(n), score=0.0) for n in kept[:k]]
 
 
 def _numbers(hits: list[Scored]) -> list[int]:
@@ -106,7 +102,7 @@ def _store(*, embedded: bool = True) -> InMemoryCorpusStore:
     texts = {1: "kernel panic on boot", 2: "texture glitch near spawn", 3: "boot loop after update"}
     vectors = dict(zip(texts, embedder.embed(list(texts.values())), strict=True))
     return InMemoryCorpusStore(
-        [(_issue(n), text) for n, text in texts.items()],
+        [(issue_record(n), text) for n, text in texts.items()],
         corpus_version="v1",
         embeddings={MODEL: vectors} if embedded else None,
         embedding_model=MODEL if embedded else None,

@@ -1,13 +1,9 @@
 from itertools import pairwise
 
+from tests.factories import issue_record
 from tests.target import NO_MATCH_QUERY, TARGET_NUMBER, TARGET_QUERY
 from ticketscope.core.fakes import InMemoryCorpusStore
-from ticketscope.core.model import IssueRecord
 from ticketscope.core.modes import REGISTRY, KeywordRetriever
-
-
-def _issue(number: int) -> IssueRecord:
-    return IssueRecord(number=number, title=f"t{number}", url="u", kind="short", state="closed")
 
 
 def test_registry_holds_keyword_dense_and_hybrid() -> None:
@@ -18,7 +14,7 @@ def test_registry_holds_keyword_dense_and_hybrid() -> None:
 
 
 def test_registry_builds_a_keyword_retriever() -> None:
-    store = InMemoryCorpusStore([(_issue(7), "alpha beta"), (_issue(9), "unrelated")])
+    store = InMemoryCorpusStore([(issue_record(7), "alpha beta"), (issue_record(9), "unrelated")])
     retriever = REGISTRY["keyword"].build(store, None)
     assert isinstance(retriever, KeywordRetriever)
     hits = retriever.search("alpha beta", k=10)
@@ -28,10 +24,10 @@ def test_registry_builds_a_keyword_retriever() -> None:
 def test_keyword_ranks_by_overlap_then_number() -> None:
     store = InMemoryCorpusStore(
         [
-            (_issue(3), "alpha"),
-            (_issue(1), "alpha beta beta"),
-            (_issue(2), "alpha"),
-            (_issue(4), "gamma"),
+            (issue_record(3), "alpha"),
+            (issue_record(1), "alpha beta beta"),
+            (issue_record(2), "alpha"),
+            (issue_record(4), "gamma"),
         ]
     )
     hits = KeywordRetriever(store).search("Alpha BETA", k=10)
@@ -40,7 +36,7 @@ def test_keyword_ranks_by_overlap_then_number() -> None:
 
 
 def test_keyword_honours_k() -> None:
-    store = InMemoryCorpusStore([(_issue(n), "alpha") for n in range(5)])
+    store = InMemoryCorpusStore([(issue_record(n), "alpha") for n in range(5)])
     assert len(KeywordRetriever(store).search("alpha", k=2)) == 2
     assert KeywordRetriever(store).search("alpha", k=0) == []
 
@@ -57,7 +53,7 @@ def test_fixture_no_match_is_empty(fixture_store: InMemoryCorpusStore) -> None:
 
 
 def test_exclude_drops_the_top_hit_and_still_fills_k() -> None:
-    store = InMemoryCorpusStore([(_issue(n), "alpha " * (10 - n)) for n in range(1, 6)])
+    store = InMemoryCorpusStore([(issue_record(n), "alpha " * (10 - n)) for n in range(1, 6)])
     retriever = KeywordRetriever(store)
     top = retriever.search("alpha", k=3)
     assert [h.issue.number for h in top] == [1, 2, 3]
@@ -66,7 +62,7 @@ def test_exclude_drops_the_top_hit_and_still_fills_k() -> None:
 
 
 def test_exclude_of_an_absent_number_changes_nothing() -> None:
-    store = InMemoryCorpusStore([(_issue(n), "alpha " * (10 - n)) for n in range(1, 6)])
+    store = InMemoryCorpusStore([(issue_record(n), "alpha " * (10 - n)) for n in range(1, 6)])
     retriever = KeywordRetriever(store)
     assert retriever.search("alpha", k=3, exclude=frozenset({99})) == retriever.search("alpha", k=3)
 

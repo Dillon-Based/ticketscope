@@ -5,22 +5,31 @@ failure paths of `run` are pinned, and the Job's deadline is checked against the
 workflow timeouts that must outlast it.
 """
 
+import importlib
 import logging
 import re
 import shutil
 from collections.abc import Sequence
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
 from tests.unit.test_chart_embeddings import _NO_PIN, _doc, _render
 from tests.unit.test_eval_main import META, PAIR, _embedded_store, _patch, _settings
 from ticketscope.adapters import embedder as embedder_module
+from ticketscope.core import modes
 from ticketscope.core.fakes import HashEmbedder
-from ticketscope.core.pairs import pairs_jsonl
+from ticketscope.core.pairs import Pair, pairs_jsonl
 from ticketscope.jobs.eval import main as eval_main
 from ticketscope.jobs.eval import score
 from ticketscope.settings import Settings
+
+# The module, not the `score` function the package re-exports under the same name.
+score_module = importlib.import_module("ticketscope.jobs.eval.score")
+
+# A second query with a different text from PAIR's (issue 3 against issue 2's cluster).
+OTHER_PAIR = Pair(3, 1, "short", (1,))
 
 ROOT = Path(__file__).resolve().parents[2]
 needs_helm = pytest.mark.skipif(shutil.which("helm") is None, reason="needs helm")
@@ -62,7 +71,7 @@ def test_a_model_that_fails_to_load_fails_the_job_without_a_results_line(
     assert "eval failed" in caplog.text
 
 
-def test_each_pair_embeds_its_query_once_for_dense_and_once_for_hybrid() -> None:
+def test_each_pair_embeds_its_query_once_for_dense_and_hybrid_together() -> None:
     embedded: list[int] = []
 
     class Counting(HashEmbedder):
@@ -70,10 +79,83 @@ def test_each_pair_embeds_its_query_once_for_dense_and_once_for_hybrid() -> None
             embedded.append(len(texts))
             return super().embed(texts)
 
-    results = score(_embedded_store(), [PAIR, PAIR], Counting())
+    results = score(_embedded_store(), [PAIR, OTHER_PAIR], Counting())
 
     assert results["modes"]["dense"]["overall"]["pairs_scored"] == 2
-    assert embedded == [1, 1, 1, 1]  # 2 pairs x (dense + hybrid); keyword never embeds
+    assert results["modes"]["hybrid"]["overall"]["pairs_scored"] == 2
+    assert embedded == [1, 1]  # one per query: hybrid reuses dense's vector; keyword never embeds
+
+
+def test_reusing_the_query_vector_leaves_every_rank_unchanged() -> None:
+    # Oracle: each mode's retriever, built and searched directly with its own fresh embedder,
+    # as score did before the cache.
+    store = _embedded_store()
+    pairs = [PAIR, OTHER_PAIR]
+    results = score(store, pairs, HashEmbedder())
+
+    for name in ("dense", "hybrid"):
+        expected: list[list[int | None]] = []
+        for pair in sorted(pairs, key=lambda p: p.query):
+            retriever = modes.REGISTRY[name].build(store, HashEmbedder())
+            hits = retriever.search(
+                score_module.query_text(store, pair.query),
+                score_module.K,
+                exclude=frozenset({pair.query}),
+            )
+            ranked = [hit.issue.number for hit in hits]
+            expected.append([pair.query, score_module.first_member_rank(pair.relevant, ranked)])
+        assert results["modes"][name]["first_member_ranks"] == expected, name
+
+
+def test_the_mode_that_reuses_the_vector_has_the_model_time_added_to_its_latency(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # A fake clock: every reading moves 1 ms, and each model call costs another 500 ms.
+    now = [0.0]
+
+    def clock() -> float:
+        now[0] += 0.001
+        return now[0]
+
+    class Slow(HashEmbedder):
+        def embed(self, texts: Sequence[str]) -> list[list[float]]:
+            now[0] += 0.5
+            return super().embed(texts)
+
+    # Only score's own `time` name: the real time module stays untouched.
+    monkeypatch.setattr(score_module, "time", SimpleNamespace(perf_counter=clock))
+    results = score(_embedded_store(), [PAIR], Slow())
+
+    dense = results["modes"]["dense"]["overall"]["p95_latency_ms"]
+    hybrid = results["modes"]["hybrid"]["overall"]["p95_latency_ms"]
+    keyword = results["modes"]["keyword"]["overall"]["p95_latency_ms"]
+    assert dense >= 500 and hybrid >= 500  # both include the one model call
+    assert keyword < 500  # keyword never embeds, so nothing is added to it
+
+
+def test_query_vector_cache_reuses_only_the_same_texts_and_returns_copies() -> None:
+    calls: list[list[str]] = []
+    ticks = iter([0.0, 0.25, 1.0, 1.5])  # first call: 250 ms; second, other text: 500 ms
+
+    class Recording(HashEmbedder):
+        def embed(self, texts: Sequence[str]) -> list[list[float]]:
+            calls.append(list(texts))
+            return super().embed(texts)
+
+    cache = score_module.QueryVectorCache(Recording("m"), clock=lambda: next(ticks))
+    assert cache.model_id == "m"
+
+    first = cache.embed(["launcher crash"])
+    first[0][0] = 99.0  # a caller mutating its copy must not leak into the next answer
+    again = cache.embed(["launcher crash"])
+    assert again == HashEmbedder("m").embed(["launcher crash"])
+    assert calls == [["launcher crash"]]
+    assert cache.take_reused_ms() == pytest.approx(250.0)
+    assert cache.take_reused_ms() == 0.0  # taking resets it
+
+    cache.embed(["unrelated sound bug"])
+    assert calls == [["launcher crash"], ["unrelated sound bug"]]
+    assert cache.take_reused_ms() == 0.0  # a new text is a model call, not a reuse
 
 
 def test_an_embedder_over_a_store_without_embeddings_skips_dense_and_hybrid() -> None:

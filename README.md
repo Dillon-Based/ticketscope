@@ -33,7 +33,7 @@ Snapshot version: 2026.11.1
 
 | Mode | Kind | Pairs | Recall@1 | Recall@5 | Recall@10 | MRR@10 | p95 ms |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| keyword | short | 10164 | 0.439 | 0.692 | 0.769 | 0.547 | 21.278 |
-| keyword | log_heavy | 309 | 0.605 | 0.780 | 0.822 | 0.679 | 70.917 |
-| keyword | overall | 10473 | 0.444 | 0.695 | 0.771 | 0.550 | 22.567 |
+| keyword | short | 10164 | 0.439 | 0.692 | 0.769 | 0.547 | 26.073 |
+| keyword | log_heavy | 309 | 0.605 | 0.780 | 0.822 | 0.679 | 94.567 |
+| keyword | overall | 10473 | 0.444 | 0.695 | 0.771 | 0.550 | 27.754 |
 <!-- eval-results:end -->

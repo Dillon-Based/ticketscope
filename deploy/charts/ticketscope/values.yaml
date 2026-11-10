@@ -77,9 +77,19 @@ jobs:
 
 # The eval Job (epic-eval-gate, AD-22): a hook after load that scores every available
 # mode on eval/pairs as ticketscope_ro. Only eval.yml's kind cluster enables it.
+# With embeddings on, the Job loads the baked model and embeds every query's text live, so
+# dense and hybrid p95 include the model (epic 3 story 5). It needs more memory than the
+# other jobs. The deadline covers all three modes over every pair: story 3.5 measured
+# 1475 s on kind (Docker Desktop), so 2700 s leaves room for a slower CI runner.
 eval:
   enabled: false
-  activeDeadlineSeconds: 1800
+  activeDeadlineSeconds: 2700
+  resources:
+    requests:
+      cpu: 50m
+      memory: 256Mi
+    limits:
+      memory: 1Gi
 
 database:
   instances: 2

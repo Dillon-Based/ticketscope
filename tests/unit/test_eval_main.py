@@ -7,6 +7,7 @@ do, so `run` reads lineage from a fake row and scores a fake store.
 import json
 import logging
 import sys
+from collections.abc import Sequence
 from pathlib import Path
 
 import pytest
@@ -17,7 +18,7 @@ from tests.factories import snapshot_issue
 from ticketscope import telemetry
 from ticketscope.adapters.postgres import CorpusMeta
 from ticketscope.core import modes
-from ticketscope.core.fakes import InMemoryCorpusStore
+from ticketscope.core.fakes import HashEmbedder, InMemoryCorpusStore
 from ticketscope.core.model import IssueRecord, Scored
 from ticketscope.core.pairs import Pair, pairs_jsonl
 from ticketscope.core.ports import CorpusStore, Embedder, Retriever
@@ -114,7 +115,7 @@ def test_scoring_runs_with_instrumentation_suppressed(
 ) -> None:
     seen: list[bool] = []
 
-    def spy_score(store: CorpusStore, pairs: object) -> dict[str, object]:
+    def spy_score(store: CorpusStore, pairs: object, embedder: object = None) -> dict[str, object]:
         seen.append(is_instrumentation_enabled())
         return {"k": 10, "relevance": "cluster", "modes": {}}
 
@@ -356,3 +357,89 @@ def test_modes_keep_separate_ranks_and_latency_samples(monkeypatch: pytest.Monke
     assert results["miss"]["overall"]["recall@10"] == 0.0
     assert results["keyword"]["overall"]["p95_latency_ms"] == pytest.approx(4.0)
     assert results["miss"]["overall"]["p95_latency_ms"] == pytest.approx(20.0)
+
+
+# --- dense and hybrid beside keyword (story 3.5) -------------------------------------------
+
+
+def _embedded_store() -> InMemoryCorpusStore:
+    embedder = HashEmbedder()
+    records = [
+        IssueRecord(number=1, title="launcher crash", url="u1", kind="short", state="closed"),
+        IssueRecord(number=2, title="launcher crash", url="u2", kind="short", state="closed"),
+        IssueRecord(number=3, title="unrelated sound bug", url="u3", kind="short", state="open"),
+    ]
+    documents = [(r, f"{r.title}\n\n") for r in records]
+    vectors = embedder.embed([text for _, text in documents])
+    return InMemoryCorpusStore(
+        documents,
+        corpus_version="2026.99.1",
+        embeddings={
+            embedder.model_id: {r.number: v for (r, _), v in zip(documents, vectors, strict=True)}
+        },
+        embedding_model=embedder.model_id,
+    )
+
+
+def test_an_embedder_scores_dense_and_hybrid_beside_keyword_on_every_pair() -> None:
+    results = score(_embedded_store(), [PAIR], HashEmbedder())
+
+    assert sorted(results["modes"]) == ["dense", "hybrid", "keyword"]
+    assert results["skipped_modes"] == []
+    for name in ("keyword", "dense", "hybrid"):
+        mode = results["modes"][name]
+        assert mode["overall"]["pairs_scored"] == 1, name
+        assert mode["short"]["pairs_scored"] == 1, name
+        assert mode["log_heavy"]["pairs_scored"] == 0, name
+        assert mode["first_member_ranks"] == [[2, 1]], name
+
+
+def test_query_embedding_is_inside_the_timed_search_so_dense_p95_is_honest(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    clock = [0.0]
+    monkeypatch.setattr(
+        sys.modules["ticketscope.jobs.eval.score"].time, "perf_counter", lambda: clock[0]
+    )
+
+    class Slow(HashEmbedder):
+        def embed(self, texts: Sequence[str]) -> list[list[float]]:
+            clock[0] += 0.02  # the model takes 20 ms of the fake clock
+            return super().embed(texts)
+
+    results = score(_embedded_store(), [PAIR], Slow())
+
+    assert results["modes"]["keyword"]["overall"]["p95_latency_ms"] == 0.0
+    assert results["modes"]["dense"]["overall"]["p95_latency_ms"] == pytest.approx(20.0)
+    assert results["modes"]["hybrid"]["overall"]["p95_latency_ms"] == pytest.approx(20.0)
+
+
+def test_an_embedder_for_another_model_leaves_dense_and_hybrid_skipped() -> None:
+    results = score(_embedded_store(), [PAIR], HashEmbedder(model_id="other-model"))
+
+    assert list(results["modes"]) == ["keyword"]
+    assert results["skipped_modes"] == ["dense", "hybrid"]
+
+
+def test_build_embedder_is_none_without_a_model_id() -> None:
+    assert eval_main.build_embedder(Settings(embedding_model_id="")) is None
+
+
+def test_run_hands_the_built_embedder_to_score(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture, pairs_dir: Path
+) -> None:
+    embedder = HashEmbedder()
+    seen: list[object] = []
+    real = eval_main.score
+
+    def spy(store: CorpusStore, pairs: object, given: Embedder | None = None) -> object:
+        seen.append(given)
+        return real(store, pairs, given)  # pyright: ignore[reportArgumentType]
+
+    _patch(monkeypatch, META)
+    monkeypatch.setattr(eval_main, "build_embedder", lambda settings: embedder)
+    monkeypatch.setattr(eval_main, "score", spy)
+    caplog.set_level(logging.INFO, logger="ticketscope.eval")
+
+    assert eval_main.run(_settings(pairs_dir)) == 0
+    assert seen == [embedder]

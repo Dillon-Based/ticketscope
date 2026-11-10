@@ -15,12 +15,24 @@ import time
 from ticketscope import telemetry
 from ticketscope.adapters.postgres import PostgresCorpusStore, read_corpus_meta
 from ticketscope.core.pairs import read_pairs
+from ticketscope.core.ports import Embedder
 from ticketscope.jobs.eval.score import score
 from ticketscope.settings import Settings
 
 log = logging.getLogger("ticketscope.eval")
 
 RESULTS_PREFIX = "ticketscope-eval results: "
+
+
+def build_embedder(settings: Settings) -> Embedder | None:
+    """The baked model when the Job is given a model id, else none (dense stays skipped).
+
+    Queries are embedded live through this, so dense p95 is honest (epic 3, AD-21)."""
+    if not settings.embedding_model_id:
+        return None
+    from ticketscope.adapters.embedder import FastEmbedEmbedder
+
+    return FastEmbedEmbedder(settings.embedding_model_id, settings.embedding_cache_dir)
 
 
 def main() -> int:
@@ -50,10 +62,11 @@ def run(settings: Settings) -> int:
             return 1
         pairs = read_pairs(path.read_bytes())
         log.info("scoring %d pairs from %s", len(pairs), path)
+        embedder = build_embedder(settings)
         started = time.monotonic()
         # ~21,000 short connections: no per-call psycopg spans in the job's one trace.
         with telemetry.untraced():
-            results = score(PostgresCorpusStore(conninfo), pairs)
+            results = score(PostgresCorpusStore(conninfo), pairs, embedder)
         seconds = time.monotonic() - started
     except Exception:
         log.exception("eval failed")

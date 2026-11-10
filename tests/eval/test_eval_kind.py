@@ -76,8 +76,9 @@ def _recompute(ranks: list[list[Any]], kinds: dict[int, str], kind: str) -> dict
 def test_keyword_is_scored_on_clusters_split_by_kind(eval_results: dict[str, Any]) -> None:
     assert eval_results["k"] == 10
     assert eval_results["relevance"] == "cluster"
-    # Every registered mode is either scored or named as skipped, so a mode whose
-    # embeddings are not loaded (dense, hybrid) is skipped without failing this check.
+    # Every registered mode is either scored or named as skipped. With the corpus's
+    # embeddings loaded dense and hybrid are scored too (the next test); without them they
+    # are skipped without failing this check.
     assert "keyword" not in eval_results["skipped_modes"]
     assert set(eval_results["modes"]) | set(eval_results["skipped_modes"]) == set(REGISTRY)
     assert not set(eval_results["modes"]) & set(eval_results["skipped_modes"])
@@ -196,3 +197,35 @@ print(json.dumps(sorted(ranks)))
         _kubectl("exec", "deploy/ticketscope-api", "-c", "api", "--", "python", "-c", script)
     )
     assert actual == eval_results["modes"]["keyword"]["first_member_ranks"]
+
+
+@pytest.mark.criterion("ticketscope--e3-s5--AC-1")
+def test_dense_and_hybrid_are_scored_beside_keyword_on_every_pair(
+    eval_results: dict[str, Any],
+) -> None:
+    model = eval_results["lineage"]["embedding_model_id"]
+    assert model, "the corpus has no embedding model id: load the pinned embedding asset"
+    assert eval_results["skipped_modes"] == []
+    assert set(eval_results["modes"]) == {"keyword", "dense", "hybrid"}
+    for name in ("keyword", "dense", "hybrid"):
+        mode = eval_results["modes"][name]
+        assert {kind: mode[kind]["pairs_scored"] for kind in KINDS} == {
+            "short": SHORT,
+            "log_heavy": LOG_HEAVY,
+            "overall": PAIRS,
+        }, name
+        for kind in KINDS:
+            for metric in (*METRICS, "p95_latency_ms"):
+                assert isinstance(mode[kind][metric], float), (name, kind, metric)
+            assert mode[kind]["p95_latency_ms"] > 0.0
+        ranks = mode["first_member_ranks"]
+        assert [query for query, _ in ranks] == [
+            q for q, _ in eval_results["modes"]["keyword"]["first_member_ranks"]
+        ]
+
+
+@pytest.mark.criterion("ticketscope--e3-s5--AC-4")
+def test_the_run_fits_inside_the_job_deadline(eval_results: dict[str, Any]) -> None:
+    deadline = _job(EVAL_JOB)["spec"]["activeDeadlineSeconds"]
+    wall = eval_results["wall_seconds"]
+    assert wall < deadline, f"scoring took {wall}s of the {deadline}s deadline"

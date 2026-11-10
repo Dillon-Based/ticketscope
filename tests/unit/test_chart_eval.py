@@ -54,7 +54,7 @@ def test_eval_job_is_a_hook_after_load() -> None:
 
 
 def test_eval_job_has_an_active_deadline() -> None:
-    assert "activeDeadlineSeconds: 1800" in _eval_job()
+    assert "activeDeadlineSeconds: 2700" in _eval_job()
     job = _docs(
         _ticketscope("--set", "eval.enabled=true", "--set", "eval.activeDeadlineSeconds=60"),
         "Job",

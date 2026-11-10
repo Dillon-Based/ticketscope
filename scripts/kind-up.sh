@@ -121,7 +121,7 @@ EVAL_ARGS=()
 HELM_TIMEOUT=25m
 if [[ "${EVAL_ENABLED:-0}" == 1 ]]; then
   EVAL_ARGS=(--set eval.enabled=true)
-  HELM_TIMEOUT=40m
+  HELM_TIMEOUT=60m  # migrate and load, then eval's 2700 s deadline
   log "installing ticketscope (hooks: migrate, then load, then eval)"
 else
   log "installing ticketscope (hooks: migrate, then load)"

@@ -79,8 +79,19 @@ def test_flag_on_sets_the_model_on_api_and_load_and_compute_on_load_only() -> No
 
 
 @needs_helm
-def test_the_eval_job_never_gets_the_model() -> None:
-    rendered = _render("--set", "embeddings.computeOnKind=true", "--set", "eval.enabled=true")
+def test_the_eval_job_gets_the_model_so_it_can_embed_queries_live() -> None:
+    model = _values_model()
+    for flags in (("--set", "embeddings.computeOnKind=true"), ()):
+        rendered = _render(*flags, "--set", "eval.enabled=true")
+        doc = _doc(rendered, "ticketscope-eval")
+        assert f'- name: {MODEL_ENV}\n              value: "{model}"' in doc
+        assert COMPUTE_ENV not in doc  # eval never computes the corpus's embeddings
+        assert "memory: 1Gi" in doc  # model plus scoring; jobs.resources is too small
+
+
+@needs_helm
+def test_the_eval_job_has_no_model_when_embeddings_are_off() -> None:
+    rendered = _render(*_NO_PIN, "--set", "eval.enabled=true")
     assert MODEL_ENV not in _doc(rendered, "ticketscope-eval")
 
 

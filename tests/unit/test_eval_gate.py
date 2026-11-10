@@ -243,3 +243,12 @@ def test_cli_fails_when_the_base_commit_is_unavailable(
     monkeypatch.chdir(repo)
     argv = ["--results", str(tmp_path / "results.json"), "--base-sha", "0" * 40]
     assert gate.main(argv) == 1
+
+
+def test_a_regressed_dense_ranking_fails_once_dense_is_in_the_baseline() -> None:
+    base = _doc(keyword=_mode(), dense=_mode(0.8, 0.6), hybrid=_mode(0.82, 0.62))
+    run = _doc(keyword=_mode(), dense=_mode(0.8, 0.5), hybrid=_mode(0.82, 0.62))
+    failures = _run(base, run)
+    assert failures and all("mode dense" in f and "mrr@10" in f for f in failures)
+    assert _run(base, run, changed=True) != []  # a changed baseline must equal the run
+    assert _run(run, run, changed=True) == []

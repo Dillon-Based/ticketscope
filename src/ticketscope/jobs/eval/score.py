@@ -17,7 +17,7 @@ from typing import Any, TypedDict
 
 from ticketscope.core import modes
 from ticketscope.core.pairs import Pair, as_pair
-from ticketscope.core.ports import CorpusStore, Retriever
+from ticketscope.core.ports import CorpusStore, Embedder, Retriever
 
 K = 10
 RELEVANCE = "cluster"
@@ -129,17 +129,24 @@ class _ModeTally:
         }
 
 
-def score(store: CorpusStore, pairs: Iterable[Pair | Mapping[str, Any]]) -> Results:
+def score(
+    store: CorpusStore,
+    pairs: Iterable[Pair | Mapping[str, Any]],
+    embedder: Embedder | None = None,
+) -> Results:
     """Cluster Recall@1/5/10, MRR@10 and p95 latency, per kind and overall, for every mode
-    whose `available(store)` holds; the other registry modes are named in `skipped_modes`."""
+    whose `available(store, embedder)` holds; the other registry modes are named in
+    `skipped_modes`. Dense and hybrid embed each query's text live through `embedder` inside
+    the timed search, so their p95 includes the model."""
     parsed = [as_pair(line) for line in pairs]
     registry = modes.REGISTRY
     retrievers: dict[str, Retriever] = {}
     skipped: list[str] = []
     for name, mode in registry.items():
-        # Eval carries no embedder: dense (and anything needing one) is skipped.
-        if mode.available(store, None):
-            retrievers[name] = mode.build(store, None)
+        # Without an embedder (or its model's embeddings in the store) dense and hybrid are
+        # skipped and named.
+        if mode.available(store, embedder):
+            retrievers[name] = mode.build(store, embedder)
         else:
             skipped.append(name)
     tallies = {name: _ModeTally() for name in retrievers}

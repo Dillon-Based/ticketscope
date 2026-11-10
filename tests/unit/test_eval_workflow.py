@@ -145,5 +145,5 @@ def test_kind_up_leaves_eval_off_unless_asked() -> None:
     branch = text[text.index('if [[ "${EVAL_ENABLED:-0}" == 1 ]]; then') :]
     branch = branch[: branch.index("\nfi\n")]
     assert "EVAL_ARGS=(--set eval.enabled=true)" in branch
-    assert "HELM_TIMEOUT=40m" in branch
+    assert "HELM_TIMEOUT=60m" in branch
     assert "HELM_TIMEOUT=25m" in text

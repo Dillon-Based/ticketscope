@@ -153,6 +153,9 @@ spec:
                   name: {{ include "ticketscope.roSecret" . }}
                   key: password
             {{- include "ticketscope.otlpEnv" . | nindent 12 }}
+            {{- with include "ticketscope.embeddingEnv" . }}
+            {{- . | nindent 12 }}
+            {{- end }}
           resources:
-            {{- toYaml .Values.jobs.resources | nindent 12 }}
+            {{- toYaml .Values.eval.resources | nindent 12 }}
 {{- end }}

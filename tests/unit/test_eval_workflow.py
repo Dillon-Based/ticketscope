@@ -71,9 +71,51 @@ def test_kind_jobs_skip_inside_the_reusable_workflow_when_no_kind_path_changed()
     assert "    if: inputs.enabled\n" in KIND_DEPLOY.read_text(encoding="utf-8")
     eval_text = EVAL.read_text(encoding="utf-8")
     assert "needs: changes" in eval_text
-    assert "enabled: ${{ needs.changes.outputs.kind == 'true' }}" in eval_text
+    assert "eval: ${{ steps.kind.outputs.eval }}" in eval_text
+    assert "enabled: ${{ needs.changes.outputs.eval == 'true' }}" in eval_text
     for workflow in (EVAL, CI):
         assert "filters: .github/kind-paths.yml" in workflow.read_text(encoding="utf-8")
+
+
+def _filter_list(name: str) -> list[str]:
+    """The quoted globs under a top-level key of .github/kind-paths.yml."""
+    text = (REPO / ".github" / "kind-paths.yml").read_text(encoding="utf-8")
+    body = _block(text, name, 0)
+    return re.findall(r"^  - '([^']+)'$", body, re.MULTILINE)
+
+
+def test_eval_runs_on_every_path_that_can_move_a_score() -> None:
+    globs = _filter_list("eval")
+    for needed in (
+        "src/ticketscope/core/**",
+        "src/ticketscope/adapters/**",
+        "src/ticketscope/jobs/**",
+        "migrations/**",
+        "eval/**",
+        "images/**",
+        "deploy/charts/ticketscope/values.yaml",
+        "deploy/charts/ticketscope/templates/jobs.yaml",
+        "scripts/kind-up.sh",
+        "tests/eval/**",
+        "uv.lock",
+        ".github/workflows/eval.yml",
+        ".github/workflows/_kind-deploy.yml",
+        ".github/kind-paths.yml",
+    ):
+        assert needed in globs, needed
+
+
+def test_eval_skips_paths_that_cannot_move_a_score() -> None:
+    globs = _filter_list("eval")
+    # The api, the page and epic 4's mcp server never reach the eval Job.
+    assert "src/**" not in globs and "deploy/**" not in globs
+    prefixes = [glob.removesuffix("**") for glob in globs if glob.endswith("**")]
+    for path in ("src/ticketscope/http/", "src/ticketscope/mcp/", "src/ticketscope/apiclient/"):
+        assert not any(path.startswith(prefix) for prefix in prefixes), path
+    # Every eval glob is also a kind glob's subset, so the eval never runs where kind would not.
+    kind = _filter_list("kind")
+    for glob in globs:
+        assert any(glob.startswith(k.removesuffix("**")) or glob == k for k in kind), glob
 
 
 def test_kind_paths_cover_what_a_kind_deploy_depends_on() -> None:

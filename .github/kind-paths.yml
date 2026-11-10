@@ -1,6 +1,6 @@
 # Paths a kind deploy can depend on. A PR that changes none of them skips the kind jobs
 # (ci.yml's integrated-check and eval.yml's eval), which together take about 15 minutes.
-# Read by dorny/paths-filter in both workflows' `changes` job; keep it the one list.
+# Read by dorny/paths-filter in both workflows' `changes` job; keep it the one file.
 kind:
   - 'src/**'
   - 'migrations/**'
@@ -15,4 +15,35 @@ kind:
   - 'pyproject.toml'
   - 'uv.lock'
   - '.github/workflows/**'
+  - '.github/kind-paths.yml'
+
+# Paths that can change an eval score, or break the eval Job. eval.yml runs its ~45-minute
+# deploy only when one of these changes (R7: every PR that can move a score is scored and
+# gated); otherwise `eval / deploy` reports skipped, as it does for kind. Retrieval and data
+# code, the snapshot and embedding pins, the model in the image, the pairs and baseline, and
+# the eval's own chart files and workflow. Not here: http, mcp, apiclient, the page, the
+# platform release and api's templates, which integrated-check covers.
+eval:
+  - 'src/ticketscope/core/**'
+  - 'src/ticketscope/adapters/**'
+  - 'src/ticketscope/contract/**'
+  - 'src/ticketscope/jobs/**'
+  - 'src/ticketscope/settings.py'
+  - 'src/ticketscope/telemetry.py'
+  - 'migrations/**'
+  - 'eval/**'
+  - 'images/**'
+  - 'deploy/charts/ticketscope/Chart.yaml'
+  - 'deploy/charts/ticketscope/values.yaml'
+  - 'deploy/charts/ticketscope/values-kind.yaml'
+  - 'deploy/charts/ticketscope/templates/_helpers.tpl'
+  - 'deploy/charts/ticketscope/templates/database.yaml'
+  - 'deploy/charts/ticketscope/templates/jobs.yaml'
+  - 'scripts/kind-up.sh'
+  - 'tests/eval/**'
+  - 'tests/*.py'
+  - 'pyproject.toml'
+  - 'uv.lock'
+  - '.github/workflows/eval.yml'
+  - '.github/workflows/_kind-deploy.yml'
   - '.github/kind-paths.yml'

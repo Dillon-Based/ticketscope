@@ -38,13 +38,14 @@ An AI assistant can use ticketscope as a tool: Claude Desktop calls search_simil
 ## Constraints
 
 - **Protocol:** the official `mcp` SDK v2 (`MCPServer`) over stateless Streamable HTTP at `/mcp`, serving protocol 2026-07-28 plus the SDK's handshake-era versions. Stateless means safe at any replica count; kind runs two replicas (spine AD-3, AD-5).
-- **Topology:** `mcp` is its own Deployment from the one app image, selected by a `ticketscope-mcp` entrypoint. It holds no database connection and no model, and reaches `api` only through `ticketscope.apiclient` (httpx2) over the in-cluster Service. import-linter enforces that `mcp` and `apiclient` import only `contract` and `apiclient` (spine AD-1, AD-2, AD-3).
+- **Topology:** `mcp` is its own Deployment from the one app image, selected by a `ticketscope-mcp` entrypoint. It holds no database connection and no model, and reaches `api` only through `ticketscope.apiclient` (httpx2) over the in-cluster Service. import-linter enforces that `mcp` and `apiclient` import only `contract` and `apiclient`, plus the cross-cutting `settings` and `telemetry` (spine AD-1, AD-2, AD-3).
 - **Contract:** tool output is the `/v1` body unchanged, built from `ticketscope.contract` models that pass unknown fields through (spine AD-4, AD-20). The issue `key` joins `/v1` additively and is read from the issue's `url`; no column is added, nothing is reloaded and the preprocessing version does not change (spine AD-21, Identifiers convention).
 - **Mode:** `mcp` has no default mode. An omitted mode is omitted on the `/v1` call, so the server default applies (spine AD-25).
-- **Routing:** a `/mcp` HTTPRoute on the `platform` Gateway, and `transport_security.allowed_hosts` from values so the gateway's and the tunnel's host headers are accepted (spine AD-5, AD-14).
+- **Routing:** a `/mcp` HTTPRoute on the `platform` Gateway, and `transport_security.allowed_hosts` from values so the gateway's and the tunnel's host headers are accepted (spine AD-5, AD-14). The tunnel's hostname is one environment value that reaches the Gateway's listener, the `/mcp` route's hostnames and `allowed_hosts`; the tunnel host reaches only `/mcp`.
 - **Values:** this epic owns the `mcp` keys in `values.yaml`. Environment files hold only environment facts: hostname, allowed hosts and replica counts (spine AD-25).
 - **Telemetry:** `service.name` is `ticketscope-mcp`, spans follow the AD-10 tree and attributes, export is OTLP to the in-cluster collector only, and query text is recorded only when a value opts in (spine AD-10, AD-11).
-- **Errors:** a tool error sets `is_error` with the problem `detail`, and its span status is `ERROR` (spine Errors convention).
+- **Errors:** a tool error sets `is_error` with the problem `detail`, and its span status is `ERROR` (spine Errors convention). An unreachable API gives a detail naming it unreachable (refused, or timed out after `TICKETSCOPE_API_TIMEOUT_SECONDS`, default 10); an error response without a problem body gives one naming the HTTP status, never the body.
+- **Keys:** a key matches `^[A-Z][A-Z0-9]*-[1-9][0-9]*$` exactly and travels as one percent-encoded path segment; anything else is a 404, and `get_issue` never returns an issue whose key differs from the one asked for.
 - **CI:** `mcp-e2e.yml` runs on PRs through `_kind-deploy.yml`, with the same path filter the other kind jobs use. This epic's tests live in `tests/mcp/` (spine AD-17).
 - **Tunnel:** ngrok's free static domain, with Tailscale Funnel as the fallback if ngrok's free plan fails a check. It runs on a person's machine, never in CI, and no tunnel credential is committed.
 
@@ -54,6 +55,7 @@ An AI assistant can use ticketscope as a tool: Claude Desktop calls search_simil
 - Claude Desktop, connected through a tunnel with a fixed hostname to the cluster, calls `search_similar_issues` and answers from the results (R4).
 - One trace spans the MCP tool call, the HTTP hop to the API, retrieval and the database. It continues the caller's trace context from MCP's `_meta` when present (R8).
 - Delivered on the cluster, with an integrated check passing in CI.
+- At closure, a person repeats the Claude Desktop session on the final head and links it, since Claude Desktop is never run in CI (R4).
 
 ## Boundaries
 
@@ -69,6 +71,7 @@ An AI assistant can use ticketscope as a tool: Claude Desktop calls search_simil
 
 - parent — _bmad-output/initiative-ticketscope/initiative-ticketscope.md, section Requirements (R4, R8)
 - architecture spine — _bmad-output/initiative-ticketscope/architecture-ticketscope/architecture-ticketscope.md, AD-1–AD-5, AD-10, AD-11, AD-13, AD-14, AD-17, AD-20, AD-21, AD-25, and Open questions (MCP `get_issue` argument)
+- test design — _bmad-output/initiative-ticketscope/tickets/epic-mcp-server/test-design-epic-4.md (risks R-001–R-011, clarifications C-1–C-9, coverage plan)
 
 ## Notes
 
@@ -82,3 +85,7 @@ An AI assistant can use ticketscope as a tool: Claude Desktop calls search_simil
 - Decision: This epic runs alongside epic-hybrid-retrieval's stories 3.5–3.8 with no `after` between them. The only shared file is `values.yaml`, where the keys are split per Boundaries, and this epic's tests live in `tests/mcp/` (user, 2026-11-10).
 - Decision: Story 4.4 adds an issue lookup by key to the `CorpusStore` port, its fake and the Postgres adapter. epic-hybrid-retrieval's refactor sweep (3.7) leaves those lookup methods alone, so the two epics need no `after` between them (Sofia's pick after the set check, under the user's "your picks", 2026-11-10).
 - Decision: The tunnel's hostname is an environment value added to both the `/mcp` route's hostnames and `allowed_hosts`, so it works for ngrok or Tailscale Funnel without rewriting the Host header (Sofia's pick after the set check, 2026-11-10).
+- Decision: The tunnel's hostname also goes on the `platform` Gateway's listener. The kind listener's hostname `ticketscope.kind.internal` makes Envoy ignore a route hostname it does not match, so the route and `allowed_hosts` alone still 404 the tunnel. CI rehearses the path with a stand-in host in kind values (test design R-006; user, 2026-11-10).
+- Decision: Stories re-sliced from the test design, ids, order and `after` unchanged (user, "have sofia update the plan", 2026-11-10). Clarifications decided by the user, each the recommended option: C-1 try the httpx instrumentor on httpx2, else apiclient opens the CLIENT span and injects `traceparent` itself; C-2 the trace check finds a no-context trace by TraceQL within the call's time window; C-3 `mcp` continues `_meta.traceparent` only; C-4 strict key pattern, percent-encoded, 404 otherwise, returned key must equal the requested key; C-5 named unreachable detail, 10 s timeout setting; C-6 non-problem error bodies give `is_error` naming the status, never the body; C-7 the closing trace cites `mcp-e2e.yml` run URLs; C-8 `key: str | None = None`; C-9 story 2 commits Claude Desktop's captured requests and CI replays them.
+- Decision: The repeated Claude Desktop session at closure is a closure step in Done when, not part of story 7, so story 7 stays unattended (`hitl = false`) (Sofia's pick, 2026-11-10).
+- Decision: After the set check (user, 2026-11-10): story 4.1 stays one tracer entry and splits at its plan checkpoint if the plan estimates well over 800 lines; story 4.4's plan checkpoint stops the story when the red-mode key-oracle fixtures are not committed, rather than a new entry; the set check's verify suggestions were applied. Spine AD-5 still reads `get_issue(number)`; the key decision above supersedes it until the spine is updated.

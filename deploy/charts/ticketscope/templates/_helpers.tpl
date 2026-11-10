@@ -40,9 +40,20 @@ helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version }}
   value: {{ .Values.jobs.dbWaitTimeoutSeconds | quote }}
 {{- end }}
 
+{{/* Embeddings are on when an asset is pinned, or (no pin) computeOnKind is set. A pinned
+asset always wins over computeOnKind (story 4). Renders "true" or nothing. */}}
+{{- define "ticketscope.embeddingsOn" -}}
+{{- if or .Values.embeddings.assetVersion .Values.embeddings.computeOnKind -}}true{{- end -}}
+{{- end }}
+
+{{/* True (non-empty) only when load computes embeddings itself: no pinned asset. */}}
+{{- define "ticketscope.embeddingsCompute" -}}
+{{- if and .Values.embeddings.computeOnKind (not .Values.embeddings.assetVersion) -}}true{{- end -}}
+{{- end }}
+
 {{/* The embedding model id for api and load; rendered only when embeddings are on (AD-21). */}}
 {{- define "ticketscope.embeddingEnv" -}}
-{{- if .Values.embeddings.computeOnKind -}}
+{{- if include "ticketscope.embeddingsOn" . -}}
 - name: TICKETSCOPE_EMBEDDING_MODEL_ID
   value: {{ required "embeddings.modelId is required" .Values.embeddings.modelId | quote }}
 {{- end -}}

@@ -8,7 +8,7 @@ schema; `load` never reads it.
 import json
 from pathlib import Path
 
-from ticketscope.adapters.release import read_snapshot_pin
+from ticketscope.adapters.release import read_embeddings_pin, read_snapshot_pin
 
 REPO = Path(__file__).resolve().parent.parent
 SNAPSHOT_DIR = REPO / "snapshot"
@@ -34,3 +34,8 @@ CHART_VALUES = REPO / "deploy" / "charts" / "ticketscope" / "values.yaml"
 def snapshot_pin() -> dict[str, str]:
     """`snapshot.version`, `sha256` and `baseUrl` from the chart's values.yaml."""
     return read_snapshot_pin(CHART_VALUES)
+
+
+def embeddings_pin() -> dict[str, str]:
+    """`embeddings.modelId`, `assetVersion` and `sha256` from the chart's values.yaml."""
+    return read_embeddings_pin(CHART_VALUES)

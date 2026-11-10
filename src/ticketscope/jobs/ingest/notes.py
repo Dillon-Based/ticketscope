@@ -4,6 +4,11 @@
         --load-seconds 4.2 --commit "$(git rev-parse HEAD)" --repo owner/name > notes.md
 
 Refuses (exit 1) a load time over the 600 s budget, so no Release is created for it.
+
+The embedding asset has its own Release and notes, from the manifest `embed` writes:
+
+    uv run python -m ticketscope.jobs.ingest.notes --embeddings-manifest out/<tag>.manifest.json \
+        --load-seconds 95.0 --commit "$(git rev-parse HEAD)" > notes.md
 """
 
 import argparse
@@ -76,16 +81,63 @@ def render_notes(
     return "\n".join(lines) + "\n"
 
 
+def render_embedding_notes(manifest: dict[str, Any], load_seconds: float, commit: str) -> str:
+    """Markdown notes of an embedding asset: what it was built from, counts, the timed load
+    (asset download and bulk load) and the attribution. Refuses a load over the budget."""
+    if not math.isfinite(load_seconds) or load_seconds < 0:
+        raise ValueError(f"load time must be a non-negative number, got {load_seconds}")
+    if load_seconds > LOAD_BUDGET_SECONDS:
+        raise ValueError(f"load took {load_seconds} s, over the {LOAD_BUDGET_SECONDS:g} s budget")
+    runtime = ", ".join(
+        f"{name} {version}" for name, version in sorted(manifest["runtime"].items())
+    )
+    lines = [
+        f"Embeddings of corpus snapshot {manifest['snapshot']} from {manifest['model_id']}, "
+        f"preprocessing {manifest['preprocessing_version']}.",
+        "",
+        f"- Built from commit `{commit}`, from the checksum-verified published snapshot",
+        f"- Vectors: {manifest['count']}, {manifest['dimension']} dimensions each "
+        f"({manifest['embed_seconds']:g} s in the model)",
+        f"- Model file SHA-256: `{manifest['model_sha256']}`",
+        f"- Runtime: {runtime}",
+        f"- Timed load into the in-repo Postgres image, with the asset download and bulk load: "
+        f"{load_seconds:g} s (budget {LOAD_BUDGET_SECONDS:g} s)",
+        f"- SHA-256: `{manifest['sha256']}` (`sha256sum -c {manifest['asset']}.sha256`)",
+        "",
+        "The asset holds only the issue number, the model id and the vector of each issue, "
+        "and a manifest on its first line. It holds no text, key, link or person identifier.",
+        "",
+        "## Pin",
+        "",
+        f"A person merges `embeddings.assetVersion: {manifest['snapshot']}` and "
+        f"`embeddings.sha256: {manifest['sha256']}` into `values.yaml`.",
+        "",
+        "## Attribution",
+        "",
+        ATTRIBUTION,
+    ]
+    return "\n".join(lines) + "\n"
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Render a snapshot's Release notes.")
-    parser.add_argument("--report", type=Path, required=True)
+    parser.add_argument("--report", type=Path)
+    parser.add_argument(
+        "--embeddings-manifest", type=Path, help="render an embedding asset's notes"
+    )
     parser.add_argument("--load-seconds", type=float, required=True)
     parser.add_argument("--commit", required=True)
     parser.add_argument("--repo", default=None, help="owner/name, for the takedown link")
     args = parser.parse_args(argv)
-    report = json.loads(args.report.read_text(encoding="utf-8"))
+    if (args.report is None) == (args.embeddings_manifest is None):
+        parser.error("give exactly one of --report and --embeddings-manifest")
     try:
-        notes = render_notes(report, args.load_seconds, args.commit, args.repo)
+        if args.embeddings_manifest is not None:
+            manifest = json.loads(args.embeddings_manifest.read_text(encoding="utf-8"))
+            notes = render_embedding_notes(manifest, args.load_seconds, args.commit)
+        else:
+            report = json.loads(args.report.read_text(encoding="utf-8"))
+            notes = render_notes(report, args.load_seconds, args.commit, args.repo)
     except ValueError as exc:
         print(exc, file=sys.stderr)
         return 1

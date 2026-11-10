@@ -52,8 +52,8 @@ metadata:
     helm.sh/hook-delete-policy: before-hook-creation
 spec:
   backoffLimit: 2
-  # Computing embeddings on CPU takes far longer than copying the snapshot.
-  activeDeadlineSeconds: {{ ternary 3000 900 .Values.embeddings.computeOnKind }}
+  # Computing embeddings on CPU takes far longer than copying the snapshot or the asset.
+  activeDeadlineSeconds: {{ ternary 3000 900 (not (empty (include "ticketscope.embeddingsCompute" .))) }}
   template:
     metadata:
       labels:
@@ -80,6 +80,15 @@ spec:
               value: /snapshots
             {{- with include "ticketscope.embeddingEnv" . }}
             {{- . | nindent 12 }}
+            {{- end }}
+            {{- if .Values.embeddings.assetVersion }}
+            # The pinned embedding asset (AD-6, AD-25): load downloads it from the same
+            # base URL as the snapshot, verifies it and bulk-loads it. Nothing is computed.
+            - name: TICKETSCOPE_EMBEDDINGS_ASSET_VERSION
+              value: {{ .Values.embeddings.assetVersion | quote }}
+            - name: TICKETSCOPE_EMBEDDINGS_SHA256
+              value: {{ required "embeddings.sha256 is required when embeddings.assetVersion is set (the pinned checksum)" .Values.embeddings.sha256 | quote }}
+            {{- else if .Values.embeddings.computeOnKind }}
             - name: TICKETSCOPE_EMBEDDINGS_COMPUTE
               value: "true"
             {{- end }}
@@ -87,7 +96,7 @@ spec:
             - name: snapshots
               mountPath: /snapshots
           resources:
-            {{- if .Values.embeddings.computeOnKind }}
+            {{- if include "ticketscope.embeddingsCompute" . }}
             {{- $res := deepCopy .Values.jobs.resources }}
             {{- $_ := set $res.limits "memory" .Values.embeddings.loadMemoryLimit }}
             {{- toYaml $res | nindent 12 }}

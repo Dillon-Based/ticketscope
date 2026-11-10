@@ -1,12 +1,17 @@
 """load: the only writer of corpus tables (AD-7). Loads the pinned snapshot (AD-6).
 
 Flow: compare the pin with the `corpus_meta` row and stop when the snapshot version,
-the embedding model (none unless `TICKETSCOPE_EMBEDDINGS_COMPUTE` is on) and core's
-preprocessing version all match (`no-op`).
+the embedding model and core's preprocessing version all match (`no-op`).
 Otherwise fetch `<version>.jsonl.gz` from its Release (or `<snapshot_dir>`), verify it
 against the pinned SHA-256, derive each issue's kind and outcome with core (AD-8), and
-replace the issues, any embeddings and the `corpus_meta` row in one transaction. Schema v2 only; any
-other line is refused. Ends with one `load report:` log line (AD-22).
+replace the issues, the embeddings and the `corpus_meta` row in one transaction. Schema v2
+only; any other line is refused. Ends with one `load report:` log line (AD-22).
+
+Embeddings come from one of two places. With an embeddings pin (`TICKETSCOPE_EMBEDDINGS_*`)
+`load` fetches that Release asset, verifies its checksum and manifest, and bulk-loads its
+vectors; it never computes one, and it fails (keeping the previous corpus) when the asset
+lacks or adds an issue or holds another dimension. With no pin, `TICKETSCOPE_EMBEDDINGS_COMPUTE`
+computes them with the baked model (kind only). With neither, the corpus is keyword-only.
 """
 
 import gzip
@@ -23,6 +28,7 @@ from tempfile import TemporaryFile
 from typing import TextIO, cast, get_args
 
 from ticketscope import telemetry
+from ticketscope.adapters.embedding_asset import AssetManifest, read_manifest, read_records
 from ticketscope.adapters.postgres import (
     CorpusMeta,
     EmbeddingRow,
@@ -31,7 +37,7 @@ from ticketscope.adapters.postgres import (
     replace_corpus,
     wait_for_database,
 )
-from ticketscope.adapters.release import fetch_snapshot
+from ticketscope.adapters.release import fetch_embeddings, fetch_snapshot
 from ticketscope.core.derive import (
     derive_kind,
     derive_outcome,
@@ -176,6 +182,73 @@ def reload_reason(current: CorpusMeta | None, wanted: CorpusMeta) -> str | None:
     return "; ".join(changed) or None
 
 
+def asset_pin_problem(settings: Settings) -> str | None:
+    """Why the embeddings pin cannot be used, or `None` when it is whole.
+
+    The pin is whole when it names a checksum, a model id, and the same snapshot version
+    the snapshot pin names (the asset is keyed by snapshot, model and preprocessing)."""
+    if not settings.embeddings_sha256.strip():
+        return (
+            f"TICKETSCOPE_EMBEDDINGS_SHA256 is empty: embeddings asset"
+            f" {settings.embeddings_asset_version or '(no version)'} has no pinned checksum"
+        )
+    if not settings.embeddings_asset_version.strip():
+        return "TICKETSCOPE_EMBEDDINGS_ASSET_VERSION is empty but a checksum is pinned"
+    if settings.embeddings_asset_version != settings.snapshot_version:
+        return (
+            f"embeddings asset {settings.embeddings_asset_version} was built from another"
+            f" snapshot than the pinned {settings.snapshot_version}"
+        )
+    if not settings.embedding_model_id.strip():
+        return "an embeddings asset is pinned but TICKETSCOPE_EMBEDDING_MODEL_ID is empty"
+    return None
+
+
+def asset_embedding_rows(
+    path: Path,
+    manifest: AssetManifest,
+    issue_numbers: set[int],
+    stats: EmbeddingStats,
+) -> Iterator[EmbeddingRow]:
+    """The asset's vectors as rows, checked against the loaded issues.
+
+    `issue_numbers` is filled by the issue rows, which `replace_corpus` copies before it
+    consumes this iterator. Raises `ValueError`, rolling the transaction back, when a record
+    names another model, a dimension other than the manifest's, an issue the snapshot lacks
+    or a repeated one, or when an issue ends up with no vector."""
+    seen: set[int] = set()
+    for record in read_records(path):
+        if record.model != manifest.model_id:
+            raise ValueError(f"issue {record.issue}: model {record.model!r}, not the pinned one")
+        if len(record.vector) != manifest.dimension:
+            raise ValueError(
+                f"issue {record.issue}: dimension {len(record.vector)},"
+                f" expected {manifest.dimension}"
+            )
+        if record.issue not in issue_numbers:
+            raise ValueError(
+                f"issue {record.issue} is in the embeddings asset but not the snapshot"
+            )
+        if record.issue in seen:
+            raise ValueError(f"issue {record.issue} appears twice in the embeddings asset")
+        seen.add(record.issue)
+        stats.count += 1
+        yield EmbeddingRow(record.issue, record.model, record.vector)
+    if seen != issue_numbers:
+        missing = sorted(issue_numbers - seen)
+        raise ValueError(
+            f"{len(missing)} issues have no vector in the embeddings asset (first: {missing[:5]})"
+        )
+    if manifest.count != len(seen):
+        raise ValueError(f"manifest count {manifest.count}, asset holds {len(seen)}")
+
+
+def _tracking(rows: Iterable[IssueRow], numbers: set[int]) -> Iterator[IssueRow]:
+    for row in rows:
+        numbers.add(row.number)
+        yield row
+
+
 def report_line(
     version: str,
     count: int,
@@ -183,9 +256,11 @@ def report_line(
     seconds: float,
     budget: int,
     embeddings: EmbeddingStats | None = None,
+    from_asset: bool = False,
 ) -> str:
     """The one `load report:` line: count, kind and outcome shares, time against budget,
-    and the embedding count and seconds when embeddings were computed."""
+    and the embedding count (with seconds when computed, `embeddings_loaded` when read from
+    the asset)."""
 
     def share(key: str) -> str:
         return f"{100 * counts[key] / count:.1f}%" if count else "0.0%"
@@ -193,11 +268,12 @@ def report_line(
     kinds = " ".join(f"kind.{k}={share(f'kind:{k}')}" for k in get_args(Kind))
     outcomes = " ".join(f"outcome.{s}={share(f'outcome:{s}')}" for s in get_args(OutcomeStatus))
     within = "true" if seconds <= budget else "false"
-    embedded = (
-        f" embeddings={embeddings.count} embedding_seconds={embeddings.seconds:.1f}"
-        if embeddings is not None
-        else ""
-    )
+    if embeddings is None:
+        embedded = ""
+    elif from_asset:
+        embedded = f" embeddings_loaded={embeddings.count}"
+    else:
+        embedded = f" embeddings={embeddings.count} embedding_seconds={embeddings.seconds:.1f}"
     return (
         f"load report: snapshot={version} issues={count} {kinds} {outcomes}{embedded}"
         f" load_seconds={seconds:.1f} budget_seconds={budget} within_budget={within}"
@@ -222,8 +298,9 @@ def main() -> int:
 def run(settings: Settings, embedder: Embedder | None = None) -> int:
     """The load itself: 0 on success or no-op, 1 with the previous corpus kept.
 
-    Embeddings are computed only when `settings.embeddings_compute` is on; `embedder` lets a
-    caller inject one, else the baked model is loaded when needed."""
+    A pinned embeddings asset is loaded and never computed. Otherwise embeddings are computed
+    only when `settings.embeddings_compute` is on; `embedder` lets a caller inject one, else
+    the baked model is loaded when needed."""
     version = settings.snapshot_version
     if not settings.snapshot_sha256.strip():
         log.error(
@@ -233,13 +310,22 @@ def run(settings: Settings, embedder: Embedder | None = None) -> int:
         )
         return 1
     conninfo = settings.conninfo()
-    compute = settings.embeddings_compute
+    pinned = bool(settings.embeddings_asset_version.strip() or settings.embeddings_sha256.strip())
+    if pinned and (problem := asset_pin_problem(settings)):
+        log.error("%s; previous corpus kept", problem)
+        return 1
+    compute = settings.embeddings_compute and not pinned
     if compute and not (settings.embedding_model_id or embedder):
         log.error("TICKETSCOPE_EMBEDDINGS_COMPUTE is on but no embedding model id is set")
         return 1
-    model_id = (embedder.model_id if embedder else settings.embedding_model_id) if compute else None
+    if pinned:
+        model_id: str | None = settings.embedding_model_id
+    else:
+        model_id = (
+            (embedder.model_id if embedder else settings.embedding_model_id) if compute else None
+        )
     wanted = pinned_meta(version, model_id)
-    stats = EmbeddingStats() if compute else None
+    stats = EmbeddingStats() if compute or pinned else None
     try:
         wait_for_database(conninfo, role=None, timeout_s=settings.db_wait_timeout_seconds)
         reason = reload_reason(read_corpus_meta(conninfo), wanted)
@@ -261,7 +347,30 @@ def run(settings: Settings, embedder: Embedder | None = None) -> int:
         )
         counts: Counter[str] = Counter()
         rows = build_rows(read_snapshot(path), counts)
-        if stats is None:
+        if pinned:
+            assert stats is not None and model_id is not None
+            assert wanted.preprocessing_version is not None
+            asset = fetch_embeddings(
+                settings.snapshot_base_url,
+                version,
+                model_id,
+                wanted.preprocessing_version,
+                settings.snapshot_dir,
+                settings.embeddings_sha256,
+                timeout=settings.snapshot_download_timeout_seconds,
+            )
+            manifest = read_manifest(asset)
+            wrong = manifest.mismatch(
+                snapshot=version,
+                model_id=model_id,
+                preprocessing_version=wanted.preprocessing_version,
+            )
+            if wrong:
+                raise ValueError(f"{asset.name}: {wrong}")
+            numbers: set[int] = set()
+            vectors = asset_embedding_rows(asset, manifest, numbers, stats)
+            count = replace_corpus(conninfo, wanted, _tracking(rows, numbers), vectors)
+        elif stats is None:
             count = replace_corpus(conninfo, wanted, rows)
         else:
             if embedder is None:
@@ -278,7 +387,7 @@ def run(settings: Settings, embedder: Embedder | None = None) -> int:
         log.exception("load of snapshot %s failed; previous corpus kept", version)
         return 1
     seconds = time.monotonic() - started
-    line = report_line(version, count, counts, seconds, BUDGET_SECONDS, stats)
+    line = report_line(version, count, counts, seconds, BUDGET_SECONDS, stats, from_asset=pinned)
     log.log(logging.INFO if seconds <= BUDGET_SECONDS else logging.WARNING, line)
     return 0
 

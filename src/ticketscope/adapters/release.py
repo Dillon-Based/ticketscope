@@ -1,7 +1,8 @@
-"""Release adapter: fetch a pinned snapshot asset and verify its checksum (AD-6).
+"""Release adapter: fetch a pinned asset and verify its checksum (AD-6).
 
-The asset lives at `{base_url}/snapshot-{version}/{version}.jsonl.gz`. A local copy at
-`<dest_dir>/<version>.jsonl.gz` is used if present; it is checked against the same pin.
+The snapshot lives at `{base_url}/snapshot-{version}/{version}.jsonl.gz`; its embeddings at
+`{base_url}/<embeddings tag>/<embeddings tag>.jsonl.gz`, a Release of their own. A local copy
+in `<dest_dir>` is used if present; it is checked against the same pin.
 """
 
 import hashlib
@@ -21,6 +22,10 @@ _SNAPSHOT_BLOCK = re.compile(r"^snapshot:\n((?:[ \t]+.*\n|[ \t]*#.*\n|\n)+)", re
 _PIN_FIELD = re.compile(
     r'^[ \t]+(version|sha256|baseUrl):[ \t]*"?([^"\n#]*?)"?[ \t]*$', re.MULTILINE
 )
+_EMBEDDINGS_BLOCK = re.compile(r"^embeddings:\n((?:[ \t]+.*\n|[ \t]*#.*\n|\n)+)", re.MULTILINE)
+_EMBEDDINGS_FIELD = re.compile(
+    r'^[ \t]+(modelId|assetVersion|sha256):[ \t]*"?([^"\n#]*?)"?[ \t]*$', re.MULTILINE
+)
 
 
 def read_snapshot_pin(values: Path) -> dict[str, str]:
@@ -33,6 +38,19 @@ def read_snapshot_pin(values: Path) -> dict[str, str]:
     missing = {"version", "sha256", "baseUrl"} - set(pin)
     if missing:
         raise ValueError(f"{values}: snapshot block lacks {sorted(missing)}")
+    return pin
+
+
+def read_embeddings_pin(values: Path) -> dict[str, str]:
+    """`embeddings.modelId`, `assetVersion` and `sha256` from a chart's values.yaml. The two
+    asset fields may be empty: no pin, so `load` falls back to `computeOnKind`."""
+    block = _EMBEDDINGS_BLOCK.search(values.read_text(encoding="utf-8"))
+    if block is None:
+        raise ValueError(f"{values}: no top-level embeddings: block")
+    pin = dict(_EMBEDDINGS_FIELD.findall(block.group(1)))
+    missing = {"modelId", "assetVersion", "sha256"} - set(pin)
+    if missing:
+        raise ValueError(f"{values}: embeddings block lacks {sorted(missing)}")
     return pin
 
 
@@ -51,6 +69,26 @@ def asset_name(version: str) -> str:
 
 def asset_url(base_url: str, version: str) -> str:
     return f"{base_url.rstrip('/')}/snapshot-{version}/{asset_name(version)}"
+
+
+def embeddings_tag(snapshot_version: str, model_id: str, preprocessing_version: str) -> str:
+    """The Release tag of an embedding asset: `embeddings-<snapshot>-<model>-<preprocessing>`.
+
+    The asset's key is (snapshot, model, preprocessing), so a change to any of them is a
+    new asset. A `/` in the model id becomes `_`."""
+    model = model_id.replace("/", "_")
+    return f"embeddings-{snapshot_version}-{model}-{preprocessing_version}"
+
+
+def embeddings_asset_name(snapshot_version: str, model_id: str, preprocessing_version: str) -> str:
+    return f"{embeddings_tag(snapshot_version, model_id, preprocessing_version)}.jsonl.gz"
+
+
+def embeddings_asset_url(
+    base_url: str, snapshot_version: str, model_id: str, preprocessing_version: str
+) -> str:
+    tag = embeddings_tag(snapshot_version, model_id, preprocessing_version)
+    return f"{base_url.rstrip('/')}/{tag}/{tag}.jsonl.gz"
 
 
 def sha256_file(path: Path) -> str:
@@ -76,21 +114,60 @@ def fetch_snapshot(
     it (a downloaded file is then deleted; a local one is left alone), and
     `httpx2.HTTPError` when the download fails. No partial file is left behind.
     """
+    return _fetch_verified(
+        asset_url(base_url, version),
+        dest_dir / asset_name(version),
+        sha256,
+        "TICKETSCOPE_SNAPSHOT_SHA256 is empty; the snapshot pin needs a checksum",
+        timeout,
+        transport,
+    )
+
+
+def fetch_embeddings(
+    base_url: str,
+    snapshot_version: str,
+    model_id: str,
+    preprocessing_version: str,
+    dest_dir: Path,
+    sha256: str,
+    *,
+    timeout: float,
+    transport: httpx2.BaseTransport | None = None,
+) -> Path:
+    """Return the path of the verified embedding asset in `dest_dir`. Same rules as
+    `fetch_snapshot`, for the asset named by (snapshot, model, preprocessing)."""
+    return _fetch_verified(
+        embeddings_asset_url(base_url, snapshot_version, model_id, preprocessing_version),
+        dest_dir / embeddings_asset_name(snapshot_version, model_id, preprocessing_version),
+        sha256,
+        "TICKETSCOPE_EMBEDDINGS_SHA256 is empty; the embeddings pin needs a checksum",
+        timeout,
+        transport,
+    )
+
+
+def _fetch_verified(
+    url: str,
+    dest: Path,
+    sha256: str,
+    empty_message: str,
+    timeout: float,
+    transport: httpx2.BaseTransport | None,
+) -> Path:
     expected = sha256.strip().lower()
     if not expected:
-        raise ValueError("TICKETSCOPE_SNAPSHOT_SHA256 is empty; the snapshot pin needs a checksum")
-    dest = dest_dir / asset_name(version)
+        raise ValueError(empty_message)
     if dest.is_file():
         actual = sha256_file(dest)
         if actual != expected:
             raise ChecksumMismatch(dest, expected, actual)
-        log.info("using local snapshot %s (checksum verified)", dest)
+        log.info("using local asset %s (checksum verified)", dest)
         return dest
 
-    dest_dir.mkdir(parents=True, exist_ok=True)
-    url = asset_url(base_url, version)
+    dest.parent.mkdir(parents=True, exist_ok=True)
     log.info("downloading %s", url)
-    fd, tmp_name = tempfile.mkstemp(prefix=f".{asset_name(version)}.", dir=dest_dir)
+    fd, tmp_name = tempfile.mkstemp(prefix=f".{dest.name}.", dir=dest.parent)
     tmp = Path(tmp_name)
     try:
         digest = hashlib.sha256()

@@ -24,7 +24,8 @@ class Settings(BaseSettings):
     default_mode: str = "keyword"
 
     # Embeddings (AD-21). An empty model id means no embeddings: dense is unavailable.
-    # `embeddings_compute` lets `load` compute them (kind only; the chart sets it).
+    # `embeddings_compute` lets `load` compute them when no asset is pinned (kind only; the
+    # chart sets it).
     embedding_model_id: str = ""
     embeddings_compute: bool = False
     # Where the baked model lives; the runtime is offline (HF_HUB_OFFLINE=1).
@@ -50,6 +51,12 @@ class Settings(BaseSettings):
     snapshot_base_url: str = "https://github.com/Dillon-Based/ticketscope/releases/download"
     snapshot_download_timeout_seconds: int = 300
     snapshot_dir: Path = Path("snapshots")
+
+    # load: the pinned embedding asset (AD-6, AD-25). The snapshot version it was built from
+    # and its checksum; both empty means no pin, and `embeddings_compute` applies instead.
+    # A pinned asset always wins. It is fetched from `snapshot_base_url` into `snapshot_dir`.
+    embeddings_asset_version: str = ""
+    embeddings_sha256: str = ""
 
     # eval: the labelled pairs, one `<snapshot_version>.jsonl` per snapshot (AD-26).
     eval_pairs_dir: Path = Path("eval/pairs")

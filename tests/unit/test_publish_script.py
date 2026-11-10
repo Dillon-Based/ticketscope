@@ -117,3 +117,89 @@ def test_script_never_clobbers_or_deletes() -> None:
     assert "release delete" not in commands
     assert "gh release create" in commands
     assert '--target "$COMMIT"' in commands
+
+
+# --- the embedding phase (story 4) -------------------------------------------------------------
+
+TAG = "embeddings-2026.11.1-BAAI_bge-small-en-v1.5-pre1.kind2-t3.outcome3.emb1"
+UV_STUB = """#!/usr/bin/env bash
+echo "uv $*" >> "$STUB_CALLS"
+case "$*" in
+  *read_embeddings_pin*) echo "BAAI/bge-small-en-v1.5" ;;
+  *read_snapshot_pin*) echo "2026.11.1 {sha}" ;;
+  *ingest.embed\\ tag*) echo "{tag}"; echo "{tag}.jsonl.gz" ;;
+  *ingest.embed\\ build*) echo "built" >&2 ;;
+esac
+"""
+GH_STUB = """#!/usr/bin/env bash
+echo "gh $*" >> "$STUB_CALLS"
+case "$*" in
+  "repo view"*) echo "owner/repo" ;;
+  "api"*) echo "refs/tags/{taken}" ;;
+  "release list"*) echo "snapshot-2026.11.1" ;;
+esac
+"""
+
+
+def _stub_embedding_tools(work: Path, bin_dir: Path, taken: str) -> dict[str, str]:
+    calls = work.parent / "embed-calls"
+    (bin_dir / "uv").write_text(UV_STUB.format(sha="a" * 64, tag=TAG))
+    (bin_dir / "gh").write_text(GH_STUB.format(taken=taken))
+    for tool in ("uv", "gh"):
+        (bin_dir / tool).chmod(0o755)
+    return {"STUB_CALLS": str(calls)}
+
+
+def _run_embeddings_only(work: Path, bin_dir: Path, extra: dict[str, str]) -> str:
+    env = {
+        **os.environ,
+        **GIT_ENV,
+        **extra,
+        "OUT_DIR": str(work.parent / "out"),
+        "PATH": f"{bin_dir}{os.pathsep}{os.environ['PATH']}",
+    }
+    result = subprocess.run(
+        ["bash", str(work / "scripts" / "publish-snapshot.sh"), "--embeddings-only", "2026.11.1"],
+        cwd=work, env=env, capture_output=True, text=True, timeout=60,
+    )  # fmt: skip
+    assert result.returncode != 0
+    return result.stderr
+
+
+def test_a_published_embedding_asset_name_stops_the_run_before_anything_is_uploaded(
+    checkout: tuple[Path, Path],
+) -> None:
+    work, bin_dir = checkout
+    env = _stub_embedding_tools(work, bin_dir, taken=TAG)
+    stderr = _run_embeddings_only(work, bin_dir, env)
+    assert f"tag {TAG} already exists" in stderr
+    calls = Path(env["STUB_CALLS"]).read_text()
+    assert "release create" not in calls
+    assert "ingest.embed build" not in calls  # refused before the long embedding pass
+
+
+def test_the_embedding_phase_embeds_the_verified_snapshot_and_attaches_with_the_guards(
+    checkout: tuple[Path, Path],
+) -> None:
+    work, bin_dir = checkout
+    env = _stub_embedding_tools(work, bin_dir, taken="embeddings-2026.10.1-other")
+    stderr = _run_embeddings_only(work, bin_dir, env)  # stops at the stub's missing asset file
+    assert "the embedding asset" in stderr and "was not written" in stderr
+    calls = Path(env["STUB_CALLS"]).read_text()
+    # Embedded from the downloaded published snapshot with its pinned checksum, not from a dump.
+    assert "gh release download snapshot-2026.11.1" in calls
+    assert f"--sha256 {'a' * 64}" in calls and "--snapshot" in calls
+    assert "mongo" not in calls.lower()
+
+
+def test_embedding_script_text_guards() -> None:
+    text = SCRIPT.read_text(encoding="utf-8")
+    commands = "\n".join(
+        line for line in text.splitlines() if line.strip() and not line.lstrip().startswith("#")
+    )
+    assert commands.count("gh release create") == 2  # the snapshot and the embeddings
+    assert commands.count('--target "$COMMIT"') == 2
+    assert "--clobber" not in commands and "release delete" not in commands
+    assert "embeddings-only" in commands
+    # Timed load of the asset, inside the same budget and notes as the snapshot's.
+    assert 'EMBEDDINGS_FILE="$asset"' in commands and "--embeddings-manifest" in commands

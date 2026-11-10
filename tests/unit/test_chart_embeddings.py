@@ -95,3 +95,72 @@ def test_the_image_reads_hugging_face_only_in_a_build_stage_and_runs_offline() -
     runtime = stages[-1]
     assert "HF_HUB_OFFLINE=1" in runtime
     assert "COPY --from=model /models /models" in runtime
+
+
+# --- the pinned embedding asset (story 4, AD-25) -----------------------------------------------
+
+ASSET_ENV = "TICKETSCOPE_EMBEDDINGS_ASSET_VERSION"
+SHA_ENV = "TICKETSCOPE_EMBEDDINGS_SHA256"
+_SHA = "ab" * 32
+_PIN = [
+    "--set-string",
+    "embeddings.assetVersion=2026.11.1",
+    "--set-string",
+    f"embeddings.sha256={_SHA}",
+]
+
+
+@needs_helm
+def test_no_pin_renders_no_asset_env() -> None:
+    load = _doc(_render(), "ticketscope-load")
+    assert ASSET_ENV not in load and SHA_ENV not in load
+
+
+@needs_helm
+def test_a_pin_gives_load_the_asset_and_the_model_and_api_the_model() -> None:
+    rendered = _render(*_PIN)
+    model = _values_model()
+    api, load = _doc(rendered, "ticketscope-api"), _doc(rendered, "ticketscope-load")
+    for doc in (api, load):
+        assert f'- name: {MODEL_ENV}\n              value: "{model}"' in doc
+    assert f'- name: {ASSET_ENV}\n              value: "2026.11.1"' in load
+    assert f'- name: {SHA_ENV}\n              value: "{_SHA}"' in load
+    assert ASSET_ENV not in api and SHA_ENV not in api
+    assert COMPUTE_ENV not in load  # nothing is computed
+    # The asset load needs the ordinary Job limit and deadline, not the compute ones.
+    assert "memory: 512Mi" in load and "activeDeadlineSeconds: 900" in load
+
+
+@needs_helm
+def test_a_pinned_asset_wins_over_compute_on_kind() -> None:
+    load = _doc(_render(*_PIN, "--set", "embeddings.computeOnKind=true"), "ticketscope-load")
+    assert COMPUTE_ENV not in load
+    assert ASSET_ENV in load
+    assert "memory: 2Gi" not in load and "activeDeadlineSeconds: 3000" not in load
+
+
+@needs_helm
+def test_a_pinned_version_with_an_empty_checksum_fails_to_render() -> None:
+    result = subprocess.run(
+        [
+            "helm",
+            "template",
+            "t",
+            str(CHART),
+            *_ARGS,
+            "--set-string",
+            "embeddings.assetVersion=2026.11.1",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode != 0
+    assert "embeddings.sha256 is required" in result.stderr
+
+
+@needs_helm
+def test_the_eval_job_never_gets_the_asset_pin() -> None:
+    rendered = _render(*_PIN, "--set", "eval.enabled=true")
+    eval_job = _doc(rendered, "ticketscope-eval")
+    assert ASSET_ENV not in eval_job and SHA_ENV not in eval_job

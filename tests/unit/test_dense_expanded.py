@@ -157,17 +157,17 @@ def test_report_line_mentions_embeddings_only_when_computed() -> None:
 def test_startup_loads_the_baked_model_when_a_model_id_is_set(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    built: list[tuple[str, Path]] = []
+    built: list[tuple[str, Path, int | None]] = []
 
     class Spy(HashEmbedder):
-        def __init__(self, model_id: str, cache_dir: Path) -> None:
+        def __init__(self, model_id: str, cache_dir: Path, threads: int | None = None) -> None:
             super().__init__(model_id)
-            built.append((model_id, cache_dir))
+            built.append((model_id, cache_dir, threads))
 
     monkeypatch.setattr("ticketscope.http.app.FastEmbedEmbedder", Spy)
     settings = Settings(embedding_model_id=MODEL, embedding_cache_dir=tmp_path)
     client = TestClient(create_app(store=_store(), settings=settings))
-    assert built == [(MODEL, tmp_path)]
+    assert built == [(MODEL, tmp_path, None)]  # no thread setting: the runtime's default
     assert (
         client.post("/v1/search", json=search_payload(query="crash", mode="dense")).status_code
         == 200
@@ -175,7 +175,7 @@ def test_startup_loads_the_baked_model_when_a_model_id_is_set(
 
 
 def test_startup_fails_fast_when_the_model_cannot_load(monkeypatch: pytest.MonkeyPatch) -> None:
-    def boom(model_id: str, cache_dir: Path) -> None:
+    def boom(model_id: str, cache_dir: Path, threads: int | None = None) -> None:
         raise RuntimeError("model missing")
 
     monkeypatch.setattr("ticketscope.http.app.FastEmbedEmbedder", boom)

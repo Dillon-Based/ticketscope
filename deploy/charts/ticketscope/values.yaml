@@ -49,20 +49,21 @@ telemetry:
 embeddings:
   computeOnKind: false
   modelId: "BAAI/bge-small-en-v1.5"
-  assetVersion: ""
-  sha256: ""
+  assetVersion: "2026.11.1"
+  sha256: "8fd7a90937d1e93dc0ff50a8b4909bfb53cff76bbe6c33375e7dbaf41b9fddba"
   # The load Job's memory limit when it computes embeddings (jobs.resources otherwise).
   loadMemoryLimit: 2Gi
 
 api:
   replicas: 1
-  # kind: model startup peaks near 258Mi; allow headroom for dense requests.
+  # kind: model startup peaks near 258Mi; the headroom covers dense requests and the eval
+  # test's second process in this container. Story 3.7 re-measures and sets the final value.
   resources:
     requests:
       cpu: 50m
       memory: 256Mi
     limits:
-      memory: 384Mi
+      memory: 512Mi
 
 jobs:
   resources:

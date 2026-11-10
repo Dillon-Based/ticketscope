@@ -6,7 +6,10 @@ AD-10).
 """
 
 import hashlib
-from collections.abc import Iterable, Sequence
+import os
+import sys
+from collections.abc import Generator, Iterable, Sequence
+from contextlib import contextmanager
 from pathlib import Path
 from threading import Lock
 from typing import Any, Protocol, cast
@@ -25,16 +28,42 @@ class _TextModel(Protocol):
     def embed(self, documents: Iterable[str], **kwargs: Any) -> Iterable[_Vector]: ...
 
 
+@contextmanager
+def _native_output_silenced() -> Generator[None]:
+    """Send file descriptors 1 and 2 to /dev/null for the block.
+
+    onnxruntime writes its start-up warnings (device discovery, telemetry) from C++ straight
+    to the process's stdout, as coloured non-JSON lines, and the api's logs are JSON lines.
+    Python exceptions still propagate; only the native output is dropped.
+    """
+    sys.stdout.flush()
+    sys.stderr.flush()
+    saved = (os.dup(1), os.dup(2))
+    devnull = os.open(os.devnull, os.O_WRONLY)
+    try:
+        os.dup2(devnull, 1)
+        os.dup2(devnull, 2)
+        yield
+    finally:
+        os.dup2(saved[0], 1)
+        os.dup2(saved[1], 2)
+        for fd in (*saved, devnull):
+            os.close(fd)
+
+
 class FastEmbedEmbedder:
     """`Embedder` over fastembed's `TextEmbedding`. Loading the model is eager."""
 
     def __init__(self, model_id: str, cache_dir: Path) -> None:
-        # Imported here: jobs and tests that never embed do not load onnxruntime.
-        from fastembed import TextEmbedding  # pyright: ignore[reportMissingTypeStubs]
-
         self.model_id = model_id
-        factory = cast(Any, TextEmbedding)
-        self._model = cast(_TextModel, factory(model_name=model_id, cache_dir=str(cache_dir)))
+        with _native_output_silenced():
+            # Imported here: jobs and tests that never embed do not load onnxruntime.
+            import onnxruntime  # pyright: ignore[reportMissingTypeStubs]
+            from fastembed import TextEmbedding  # pyright: ignore[reportMissingTypeStubs]
+
+            cast(Any, onnxruntime).set_default_logger_severity(3)
+            factory = cast(Any, TextEmbedding)
+            self._model = cast(_TextModel, factory(model_name=model_id, cache_dir=str(cache_dir)))
         self._inference_lock = Lock()
 
     def embed(self, texts: Sequence[str]) -> list[list[float]]:

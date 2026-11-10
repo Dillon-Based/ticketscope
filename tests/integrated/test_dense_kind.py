@@ -137,7 +137,7 @@ def test_dense_corpus_readiness_and_api_budget() -> None:
         assert "embedding_seconds=" not in log
     deployment = json.loads(_kubectl("get", "deploy/ticketscope-api", "-o", "json"))
     container = deployment["spec"]["template"]["spec"]["containers"][0]
-    assert container["resources"]["limits"]["memory"] == "384Mi"
+    assert container["resources"]["limits"]["memory"] == "512Mi"
     assert deployment["status"]["readyReplicas"] == 1
     pods = json.loads(
         _kubectl("get", "pods", "-l", "app.kubernetes.io/component=api", "-o", "json")
@@ -163,7 +163,7 @@ def test_dense_corpus_readiness_and_api_budget() -> None:
     )
     # The kernel can reclaim cache at the limit without an OOM. Successful requests
     # and zero restarts above establish that touching the limit did not kill the api.
-    assert peak <= 384 * 1024 * 1024
+    assert peak <= 512 * 1024 * 1024
 
 
 @pytest.mark.parametrize(
@@ -201,8 +201,11 @@ def test_hybrid_gateway_queries_and_tempo(query: str) -> None:
         status, text = _tempo(trace_id)
         assert status == 200, text
         spans = _spans(json.loads(text))
-        [retrieval] = [s for s in spans if s["name"] == "retrieval hybrid"]
-        [embedding] = [s for s in spans if s["name"] == f"embeddings {MODEL}"]
-        assert embedding["parentSpanId"] == retrieval["spanId"]
+        # `assert`, not unpacking: `eventually` retries AssertionError only, and Tempo may not
+        # hold every span of the trace yet.
+        retrievals = [s for s in spans if s["name"] == "retrieval hybrid"]
+        embeddings = [s for s in spans if s["name"] == f"embeddings {MODEL}"]
+        assert len(retrievals) == len(embeddings) == 1, spans
+        assert embeddings[0]["parentSpanId"] == retrievals[0]["spanId"]
 
     eventually(trace_has_embeddings, timeout=60, interval=2)

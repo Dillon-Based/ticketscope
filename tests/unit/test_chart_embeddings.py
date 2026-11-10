@@ -24,6 +24,10 @@ COMPUTE_ENV = "TICKETSCOPE_EMBEDDINGS_COMPUTE"
 needs_helm = pytest.mark.skipif(shutil.which("helm") is None, reason="needs helm")
 
 
+# The merged pin in values.yaml is real, so the tests about "no pin" clear it explicitly.
+_NO_PIN = ["--set-string", "embeddings.assetVersion=", "--set-string", "embeddings.sha256="]
+
+
 def _render(*args: str) -> str:
     result = subprocess.run(
         ["helm", "template", "t", str(CHART), *_ARGS, *args],
@@ -52,18 +56,18 @@ def _values_model() -> str:
 
 @needs_helm
 def test_flag_off_renders_no_model_env_on_api_or_load() -> None:
-    rendered = _render()
+    rendered = _render(*_NO_PIN)
     for name in ("ticketscope-api", "ticketscope-load"):
         doc = _doc(rendered, name)
         assert MODEL_ENV not in doc
         assert COMPUTE_ENV not in doc
-    assert "memory: 384Mi" in _doc(rendered, "ticketscope-api")
+    assert "memory: 512Mi" in _doc(rendered, "ticketscope-api")
     assert "memory: 512Mi" in _doc(rendered, "ticketscope-load")  # the Job limit stays
 
 
 @needs_helm
 def test_flag_on_sets_the_model_on_api_and_load_and_compute_on_load_only() -> None:
-    rendered = _render("--set", "embeddings.computeOnKind=true")
+    rendered = _render(*_NO_PIN, "--set", "embeddings.computeOnKind=true")
     model = _values_model()
     api, load = _doc(rendered, "ticketscope-api"), _doc(rendered, "ticketscope-load")
     for doc in (api, load):
@@ -95,6 +99,9 @@ def test_the_image_reads_hugging_face_only_in_a_build_stage_and_runs_offline() -
     runtime = stages[-1]
     assert "HF_HUB_OFFLINE=1" in runtime
     assert "COPY --from=model /models /models" in runtime
+    # onnxruntime's telemetry warning goes to stdout as a non-JSON line and breaks the api's
+    # JSON-lines logs; the runtime image has no writable home to persist its device id in.
+    assert "ORT_DISABLE_TELEMETRY=1" in runtime
 
 
 # --- the pinned embedding asset (story 4, AD-25) -----------------------------------------------
@@ -112,7 +119,7 @@ _PIN = [
 
 @needs_helm
 def test_no_pin_renders_no_asset_env() -> None:
-    load = _doc(_render(), "ticketscope-load")
+    load = _doc(_render(*_NO_PIN), "ticketscope-load")
     assert ASSET_ENV not in load and SHA_ENV not in load
 
 
@@ -150,6 +157,8 @@ def test_a_pinned_version_with_an_empty_checksum_fails_to_render() -> None:
             *_ARGS,
             "--set-string",
             "embeddings.assetVersion=2026.11.1",
+            "--set-string",
+            "embeddings.sha256=",
         ],
         capture_output=True,
         text=True,

@@ -1,8 +1,8 @@
 {
   "k": 10,
   "lineage": {
-    "embedding_model_id": null,
-    "preprocessing_version": "pre1.kind2-t3.outcome3",
+    "embedding_model_id": "BAAI/bge-small-en-v1.5",
+    "preprocessing_version": "pre1.kind2-t3.outcome3.emb1",
     "snapshot_version": "2026.11.1"
   },
   "modes": {
@@ -41903,7 +41903,7 @@
       ],
       "log_heavy": {
         "mrr@10": 0.6789143165356758,
-        "p95_latency_ms": 70.91701199999534,
+        "p95_latency_ms": 94.56684500003121,
         "pairs_scored": 309,
         "recall@1": 0.6051779935275081,
         "recall@10": 0.8220064724919094,
@@ -41911,7 +41911,7 @@
       },
       "overall": {
         "mrr@10": 0.5504942793183984,
-        "p95_latency_ms": 22.567272999992838,
+        "p95_latency_ms": 27.753647999986697,
         "pairs_scored": 10473,
         "recall@1": 0.4442853050701805,
         "recall@10": 0.7706483338107515,
@@ -41919,7 +41919,7 @@
       },
       "short": {
         "mrr@10": 0.5465901282459724,
-        "p95_latency_ms": 21.278424000001905,
+        "p95_latency_ms": 26.073317999987466,
         "pairs_scored": 10164,
         "recall@1": 0.4393939393939394,
         "recall@10": 0.7690869736324282,
@@ -41929,6 +41929,9 @@
   },
   "pairs_file": "eval/pairs/2026.11.1.jsonl",
   "relevance": "cluster",
-  "skipped_modes": [],
-  "wall_seconds": 254.4
+  "skipped_modes": [
+    "dense",
+    "hybrid"
+  ],
+  "wall_seconds": 318.2
 }

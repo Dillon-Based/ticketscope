@@ -193,6 +193,42 @@
       "evidence": "https://github.com/Dillon-Based/ticketscope/actions/runs/42532155256 - eval / deploy success (12m33s); https://github.com/Dillon-Based/ticketscope/actions/runs/42532155240 - checks, charts, integrated-check / deploy success; git diff d2313e9 3fe91b2 -- eval/baseline.json is empty; lint-imports 7 kept 0 broken. Observed at 4372cca (PR #31 head), whose tree is identical to main 3fe91b2; recorded against the commit under trace by the user's explicit acceptance (2026-11-08, 'option 2'): this branch adds only tests and ticket-tree text, no product code.",
       "observed_at": "2026-11-08T23:37:00+00:00",
       "source_sha": "424291fa5b0bc6d538614440246249eaadeea1b3"
+    },
+    {
+      "id": "ticketscope--e3-LIVE-001",
+      "requirement_id": "ticketscope--e3-s1--AC-7",
+      "title": "On the PR, ci.yml (including integrated-check) and eval.yml pass with eval/baseline.json unchanged",
+      "status": "fail",
+      "evidence": "PR #36 (head 648b536, merged 2026-11-09T15:53Z as 684c8f4): https://github.com/Dillon-Based/ticketscope/actions/runs/42648614318 - ci: checks, changes, integrated-check / deploy, charts, images (amd64, arm64), evidence all success; eval/baseline.json not in the PR's 43 files. BUT https://github.com/Dillon-Based/ticketscope/actions/runs/42648614288 - eval / deploy failure: tests/eval/test_eval_kind.py::test_keyword_is_scored_on_clusters_split_by_kind asserted ['dense'] == [] (1 failed, 8 passed). The test still expected no skipped modes, while CI is keyword-only by design until 3.4 (epic Decision 2026-11-08), so dense was correctly reported unavailable. Fixed by PR #38 (f7f3490, 'skipped modes are the unavailable registry modes'): https://github.com/Dillon-Based/ticketscope/actions/runs/42662639770 eval success; eval green on every later epic-3 story PR (3.2 https://github.com/Dillon-Based/ticketscope/actions/runs/42668540684, 3.3 https://github.com/Dillon-Based/ticketscope/actions/runs/42699076637, 3.5 https://github.com/Dillon-Based/ticketscope/actions/runs/42835557994, 3.6 https://github.com/Dillon-Based/ticketscope/actions/runs/42891461582, 3.7 https://github.com/Dillon-Based/ticketscope/actions/runs/42903014546, 3.8 https://github.com/Dillon-Based/ticketscope/actions/runs/42910706607). Recorded as fail because the clause names PR #36; the user accepted the epic over it (Sofia, 2026-11-11).",
+      "observed_at": "2026-11-11T00:30:00+00:00",
+      "source_sha": "648b53630d3827df95219f1d71f96e970181501f"
+    },
+    {
+      "id": "ticketscope--e3-LIVE-002",
+      "requirement_id": "ticketscope--e3-s4--AC-5",
+      "title": "A person runs the publish script; the Release shows the asset, its checksum and notes with attribution; a person merges the pin",
+      "status": "pass",
+      "evidence": "https://github.com/Dillon-Based/ticketscope/releases/tag/embeddings-2026.11.1-BAAI_bge-small-en-v1.5-pre1.kind2-t3.outcome3.emb1 - published 2026-11-10T01:11:51Z by Dillon-Based from 2067071; assets embeddings-...emb1.jsonl.gz (66062972 bytes) and its .sha256; notes give the build commit, 32153 vectors x 384 dims, model file SHA-256, runtime versions, timed load 8.7 s of the 600 s budget, asset SHA-256 8fd7a909...9fddba, the pin to merge, and the Public Jira Dataset v7 attribution (CC BY 4.0). Pin merged by Dillon-Based in PR #43 (d9abdc7, 2026-11-10T13:05Z); deploy/charts/ticketscope/values.yaml embeddings.assetVersion 2026.11.1, sha256 equal to the Release's.",
+      "observed_at": "2026-11-11T00:30:00+00:00",
+      "source_sha": "d9abdc7"
+    },
+    {
+      "id": "ticketscope--e3-LIVE-003",
+      "requirement_id": "ticketscope--e3-s7--verify",
+      "title": "On a PR, the eval check passes with eval/baseline.json unchanged, ci.yml and its integrated-check pass, and import-linter keeps every contract",
+      "status": "pass",
+      "evidence": "PR #52 (head 62d0d42, merged 2026-11-10T21:48Z as 3c0cddd): https://github.com/Dillon-Based/ticketscope/actions/runs/42903014546 - eval success; https://github.com/Dillon-Based/ticketscope/actions/runs/42903014549 - ci: checks (ruff, pyright, pytest, lint-imports) success, integrated-check / deploy success, charts success, evidence success, images skipped (no image path changed); eval/baseline.json not among the PR's 13 files.",
+      "observed_at": "2026-11-11T00:30:00+00:00",
+      "source_sha": "62d0d421c258ad32f806af34da7d34ca4160f1d7"
+    },
+    {
+      "id": "ticketscope--e3-LIVE-004",
+      "requirement_id": "ticketscope--e3-s3--AC-3",
+      "title": "The spike run changed no tracked file outside scripts/embedding_spike.py and the findings file",
+      "status": "pass",
+      "evidence": "git diff --stat 90364f5 6227978 (spike PR #41, merged by Dillon-Based 2026-11-09T21:45Z): scripts/embedding_spike.py (+226), spike-choose-the-embedding-model-findings.md (+51), plus ticket-tree bookkeeping only: the spike's plan file (+75) and one Decision line in epic-hybrid-retrieval.md. No product code, chart, test, workflow or eval file changed.",
+      "observed_at": "2026-11-11T00:30:00+00:00",
+      "source_sha": "6227978"
     }
   ]
 }

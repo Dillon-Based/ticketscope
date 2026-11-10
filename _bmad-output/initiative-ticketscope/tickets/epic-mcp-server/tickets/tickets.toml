@@ -1,0 +1,90 @@
+# epic-mcp-server stories, in build order. `id` is permanent, never reused.
+# Lane: 1 → 2 → 3 → 4 → 5 is one lane, because each edits the mcp server module (ticketscope.mcp).
+# 1 is the tracer and owns the shared setup (mcp and apiclient packages, entrypoint, chart keys, route, mcp-e2e.yml).
+# 2 is the least certain part and comes next, so any server change Claude Desktop needs lands before 3–5.
+# Runs alongside epic-hybrid-retrieval 3.5–3.8: the only shared file is values.yaml (keys split per the epic's Boundaries).
+# Sizing (epic-search-baseline retro): each story fits one agent session; one likely to add more than
+# about 800 lines is flagged in its notes for the independent review.
+# Tests: each story writes its own, in tests/mcp/; the closing integrated check is the only test story.
+
+[[entry]]
+id = 1
+type = "story"
+title = "Tracer: an MCP client calls search_similar_issues through the Gateway on kind"
+description = "Lays the thinnest path from an MCP client to the database. Adds the mcp SDK v2 dependency; ticketscope.apiclient, an httpx2 /v1 client built on ticketscope.contract; and ticketscope.mcp, an MCPServer over stateless Streamable HTTP at /mcp with one tool, search_similar_issues(query, mode?, k?), whose structured output is the /v1/search body and whose output schema is generated from the contract. The tool's mode input is a plain string, not the contract's Literal, so an invalid mode reaches the API and story 3 can return its 422 detail. An omitted mode is omitted on the /v1 call. Its composition root ticketscope.mcp.main reads TICKETSCOPE_* settings (api base URL, allowed hosts) and is the ticketscope-mcp entrypoint in the one app image. import-linter gains contracts that mcp and apiclient never import core, adapters, http or jobs (settings and telemetry stay cross-cutting), and that nothing imports mcp. The chart gains the mcp keys in values.yaml, an mcp Deployment with probes (its replica count, two on kind, in values-kind.yaml), a Service, and an HTTPRoute for /mcp on the platform Gateway, with transport_security.allowed_hosts from values. mcp-e2e.yml runs on PRs through _kind-deploy.yml, behind the same path filter as the other kind jobs, with tests/mcp/** added to .github/kind-paths.yml, and runs an MCP client test from tests/mcp/ against /mcp through the Gateway. Story 2 relies on the route's hostnames and the allowed-hosts value both coming from values, to admit the tunnel's host."
+verify = "On a PR, mcp-e2e.yml deploys to kind and its client test lists the tools, calls search_similar_issues for a vague query without a mode (the response's mode is the server default) and with mode=keyword, and validates each structured result against the output schema generated from ticketscope.contract (R1); with two mcp replicas, repeated calls all succeed (R1); a request with a host header outside allowed_hosts is refused (R1); unit tests run the server in-process against a fake /v1 with no cluster; import-linter keeps every contract and ci.yml passes (R1)."
+covers = ["R1"]
+after = ["1.6", "1.9"]
+hitl = false
+risk = "high"
+plan_checkpoint = true
+notes = ["Likely more than 800 added lines (two packages, entrypoint, chart templates, workflow, tests): run the independent review on it."]
+
+[[entry]]
+id = 2
+type = "story"
+title = "Claude Desktop answers from ticketscope through a tunnel"
+description = "Exposes the kind cluster's /mcp on a fixed public hostname and connects Claude Desktop to it. First checks, and records in the plan, that ngrok's free static domain serves Streamable HTTP responses unaltered to non-browser clients (no interstitial page, no buffering of streamed responses) and that its bandwidth limit covers a demo; if not, it uses Tailscale Funnel. Adds a committed script that starts the tunnel to the kind Gateway, with the tunnel's hostname added as an environment value to the /mcp route's hostnames and to the allowed-hosts value from story 1 (Envoy otherwise 404s the tunnel's Host header before the server sees it), reading the person's tunnel credential from their environment and committing none. Documents adding the server as a custom connector in Claude Desktop with no auth. Any server change Claude Desktop turns out to need (protocol version, response format) is made here in ticketscope.mcp with a test. A person creates the tunnel account, reserves the hostname, runs the script and the Claude Desktop session."
+verify = "A person runs the tunnel script against kind, adds the hostname's /mcp as a custom connector in Claude Desktop, asks a triage question, and Claude calls search_similar_issues and answers citing returned issues; a screenshot of that session is committed and linked from the plan (R4); the plan records which tunnel was chosen and why (R4); mcp-e2e.yml still passes (R1)."
+covers = ["R4"]
+after = [1]
+hitl = true # a person creates the tunnel account, runs the tunnel and the Claude Desktop session
+risk = "high"
+plan_checkpoint = true
+notes = ["Before connecting Claude Desktop, curl the tunnel's /mcp from outside with a non-browser client and confirm there is no interstitial page and a streamed response arrives intact."]
+
+[[entry]]
+id = 3
+type = "story"
+title = "Tool errors carry the API's problem detail"
+description = "Makes every failed tool call an MCP tool error rather than a protocol failure or an empty result. apiclient turns a /v1 RFC 9457 problem+json response into a typed error carrying its detail, and a connection failure or timeout into one naming the API as unreachable; the tool returns is_error with that detail, and an invalid mode is rejected with the API's 422 detail rather than by a separate list in mcp. Story 4's get_issue and story 5's spans build on this error path."
+verify = "The CI client test on kind calls search_similar_issues with an unknown mode and gets is_error with the API's problem detail (R3); unit tests against a fake /v1 cover a 422, a 404, a 500, and an unreachable API, each returning is_error with the detail and never raising through the protocol (R3); mcp-e2e.yml passes (R1, R3)."
+covers = ["R3"]
+after = [2]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 4
+type = "story"
+title = "get_issue takes the issue key"
+description = "Adds the readable key to /v1 additively and the get_issue tool on it. The contract's Issue gains key (for example MCL-6629), read from the issue's url by one function that reuses core.derive.MOJANG_BROWSE_URL and gives null when the url is not a browse URL (as in v1-shaped test fixtures), so every /v1 response carries it with no new column, no reload and no preprocessing change. api adds GET /v1/issues/by-key/{key}, backed by a lookup on the CorpusStore port, its in-memory fake and the Postgres adapter (by url), which returns the GET /v1/issues/{number} body, and a problem+json 404 for an unknown key. The tool get_issue(key) returns that body as structured output with an output schema generated from the contract, and an unknown key comes back as a tool error through story 3's error path. GET /v1/issues/{number} is unchanged, and the page is not touched."
+verify = "The CI client test takes the key of a search_similar_issues result, calls get_issue with it, and gets back the issue with that key and its outcome, validated against the generated schema (R2); get_issue with an unknown key returns is_error with the API's detail (R3); POST /v1/search results carry key, and existing /v1 tests pass, and the v1 parity script passes when it compares bodies with issue.key dropped (R2); the eval check passes with eval/baseline.json unchanged (R2); mcp-e2e.yml passes (R1, R2)."
+covers = ["R2", "R3"]
+after = [3]
+hitl = false
+risk = "medium"
+plan_checkpoint = true
+
+[[entry]]
+id = 5
+type = "story"
+title = "One MCP tool call yields one trace in Tempo"
+description = "Wires ticketscope-mcp into the AD-10 span tree. The mcp process sets up telemetry with service.name ticketscope-mcp and exports OTLP to the in-cluster collector from values. Each tool call is a SERVER span tools/call {tool} with mcp.method.name, gen_ai.operation.name=execute_tool and gen_ai.tool.name, status ERROR on story 3's tool errors, and query text only when the existing opt-in value is set. apiclient's httpx2 calls are instrumented, so the CLIENT span carries traceparent to api, whose spans continue the trace. When the MCP request's _meta carries a traceparent, the tool span continues that trace. The Tempo lookup the check needs lives in tests/mcp/ and does not touch tests/smoke/, which epic-hybrid-retrieval's 3.8 extends; unifying it with tests/smoke's private helpers is left for a later sweep."
+verify = "The CI check on kind calls search_similar_issues with mode=hybrid, then finds in Tempo one trace whose root is the ticketscope-mcp tools/call span, with the CLIENT POST, api's POST /v1/search, retrieval {mode}, embeddings {model} and the db query beneath it (R5); a call carrying a traceparent in _meta lands in that trace id (R5); a tool error's span has status ERROR (R5); get_issue yields its own trace the same way (R5); mcp-e2e.yml passes (R1, R5)."
+covers = ["R5"]
+after = [4]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 6
+type = "story"
+title = "Refactor sweep"
+description = "Cleanup only, scoped at its start from the plans' deferred items and review findings in this epic: duplication between the two tools and apiclient, chart template repetition between api and mcp, and test structure in tests/mcp/. Behaviour, the /v1 contract and the span tree do not change."
+verify = "On a PR, mcp-e2e.yml, ci.yml and the eval check pass with eval/baseline.json unchanged, and import-linter keeps every contract (R1, R2, R3, R5)."
+covers = []
+after = [1, 2, 3, 4, 5]
+hitl = false
+risk = "low"
+
+[[entry]]
+id = 7
+type = "story"
+title = "Integrated check on kind"
+description = "Extends mcp-e2e.yml's suite in tests/mcp/ to prove the epic end to end on a fresh kind cluster: both tools with and without a mode, get_issue by a key taken from a search, each tool-error case including an unreachable API (made by scaling api to zero as the suite's last step), and one trace from the tool call to the database in Tempo. Claude Desktop through the tunnel (R4) is evidenced by story 2's recorded session, not re-run in CI."
+verify = "On a fresh kind cluster, mcp-e2e.yml's integrated suite passes in CI covering each Done when line of the epic that CI can run (R1, R2, R3, R5), and the epic's Notes link story 2's recorded Claude Desktop session for R4."
+covers = ["R1", "R2", "R3", "R4", "R5"]
+after = [6]
+hitl = false
+risk = "medium"

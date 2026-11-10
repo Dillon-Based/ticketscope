@@ -33,7 +33,7 @@ after = [
 id = 4
 slug = "epic-mcp-server"
 title = "Claude Desktop calls search_similar_issues on a remote MCP server"
-description = "A stateless Streamable HTTP MCP server, built to the 2026-07-28 spec, runs as its own Deployment in the chart. It exposes search_similar_issues and get_issue, which call epic 1's /v1 API over HTTP and return its bodies, with an optional mode argument. An MCP client test passes in CI on kind. Claude Desktop answers from it through a named tunnel. One trace runs from the tool call through retrieval to the database in epic 1's Tempo. There is no auth yet; epic 6 adds it. Epic 5 serves this endpoint live, epic 7 charts its tool-call telemetry, and epic 8 uses its trace screenshot."
+description = "A stateless Streamable HTTP MCP server, built to the 2026-07-28 spec, runs as its own Deployment in the chart. It exposes search_similar_issues and get_issue, which call epic 1's /v1 API over HTTP and return its bodies, with an optional mode argument; get_issue takes the readable issue key. An MCP client test passes in CI on kind. Claude Desktop answers from it through a tunnel with a fixed hostname (ngrok static domain). One trace runs from the tool call through retrieval to the database in epic 1's Tempo. There is no auth yet; epic 6 adds it. Epic 5 serves this endpoint live, epic 7 charts its tool-call telemetry, and epic 8 uses its trace screenshot."
 covers = ["R4", "R8"]
 after = [{ epic = 1, needs = "the /v1 API and contract module, the Helm releases, the CI layout, and the OTel Collector, Tempo and span contract" }]
 
@@ -81,7 +81,7 @@ description = "The README has an architecture diagram, epic 2's CI eval table wi
 covers = ["R12", "R13"]
 after = [
   { epic = 3, needs = "final keyword, dense and hybrid numbers in the CI table" },
-  { epic = 4, needs = "the end-to-end trace to screenshot, and the named tunnel the README links if epic 5 is cut" },
+  { epic = 4, needs = "the end-to-end trace to screenshot, and the fixed-hostname tunnel the README links if epic 5 is cut" },
   { epic = 5, needs = "the live URL and the recorded CloudNativePG drills; if epic 5 is cut, this edge is dropped, the README links the kind deployment through the tunnel, and this epic records the drills on kind" },
   { epic = 6, needs = "the authenticated Claude Desktop session to record; if epic 6 is cut, this edge is dropped and the clip is unauthenticated" },
 ]

@@ -137,7 +137,7 @@ def test_dense_corpus_readiness_and_api_budget() -> None:
         assert "embedding_seconds=" not in log
     deployment = json.loads(_kubectl("get", "deploy/ticketscope-api", "-o", "json"))
     container = deployment["spec"]["template"]["spec"]["containers"][0]
-    assert container["resources"]["limits"]["memory"] == "384Mi"
+    assert container["resources"]["limits"]["memory"] == "512Mi"
     assert deployment["status"]["readyReplicas"] == 1
     pods = json.loads(
         _kubectl("get", "pods", "-l", "app.kubernetes.io/component=api", "-o", "json")
@@ -163,7 +163,7 @@ def test_dense_corpus_readiness_and_api_budget() -> None:
     )
     # The kernel can reclaim cache at the limit without an OOM. Successful requests
     # and zero restarts above establish that touching the limit did not kill the api.
-    assert peak <= 384 * 1024 * 1024
+    assert peak <= 512 * 1024 * 1024
 
 
 @pytest.mark.parametrize(

@@ -61,7 +61,7 @@ def test_flag_off_renders_no_model_env_on_api_or_load() -> None:
         doc = _doc(rendered, name)
         assert MODEL_ENV not in doc
         assert COMPUTE_ENV not in doc
-    assert "memory: 384Mi" in _doc(rendered, "ticketscope-api")
+    assert "memory: 512Mi" in _doc(rendered, "ticketscope-api")
     assert "memory: 512Mi" in _doc(rendered, "ticketscope-load")  # the Job limit stays
 
 

@@ -56,13 +56,14 @@ embeddings:
 
 api:
   replicas: 1
-  # kind: model startup peaks near 258Mi; allow headroom for dense requests.
+  # kind: model startup peaks near 258Mi; the headroom covers dense requests and the eval
+  # test's second process in this container. Story 3.7 re-measures and sets the final value.
   resources:
     requests:
       cpu: 50m
       memory: 256Mi
     limits:
-      memory: 384Mi
+      memory: 512Mi
 
 jobs:
   resources:

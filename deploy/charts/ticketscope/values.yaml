@@ -19,8 +19,11 @@ gateway:
   namespace: platform
 
 retrieval:
-  # Server default when a request omits `mode` (AD-4, AD-25). Owned by epic 3.
-  defaultMode: keyword
+  # Server default when a request omits `mode` (AD-4, AD-25): the mode with the best overall
+  # MRR@10 in eval/baseline.json, hybrid on a tie. Chosen by that number (story 3.6):
+  # hybrid 0.5936, dense 0.5787, keyword 0.5505. Re-pick it when the baseline changes
+  # which mode leads. mcp has no default of its own and sends none (AD-25).
+  defaultMode: hybrid
 
 # The pinned snapshot that load reads (AD-6): a `snapshot-<version>` Release asset and
 # its SHA-256. Set here only; environment files never override it (AD-25).
@@ -56,15 +59,26 @@ embeddings:
 
 api:
   replicas: 1
-  # kind: model startup peaks near 258Mi; the headroom covers dense requests and the eval
-  # test's second process in this container. Story 3.7 re-measures and sets the final value.
+  # Sized from the model's measured needs (bge-small-en-v1.5, story 3.6), measured on the
+  # kind api pod: memory peaked at 288 MB (275 MiB, cgroup memory.peak) from a fresh start through
+  # 60 dense searches and one default-mode search, with no OOM events. The model itself adds about
+  # 130-185 MB over the process baseline (spike 3.3). The 512Mi limit is about 1.9 times the
+  # peak and leaves room for the eval test's second process in this container.
+  # CPU: a dense search embeds its query on the CPU, about 80-134 ms end to end (hybrid 81 ms,
+  # keyword 20 ms), measured under the 1-core limit, so a request is one core for a fraction of a second.
+  # Embedding time: 35.7 ms per issue, 1,146 s for the 32,153-issue snapshot, which is why
+  # embeddings come from the pinned asset and load never computes them (spike 3.3).
   resources:
     requests:
-      cpu: 50m
+      cpu: 100m
       memory: 256Mi
     limits:
+      cpu: "1"
       memory: 512Mi
 
+# Resources for the migrate and load Jobs. With the pinned asset, load only downloads and inserts vectors: it
+# completed in 16 s on kind within the 512Mi limit (story 3.6); it embeds nothing.
+# embeddings.loadMemoryLimit applies only when computeOnKind embeds the corpus.
 jobs:
   resources:
     requests:

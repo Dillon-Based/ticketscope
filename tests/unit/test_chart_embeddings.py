@@ -99,6 +99,9 @@ def test_the_image_reads_hugging_face_only_in_a_build_stage_and_runs_offline() -
     runtime = stages[-1]
     assert "HF_HUB_OFFLINE=1" in runtime
     assert "COPY --from=model /models /models" in runtime
+    # onnxruntime's telemetry warning goes to stdout as a non-JSON line and breaks the api's
+    # JSON-lines logs; the runtime image has no writable home to persist its device id in.
+    assert "ORT_DISABLE_TELEMETRY=1" in runtime
 
 
 # --- the pinned embedding asset (story 4, AD-25) -----------------------------------------------

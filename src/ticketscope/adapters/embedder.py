@@ -30,7 +30,14 @@ class FastEmbedEmbedder:
 
     def __init__(self, model_id: str, cache_dir: Path) -> None:
         # Imported here: jobs and tests that never embed do not load onnxruntime.
+        import onnxruntime  # pyright: ignore[reportMissingTypeStubs]
         from fastembed import TextEmbedding  # pyright: ignore[reportMissingTypeStubs]
+
+        # onnxruntime writes its own warnings (e.g. a telemetry device-id notice) to stdout in
+        # a non-JSON format, which breaks the api's JSON-lines log contract. Errors only.
+        ort = cast(Any, onnxruntime)
+        ort.set_default_logger_severity(3)
+        ort.disable_telemetry_events()
 
         self.model_id = model_id
         factory = cast(Any, TextEmbedding)

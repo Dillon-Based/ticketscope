@@ -30,7 +30,7 @@ import httpx2
 import pytest
 
 from tests.factories import form_payload, search_payload
-from tests.target import NO_MATCH_QUERY, REPO, snapshot_pin
+from tests.target import NO_MATCH_QUERY, REPO, embeddings_pin, snapshot_pin
 from tests.waiting import eventually, wait_for_output
 from ticketscope.contract.search import IssueResponse, Problem, SearchResponse
 from ticketscope.core.derive import preprocessing_version
@@ -43,6 +43,17 @@ PLATFORM_NAMESPACE = os.environ.get("TICKETSCOPE_PLATFORM_NAMESPACE", "platform"
 BACKUP_BUCKET = "ticketscope-backups"  # backup.destinationPath in values-kind.yaml
 BACKUP_TIMEOUT_SECONDS = 600
 PIN = snapshot_pin()["version"]
+
+
+def _expected_meta() -> tuple[str, str, str]:
+    """`corpus_meta` after a load: with a pinned embedding asset it also holds the model id and
+    the embedding rule version; without one the load is keyword-only."""
+    pinned = embeddings_pin()
+    if pinned["assetVersion"]:
+        return PIN, pinned["modelId"], preprocessing_version(embeddings=True)
+    return PIN, "", preprocessing_version()
+
+
 GOLDEN = json.loads((REPO / "eval" / "golden-queries.json").read_text(encoding="utf-8"))
 ISSUE_COUNT = 32153  # issues in snapshot 2026.11.1
 RESULTS_QUERY = "launcher crash"
@@ -155,7 +166,7 @@ def _force_reload() -> tuple[str, tuple[str, str, str]]:
     Returns the load log and `corpus_meta` right after that upgrade. Never leaves
     `corpus_meta` stale: if the reload did not make it current, one more upgrade does.
     """
-    current = (PIN, "", preprocessing_version())
+    current = _expected_meta()
     _sql("UPDATE corpus_meta SET preprocessing_version = 'pre0.stale'")
     try:
         _upgrade()
@@ -329,7 +340,7 @@ def test_every_issue_is_loaded_with_a_kind_and_an_outcome() -> None:
     )
     assert int(missing) == 0
     assert int(_sql("SELECT count(DISTINCT outcome_status) FROM issue")) > 1
-    assert _corpus_meta() == (PIN, "", preprocessing_version())
+    assert _corpus_meta() == _expected_meta()
 
 
 def test_api_database_role_can_read_but_cannot_write() -> None:
@@ -395,7 +406,7 @@ def test_load_log_has_the_report() -> None:
         # so it logged no report: force a reload to get a fresh one.
         assert "no-op" in log, log
         log, meta = _force_reload()
-        assert meta == (PIN, "", preprocessing_version())
+        assert meta == _expected_meta()
     reports = [line for line in log.splitlines() if "load report:" in line]
     assert reports, "no load report line"
     line = reports[-1]
@@ -426,7 +437,7 @@ def test_stale_preprocessing_version_reloads() -> None:
     log, meta = _force_reload()
     assert "reloading" in log and "preprocessing_version" in log, log
     assert "load report:" in log
-    assert meta == (PIN, "", preprocessing_version())
+    assert meta == _expected_meta()
 
 
 # (6) ---------------------------------------------------------------------------------------

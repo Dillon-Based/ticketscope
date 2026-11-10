@@ -201,8 +201,11 @@ def test_hybrid_gateway_queries_and_tempo(query: str) -> None:
         status, text = _tempo(trace_id)
         assert status == 200, text
         spans = _spans(json.loads(text))
-        [retrieval] = [s for s in spans if s["name"] == "retrieval hybrid"]
-        [embedding] = [s for s in spans if s["name"] == f"embeddings {MODEL}"]
-        assert embedding["parentSpanId"] == retrieval["spanId"]
+        # `assert`, not unpacking: `eventually` retries AssertionError only, and Tempo may not
+        # hold every span of the trace yet.
+        retrievals = [s for s in spans if s["name"] == "retrieval hybrid"]
+        embeddings = [s for s in spans if s["name"] == f"embeddings {MODEL}"]
+        assert len(retrievals) == len(embeddings) == 1, spans
+        assert embeddings[0]["parentSpanId"] == retrievals[0]["spanId"]
 
     eventually(trace_has_embeddings, timeout=60, interval=2)

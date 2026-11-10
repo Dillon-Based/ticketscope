@@ -34,7 +34,9 @@ jobs:
       - name: import-linter
         run: uv run lint-imports
       - name: pytest
-        run: uv run pytest --junitxml=reports/unit.xml
+        # The image tiers run in `containers`, where an image exists; here they could only
+        # skip, and a skipped copy would mark their criteria `skipped` in the evidence file.
+        run: uv run pytest --ignore=tests/postgres --ignore=tests/image --junitxml=reports/unit.xml
       - name: README results table
         run: python3 scripts/render_readme_table.py --check
       - name: Upload test report
@@ -77,6 +79,7 @@ jobs:
     outputs:
       images: ${{ steps.filter.outputs.images }}
       kind: ${{ steps.kind.outputs.kind }}
+      containers: ${{ steps.kind.outputs.containers }}
     steps:
       - uses: actions/checkout@v7
       - uses: dorny/paths-filter@v4
@@ -117,6 +120,38 @@ jobs:
           docker build --platform ${{ matrix.platform }}
           -f images/postgres.Dockerfile -t ticketscope-postgres:18-${{ github.sha }} .
 
+  # The tests that need a built image: tests/postgres (the only real-SQL tests: the dense SQL,
+  # the read-only role, the asset load, the eval's search reuse) and tests/image (the app image
+  # embeds with no network). They skip in `checks`, which has no image. Here the require flag
+  # turns a missing image into a failure, so they can never skip silently (epic 3 retro, F2).
+  containers:
+    needs: changes
+    # Its own path list in .github/kind-paths.yml: these tiers change without a kind deploy.
+    if: needs.changes.outputs.containers == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+      - run: uv sync --locked
+      - name: Build postgres image
+        run: docker build -f images/postgres.Dockerfile -t ticketscope-postgres:18-${{ github.sha }} .
+      - name: Build app image
+        run: docker build -f images/app.Dockerfile -t ticketscope-app:${{ github.sha }} .
+      - name: Container tests
+        env:
+          TICKETSCOPE_REQUIRE_CONTAINER_TESTS: "1"
+          TICKETSCOPE_TEST_PG_IMAGE: ticketscope-postgres:18-${{ github.sha }}
+          TICKETSCOPE_TEST_APP_IMAGE: ticketscope-app:${{ github.sha }}
+        run: uv run pytest tests/postgres tests/image --junitxml=reports/containers.xml
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports-containers
+          path: reports/
+          if-no-files-found: ignore
+
   # Once a person merges the embeddings pin (values.yaml embeddings.assetVersion and sha256),
   # kind-up's load downloads that Release asset and bulk-loads it, and the dense checks in
   # tests/integrated run on their own: issue_embedding holds one row per issue, nothing computed.
@@ -136,7 +171,7 @@ jobs:
   evidence:
     # Trace live-verification results for this run (bmad-tea-trace input). Runs whatever
     # the other jobs did, so a failure is recorded as `fail`, never left out.
-    needs: [checks, charts, changes, images, integrated-check]
+    needs: [checks, charts, changes, images, containers, integrated-check]
     if: always()
     runs-on: ubuntu-24.04
     timeout-minutes: 5

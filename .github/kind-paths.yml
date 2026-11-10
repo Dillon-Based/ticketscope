@@ -17,6 +17,21 @@ kind:
   - '.github/workflows/**'
   - '.github/kind-paths.yml'
 
+# Paths ci.yml's `containers` job depends on: the image-backed tiers (tests/postgres,
+# tests/image), what they test (src, migrations, the snapshot fixtures), and the images.
+containers:
+  - 'src/**'
+  - 'migrations/**'
+  - 'images/**'
+  - 'snapshot/**'
+  - 'tests/postgres/**'
+  - 'tests/image/**'
+  - 'tests/*.py'
+  - 'pyproject.toml'
+  - 'uv.lock'
+  - '.github/workflows/ci.yml'
+  - '.github/kind-paths.yml'
+
 # Paths that can change an eval score, or break the eval Job. eval.yml runs its ~45-minute
 # deploy only when one of these changes (R7: every PR that can move a score is scored and
 # gated); otherwise `eval / deploy` reports skipped, as it does for kind. Retrieval and data

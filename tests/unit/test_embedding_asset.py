@@ -98,8 +98,9 @@ def test_every_record_holds_only_issue_model_and_vector(tmp_path: Path) -> None:
     with gzip.open(path, "rt", encoding="utf-8") as f:
         manifest_line, *record_lines = f.read().splitlines()
     assert set(json.loads(manifest_line)) == set(AssetManifest.model_fields)
-    for line in record_lines:
-        assert set(json.loads(line)) == {"issue", "model", "vector"}
+    # Exactly the one record written: a dropped record must fail, not skip the check.
+    [record_line] = record_lines
+    assert set(json.loads(record_line)) == {"issue", "model", "vector"}
 
 
 def test_a_record_with_a_text_field_is_refused() -> None:
@@ -258,14 +259,17 @@ def test_a_pinned_asset_is_whole_and_matches_the_snapshot_pin() -> None:
     from tests.target import snapshot_pin
 
     pin = embeddings_pin()
-    if not pin["assetVersion"] and not pin["sha256"]:
-        pytest.skip("no embeddings pin merged yet (the person-run publish step)")
+    # The pin is merged (story 3.4), so an empty one is a regression, not a pending step.
+    assert pin["assetVersion"], "values.yaml lost its embeddings pin"
     assert re.fullmatch(r"[0-9a-f]{64}", pin["sha256"]), "a pinned asset needs its SHA-256"
     assert pin["assetVersion"] == snapshot_pin()["version"]
 
 
 def test_no_environment_file_overrides_the_embeddings_pin() -> None:
-    for env_file in CHART_VALUES.parent.glob("values-*.yaml"):
+    env_files = sorted(CHART_VALUES.parent.glob("values-*.yaml"))
+    # A renamed or moved environment file must fail, not leave nothing to check.
+    assert "values-kind.yaml" in {f.name for f in env_files}, env_files
+    for env_file in env_files:
         text = env_file.read_text(encoding="utf-8")
         assert "assetVersion" not in text, env_file.name
         assert not re.search(r"^embeddings:\n(?:[ #].*\n)*?  sha256:", text, re.MULTILINE)

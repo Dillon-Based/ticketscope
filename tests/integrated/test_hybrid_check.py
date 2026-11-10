@@ -4,7 +4,7 @@ Run in CI by `integrated-check` with the rest of `tests/integrated`. Each Done w
 covered by one named check, so a broken part fails exactly its own test:
 
 - R1, load from the pinned asset, `corpus_meta` model id, nothing computed:
-  `test_dense_kind.py::test_dense_corpus_readiness_and_api_budget`.
+  `test_dense_kind.py::test_dense_corpus_and_load`.
 - R2, a vague and a log-heavy query ranked with outcomes in dense and in hybrid:
   `test_dense_kind.py::test_dense_gateway_queries_and_tempo` and
   `::test_hybrid_gateway_queries_and_tempo`.
@@ -12,9 +12,11 @@ covered by one named check, so a broken part fails exactly its own test:
 - R4, the eval artifact with all three modes (the CI eval run's committed baseline and the
   README table; the live eval Job is checked by `tests/eval` in the eval workflow):
   `test_committed_baseline_and_readme_carry_all_three_modes`.
-- R5, the api resources and a dense answer within them: `test_dense_kind.py` (budget check).
+- R5, the api resources and dense answers within them:
+  `test_dense_kind.py::test_api_survives_dense_load_within_its_memory_budget`.
   A request without `mode` served by the chart default, and readiness on a model mismatch:
   `test_omitted_mode_is_served_by_the_chart_default`, `test_readiness_fails_on_a_model_mismatch`.
+- Readiness on the loaded corpus: `test_dense_kind.py::test_api_reports_ready_on_the_loaded_corpus`.
 """
 
 import json

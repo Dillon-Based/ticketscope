@@ -24,6 +24,8 @@ def test_default_mode_is_the_best_overall_mrr_in_the_baseline() -> None:
 def test_default_mode_comment_records_the_number_it_chose_by() -> None:
     comment = _values().split("defaultMode:")[0].rsplit("retrieval:", 1)[1]
     modes = json.loads((REPO / "eval" / "baseline.json").read_text(encoding="utf-8"))["modes"]
+    # Every mode is checked: an empty or partial baseline must fail, not check fewer numbers.
+    assert set(modes) == {"keyword", "dense", "hybrid"}
     for name, doc in modes.items():
         assert f"{name} {doc['overall']['mrr@10']:.4f}" in comment
 

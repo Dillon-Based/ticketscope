@@ -56,6 +56,21 @@ KINDS = ("short", "log_heavy", "overall")
 METRICS = ("recall@1", "recall@5", "recall@10", "mrr@10")
 
 
+def _assert_metric_bounds(name: str, mode: dict[str, Any]) -> None:
+    """Every metric is a float in [0, 1]; Recall@1 <= @5 <= @10; MRR@10 <= Recall@10; and
+    p95 latency is positive. A NaN fails the range check (every comparison with NaN is
+    false)."""
+    for kind in KINDS:
+        scores = mode[kind]
+        for metric in METRICS:
+            assert isinstance(scores[metric], float), (name, kind, metric)
+            assert 0.0 <= scores[metric] <= 1.0, (name, kind, metric, scores[metric])
+        assert scores["recall@1"] <= scores["recall@5"] <= scores["recall@10"], (name, kind)
+        assert scores["mrr@10"] <= scores["recall@10"], (name, kind)
+        assert isinstance(scores["p95_latency_ms"], float), (name, kind)
+        assert scores["p95_latency_ms"] > 0.0, (name, kind)
+
+
 def _recompute(ranks: list[list[Any]], kinds: dict[int, str], kind: str) -> dict[str, float]:
     """Metrics for `kind` from the first-member ranks alone; overall is over every query."""
     chosen = [rank for query, rank in ranks if kind == "overall" or kinds[query] == kind]
@@ -88,13 +103,7 @@ def test_keyword_is_scored_on_clusters_split_by_kind(eval_results: dict[str, Any
         "log_heavy": LOG_HEAVY,
         "overall": PAIRS,
     }
-    for kind in KINDS:
-        for metric in METRICS:
-            assert isinstance(keyword[kind][metric], float)
-            assert 0.0 <= keyword[kind][metric] <= 1.0
-        assert keyword[kind]["recall@1"] <= keyword[kind]["recall@5"] <= keyword[kind]["recall@10"]
-        assert keyword[kind]["mrr@10"] <= keyword[kind]["recall@10"]
-        assert keyword[kind]["p95_latency_ms"] > 0.0
+    _assert_metric_bounds("keyword", keyword)
     assert isinstance(eval_results["wall_seconds"], float)
     assert eval_results["wall_seconds"] > 0.0
 
@@ -214,10 +223,7 @@ def test_dense_and_hybrid_are_scored_beside_keyword_on_every_pair(
             "log_heavy": LOG_HEAVY,
             "overall": PAIRS,
         }, name
-        for kind in KINDS:
-            for metric in (*METRICS, "p95_latency_ms"):
-                assert isinstance(mode[kind][metric], float), (name, kind, metric)
-            assert mode[kind]["p95_latency_ms"] > 0.0
+        _assert_metric_bounds(name, mode)
         ranks = mode["first_member_ranks"]
         assert [query for query, _ in ranks] == [
             q for q, _ in eval_results["modes"]["keyword"]["first_member_ranks"]

@@ -118,7 +118,8 @@ def test_concurrent_dense_requests() -> None:
         list(pool.map(search, range(16)))
 
 
-def test_dense_corpus_readiness_and_api_budget() -> None:
+def test_dense_corpus_and_load() -> None:
+    """R1: every loaded issue has an embedding from the model, and load computed none."""
     enabled = _dense_enabled()
     row = _sql(
         "SELECT (SELECT count(*) FROM issue),"
@@ -135,6 +136,11 @@ def test_dense_corpus_readiness_and_api_budget() -> None:
         log = _kubectl("logs", "job/ticketscope-load")
         assert "embeddings_loaded=" in log or "no-op" in log, log[-2000:]
         assert "embedding_seconds=" not in log
+
+
+def test_api_survives_dense_load_within_its_memory_budget() -> None:
+    """R5: after the dense tests above, api runs under its 512Mi limit with no restart or
+    OOM kill, and its cgroup peak stayed within the limit."""
     deployment = json.loads(_kubectl("get", "deploy/ticketscope-api", "-o", "json"))
     container = deployment["spec"]["template"]["spec"]["containers"][0]
     assert container["resources"]["limits"]["memory"] == "512Mi"
@@ -142,10 +148,27 @@ def test_dense_corpus_readiness_and_api_budget() -> None:
     pods = json.loads(
         _kubectl("get", "pods", "-l", "app.kubernetes.io/component=api", "-o", "json")
     )
+    # Sized first: a selector that matches nothing, or a pod with no status yet, would
+    # otherwise skip every restart and OOM assertion below and pass.
+    assert len(pods["items"]) == 1, [p["metadata"]["name"] for p in pods["items"]]
     for pod in pods["items"]:
-        for status in pod["status"].get("containerStatuses", []):
+        statuses = pod["status"].get("containerStatuses", [])
+        assert statuses, pod["metadata"]["name"]
+        for status in statuses:
             assert status["restartCount"] == 0, status
             assert status.get("lastState", {}).get("terminated", {}).get("reason") != "OOMKilled"
+    peak = int(
+        _kubectl(
+            "exec", "deploy/ticketscope-api", "--", "cat", "/sys/fs/cgroup/memory.peak"
+        ).strip()
+    )
+    # The kernel can reclaim cache at the limit without an OOM. Successful requests
+    # and zero restarts above establish that touching the limit did not kill the api.
+    assert peak <= 512 * 1024 * 1024
+
+
+def test_api_reports_ready_on_the_loaded_corpus() -> None:
+    """Readiness: api's own /readyz, read inside the pod, says ready."""
     response = _kubectl(
         "exec",
         "deploy/ticketscope-api",
@@ -156,14 +179,6 @@ def test_dense_corpus_readiness_and_api_budget() -> None:
         ".read().decode())",
     )
     assert json.loads(response)["status"] == "ready"
-    peak = int(
-        _kubectl(
-            "exec", "deploy/ticketscope-api", "--", "cat", "/sys/fs/cgroup/memory.peak"
-        ).strip()
-    )
-    # The kernel can reclaim cache at the limit without an OOM. Successful requests
-    # and zero restarts above establish that touching the limit did not kill the api.
-    assert peak <= 512 * 1024 * 1024
 
 
 @pytest.mark.parametrize(

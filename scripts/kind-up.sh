@@ -126,11 +126,13 @@ if [[ "${EVAL_ENABLED:-0}" == 1 ]]; then
 else
   log "installing ticketscope (hooks: migrate, then load)"
 fi
-# EMBEDDINGS_COMPUTE=1: load computes embeddings on the CPU and api loads the model, so
-# Helm waits longer for the load hook.
+# EMBEDDINGS_COMPUTE=1: load computes embeddings on the CPU (about 19 minutes for the snapshot,
+# spike 3.3) and api loads the model, so Helm waits longer for the load hook. It adds to the
+# timeout instead of replacing it: with EVAL_ENABLED too, load's compute comes before eval's
+# deadline (25m alone is 50m; with eval, 60m becomes 85m).
 if [[ "${EMBEDDINGS_COMPUTE:-0}" == 1 ]]; then
   EVAL_ARGS+=(--set embeddings.computeOnKind=true)
-  HELM_TIMEOUT=50m
+  HELM_TIMEOUT="$(( ${HELM_TIMEOUT%m} + 25 ))m"
   log "embeddings on: load computes them unless values.yaml pins an embedding asset (it wins)"
 fi
 helm --kube-context "$KCTX" upgrade --install ticketscope deploy/charts/ticketscope \

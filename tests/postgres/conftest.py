@@ -1,8 +1,9 @@
 """A throwaway Postgres from the repo's image (pgvector, pg_textsearch), migrated.
 
 Skipped unless `TICKETSCOPE_TEST_PG_IMAGE` names a built `images/postgres.Dockerfile` image
-(e.g. `ticketscope-postgres:18-<sha>`) and docker is available. CNPG's image has no
-entrypoint script, so the container runs initdb itself.
+(e.g. `ticketscope-postgres:18-<sha>`) and docker is available. ci.yml's `containers` job
+sets it and `TICKETSCOPE_REQUIRE_CONTAINER_TESTS=1`, which turns that skip into a failure.
+CNPG's image has no entrypoint script, so the container runs initdb itself.
 """
 
 import os
@@ -39,6 +40,10 @@ def _docker(*args: str) -> str:
 @pytest.fixture(scope="session")
 def pg_conninfo() -> Iterator[str]:
     if not IMAGE or shutil.which("docker") is None:
+        # ci.yml's `containers` job sets this, so CI fails rather than silently skipping
+        # the only real-SQL tests (epic 3 retro, F2).
+        if os.environ.get("TICKETSCOPE_REQUIRE_CONTAINER_TESTS") == "1":
+            pytest.fail("TICKETSCOPE_REQUIRE_CONTAINER_TESTS=1 but no Postgres image or docker")
         pytest.skip("needs docker and TICKETSCOPE_TEST_PG_IMAGE")
     name = f"ticketscope-test-pg-{uuid.uuid4().hex[:8]}"
     _docker("run", "-d", "--rm", "--name", name, "-p", "127.0.0.1::5432", "--entrypoint", "bash",

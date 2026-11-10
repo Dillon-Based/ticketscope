@@ -329,16 +329,30 @@ def test_the_eval_helm_timeout_outlasts_the_eval_deadline() -> None:
     assert minutes * 60 > _eval_deadline_seconds()
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="PRODUCT DEFECT: EMBEDDINGS_COMPUTE=1 resets HELM_TIMEOUT to 50m after eval set 60m",
-)
-def test_embeddings_compute_does_not_shrink_the_eval_helm_timeout() -> None:
-    text = (ROOT / "scripts/kind-up.sh").read_text(encoding="utf-8")
-    compute = text[text.index('if [[ "${EMBEDDINGS_COMPUTE:-0}" == 1 ]]; then') :]
-    compute = compute[: compute.index("\nfi\n")]
-    match = re.search(r"HELM_TIMEOUT=(\d+)m", compute)
-    assert match is None or int(match.group(1)) * 60 > _eval_deadline_seconds() + 15 * 60
+def _helm_timeout_minutes(tmp_path: Path, flags: dict[str, str]) -> int:
+    """The `--timeout` kind-up.sh passes to the ticketscope install, run with stubbed tools."""
+    from tests.unit.test_dense_expanded import _run_kind_up
+
+    calls = _run_kind_up(tmp_path, flags)
+    [upgrade] = [
+        c for c in calls if c.startswith("helm ") and "upgrade --install ticketscope " in c
+    ]
+    match = re.search(r"--timeout (\d+)m", upgrade)
+    assert match, upgrade
+    return int(match.group(1))
+
+
+def test_embeddings_compute_does_not_shrink_the_eval_helm_timeout(tmp_path: Path) -> None:
+    # Story 3.1's compute branch used to reset the timeout to 50m after story 3.5's eval
+    # branch set 60m (epic 3 retro F1). Both flags now need load's compute and eval's deadline.
+    both = _helm_timeout_minutes(
+        tmp_path / "both", {"EVAL_ENABLED": "1", "EMBEDDINGS_COMPUTE": "1"}
+    )
+    eval_only = _helm_timeout_minutes(tmp_path / "eval", {"EVAL_ENABLED": "1"})
+    compute_only = _helm_timeout_minutes(tmp_path / "compute", {"EMBEDDINGS_COMPUTE": "1"})
+    assert (eval_only, compute_only, both) == (60, 50, 85)
+    assert both * 60 > _eval_deadline_seconds() + 15 * 60
+    assert both > eval_only and both > compute_only
 
 
 @needs_helm

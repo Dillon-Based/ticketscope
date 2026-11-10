@@ -31,7 +31,9 @@ def test_baseline_modes_cover_every_kind() -> None:
 def test_docstring_references_existing_tests() -> None:
     names = _test_names("test_hybrid_check.py") | _test_names("test_dense_kind.py")
     for ref in (
-        "test_dense_corpus_readiness_and_api_budget",
+        "test_dense_corpus_and_load",
+        "test_api_survives_dense_load_within_its_memory_budget",
+        "test_api_reports_ready_on_the_loaded_corpus",
         "test_dense_gateway_queries_and_tempo",
         "test_hybrid_gateway_queries_and_tempo",
         "test_model_choice_record_names_the_chosen_model",
@@ -43,4 +45,6 @@ def test_docstring_references_existing_tests() -> None:
 
 
 def test_baseline_file_is_json_with_modes() -> None:
-    assert "modes" in json.loads((REPO / "eval" / "baseline.json").read_text())
+    # The value, not the key: an empty, null or partial `modes` must fail.
+    modes = json.loads((REPO / "eval" / "baseline.json").read_text())["modes"]
+    assert set(modes) == {"keyword", "dense", "hybrid"}

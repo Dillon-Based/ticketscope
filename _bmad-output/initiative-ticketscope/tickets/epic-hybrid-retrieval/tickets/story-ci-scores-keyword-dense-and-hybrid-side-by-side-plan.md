@@ -3,7 +3,7 @@ title: 'CI scores keyword, dense and hybrid side by side'
 type: 'feature'
 ticket: '5'
 created: '2026-11-10'
-status: blocked
+status: done
 baseline_revision: 'e5041014afe4fec25d9546d5134700ff76835152'
 route: 'oneshot'
 route_source: 'auto'
@@ -22,8 +22,6 @@ operator_actions:
   - "Run `python3 scripts/render_readme_table.py --write` and commit the README table whatever it shows. Push, and confirm `eval / deploy` passes with the changed baseline, the README table check passes, and the job summary shows wall seconds under 2700."
   - "Check the gate fails a deliberately regressed dense ranking: on a scratch branch lower dense MRR@10 in the run's results and confirm the gate step fails. The unit test covers the rule on synthetic documents only."
 deferred: []
-blocked_at: "2026-11-10"
-blocked_reason: "awaiting operator: Push this branch and open a PR, then wait for the `eval / deploy` check to finish. Its first run passes with the old baseline: dense and hybrid are reported as new modes and not gated.; Download the `reports-kind` artifact from that run and copy `eval-results.json` over `eval/baseline.json` whole, without editing it. Its lineage must name BAAI/bge-small-en-v1.5 and pre1.kind2-t3.outcome3.emb1.; Run `python3 scripts/render_readme_table.py --write` and commit the README table whatever it shows. Push, and confirm `eval / deploy` passes with the changed baseline, the README table check passes, and the job summary shows wall seconds under 2700.; Check the gate fails a deliberately regressed dense ranking: on a scratch branch lower dense MRR@10 in the run's results and confirm the gate step fails. The unit test covers the rule on synthetic documents only."
 ---
 
 <intent-contract>
@@ -97,3 +95,14 @@ Status: awaiting-operator
 **Verification.** 1058 unit tests pass (postgres tests skipped without a database); ruff, format and pyright clean; lint-imports 7 kept; `helm template` renders with eval enabled; the kind eval checks pass against the local cluster's eval run (wall 1475.1 s).
 
 **Residual risks.** A slower CI runner could approach the 2700 s deadline; the job summary shows wall seconds to confirm. The p95 values in the local run (dense 107 ms, hybrid 125 ms, keyword 18 ms) are not gated and will differ in CI.
+
+## Operator Confirmation
+
+Confirmed 2026-11-10: the external actions this story owed were carried out.
+
+- Push this branch and open a PR, then wait for the `eval / deploy` check to finish. Its first run passes with the old baseline: dense and hybrid are reported as new modes and not gated.
+- Download the `reports-kind` artifact from that run and copy `eval-results.json` over `eval/baseline.json` whole, without editing it. Its lineage must name BAAI/bge-small-en-v1.5 and pre1.kind2-t3.outcome3.emb1.
+- Run `python3 scripts/render_readme_table.py --write` and commit the README table whatever it shows. Push, and confirm `eval / deploy` passes with the changed baseline, the README table check passes, and the job summary shows wall seconds under 2700.
+- Check the gate fails a deliberately regressed dense ranking: on a scratch branch lower dense MRR@10 in the run's results and confirm the gate step fails. The unit test covers the rule on synthetic documents only.
+
+_Appended by the bmad-loop orchestrator (`bmad-loop confirm`, #335): a human confirmed these external actions out of band, and the story was advanced from `awaiting-operator` to `done`._

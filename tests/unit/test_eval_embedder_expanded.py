@@ -19,7 +19,8 @@ from tests.unit.test_chart_embeddings import _NO_PIN, _doc, _render
 from tests.unit.test_eval_main import META, PAIR, _embedded_store, _patch, _settings
 from ticketscope.adapters import embedder as embedder_module
 from ticketscope.core import modes
-from ticketscope.core.fakes import HashEmbedder
+from ticketscope.core.fakes import HashEmbedder, InMemoryCorpusStore
+from ticketscope.core.model import IssueRecord, Scored
 from ticketscope.core.pairs import Pair, pairs_jsonl
 from ticketscope.jobs.eval import main as eval_main
 from ticketscope.jobs.eval import score
@@ -165,6 +166,144 @@ def test_an_embedder_over_a_store_without_embeddings_skips_dense_and_hybrid() ->
 
     assert list(results["modes"]) == ["keyword"]
     assert results["skipped_modes"] == ["dense", "hybrid"]
+
+
+# --- search reuse: each keyword and dense list fetched once per query ------------------------
+
+
+class _Counting:
+    """Wraps a store and counts the keyword and dense searches that reach it, with k."""
+
+    def __init__(self, inner: InMemoryCorpusStore) -> None:
+        self._inner = inner
+        self.keyword: list[int] = []
+        self.dense: list[int] = []
+
+    def keyword_search(self, query: str, k: int) -> list[Scored]:
+        self.keyword.append(k)
+        return self._inner.keyword_search(query, k)
+
+    def dense_search(self, model_id: str, vector: Sequence[float], k: int) -> list[Scored]:
+        self.dense.append(k)
+        return self._inner.dense_search(model_id, vector, k)
+
+    def __getattr__(self, name: str) -> object:
+        return getattr(self._inner, name)
+
+
+def _tied_store() -> InMemoryCorpusStore:
+    """30 issues in three tie groups of ten, by keyword score and by vector, so the 11th and
+    12th rows of every list sit inside a tie broken only by issue number."""
+    embedder = HashEmbedder()
+    texts = {
+        **{n: "launcher crash launcher crash" for n in range(1, 11)},
+        **{n: "launcher crash" for n in range(11, 21)},
+        **{n: "launcher crash on startup" for n in range(21, 31)},
+    }
+    records = [IssueRecord(n, text, f"u{n}", "short", "closed") for n, text in texts.items()]
+    documents = [(r, f"{r.title}\n\n") for r in records]
+    vectors = embedder.embed([text for _, text in documents])
+    return InMemoryCorpusStore(
+        documents,
+        embeddings={
+            embedder.model_id: {r.number: v for (r, _), v in zip(documents, vectors, strict=True)}
+        },
+        embedding_model=embedder.model_id,
+    )
+
+
+TIED_PAIRS = [Pair(q, 1, "short", (5,)) for q in (2, 12, 22, 7)]
+
+
+def test_each_query_fetches_its_keyword_and_dense_lists_once() -> None:
+    counting = _Counting(_embedded_store())
+    results = score(counting, [PAIR, OTHER_PAIR], HashEmbedder())  # type: ignore[arg-type]
+
+    # Without reuse: keyword and hybrid each search keyword, dense and hybrid each search dense.
+    assert len(counting.keyword) == 2 and len(counting.dense) == 2  # one of each per pair
+    assert set(counting.keyword) == set(counting.dense) == {score_module.K + 2}
+    timing = results["timing"]
+    assert (timing["keyword_fetches"], timing["dense_fetches"], timing["embed_calls"]) == (2, 2, 2)
+    assert set(timing["mode_search_seconds"]) == {"keyword", "dense", "hybrid"}
+
+
+def test_reusing_searches_leaves_every_rank_unchanged_across_ties() -> None:
+    # Oracle: each mode built over the raw store, with its own embedder, searched directly.
+    store = _tied_store()
+    results = score(store, TIED_PAIRS, HashEmbedder())
+    for name in ("keyword", "dense", "hybrid"):
+        expected: list[list[int | None]] = []
+        for pair in sorted(TIED_PAIRS, key=lambda p: p.query):
+            retriever = modes.REGISTRY[name].build(store, HashEmbedder())
+            text = score_module.query_text(store, pair.query)
+            hits = retriever.search(text, score_module.K, exclude=frozenset({pair.query}))
+            ranked = [hit.issue.number for hit in hits]
+            expected.append([pair.query, score_module.first_member_rank(pair.relevant, ranked)])
+        assert results["modes"][name]["first_member_ranks"] == expected, name
+
+
+def test_hybrid_gets_the_search_time_it_reused_added_to_its_latency(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Every clock read moves 1 ms; each keyword or dense fetch costs another 300 ms.
+    now = [0.0]
+
+    def clock() -> float:
+        now[0] += 0.001
+        return now[0]
+
+    class Slow(InMemoryCorpusStore):
+        def keyword_search(self, query: str, k: int) -> list[Scored]:
+            now[0] += 0.3
+            return super().keyword_search(query, k)
+
+        def dense_search(self, model_id: str, vector: Sequence[float], k: int) -> list[Scored]:
+            now[0] += 0.3
+            return super().dense_search(model_id, vector, k)
+
+    base = _embedded_store()
+    slow = Slow([], embeddings={}, embedding_model=None)
+    slow.__dict__.update(base.__dict__)
+    monkeypatch.setattr(score_module, "time", SimpleNamespace(perf_counter=clock))
+    results = score(slow, [PAIR], HashEmbedder())
+
+    overall = {m: results["modes"][m]["overall"]["p95_latency_ms"] for m in results["modes"]}
+    assert overall["keyword"] >= 300 and overall["dense"] >= 300
+    assert overall["hybrid"] >= 600  # both lists it fused, though neither was fetched again
+    raw = results["timing"]["mode_search_seconds"]
+    assert raw["hybrid"] < 0.3  # its own search touched neither store call
+
+
+def test_search_reuse_store_serves_heads_refetches_longer_and_starts_clean() -> None:
+    counting = _Counting(_tied_store())
+    ticks = iter([0.0, 0.2, 1.0, 1.5, 2.0, 2.1])  # fetches of 200 ms, 500 ms, 100 ms
+    reuse = score_module.SearchReuseStore(counting, clock=lambda: next(ticks))  # type: ignore[arg-type]
+
+    reuse.begin(12)
+    first = [h.issue.number for h in reuse.keyword_search("launcher crash", 11)]
+    assert counting.keyword == [12]  # fetched the most any mode asks for
+    assert len(first) == 11
+    again = [h.issue.number for h in reuse.keyword_search("launcher crash", 12)]
+    assert counting.keyword == [12] and again[:11] == first
+    assert reuse.take_reused_ms() == pytest.approx(200.0)
+
+    longer = reuse.keyword_search("launcher crash", 20)  # more rows than were fetched
+    assert counting.keyword == [12, 20] and len(longer) == 20
+    assert reuse.take_reused_ms() == 0.0
+
+    reuse.begin(12)  # a new query forgets the last one's lists
+    reuse.keyword_search("launcher crash", 5)
+    assert counting.keyword == [12, 20, 12]
+
+
+def test_a_short_list_answers_any_longer_request_without_a_refetch() -> None:
+    counting = _Counting(_tied_store())
+    reuse = score_module.SearchReuseStore(counting)  # type: ignore[arg-type]
+    reuse.begin(12)
+    # "startup" matches only issues 21-30: the fetch of 12 comes back with 10, all there is.
+    assert len(reuse.keyword_search("startup", 11)) == 10
+    assert len(reuse.keyword_search("startup", 40)) == 10
+    assert counting.keyword == [12]
 
 
 # --- time budget ---------------------------------------------------------------------------

@@ -261,7 +261,15 @@ def test_scoring_the_same_corpus_twice_gives_identical_metrics_and_ranks() -> No
 
 
 def test_a_latency_is_measured_per_search(monkeypatch: pytest.MonkeyPatch) -> None:
-    ticks = iter([0.0, 0.004, 1.0, 1.010, 2.0, 2.002])
+    # Clock reads per pair, in order: the query-text fetch (2), then the keyword search's
+    # start, the store fetch inside it (2), and its end. Latency is end minus start.
+    ticks = iter(
+        [
+            *(0.0, 0.0, 0.0, 0.001, 0.002, 0.004),
+            *(1.0, 1.0, 1.0, 1.001, 1.002, 1.010),
+            *(2.0, 2.0, 2.0, 2.0005, 2.001, 2.002),
+        ]
+    )
     monkeypatch.setattr(
         sys.modules["ticketscope.jobs.eval.score"].time, "perf_counter", lambda: next(ticks)
     )
@@ -346,7 +354,9 @@ def test_modes_keep_separate_ranks_and_latency_samples(monkeypatch: pytest.Monke
         "miss", "cosine", lambda _store, _embedder: Miss(), lambda _store, _embedder: True
     )
     monkeypatch.setattr(modes, "REGISTRY", {**modes.REGISTRY, "miss": second})
-    ticks = iter([0.0, 0.004, 1.0, 1.020])
+    # Clock reads: the query-text fetch (2); keyword's start, its store fetch (2) and end;
+    # then miss's start and end (it never reaches the store).
+    ticks = iter([0.0, 0.0, 0.0, 0.001, 0.002, 0.004, 1.0, 1.020])
     monkeypatch.setattr(
         sys.modules["ticketscope.jobs.eval.score"].time, "perf_counter", lambda: next(ticks)
     )

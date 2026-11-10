@@ -12,6 +12,15 @@ Each query is embedded once: dense and hybrid both ask for the same text's vecto
 second asks a one-entry cache (`QueryVectorCache`) and gets the identical vector, and ranks
 cannot change. The embedding time the second mode skipped is added to its measured latency,
 so every embedding mode's p95 still includes the model.
+
+Each query's keyword and dense searches also run once: hybrid fuses the same two candidate
+lists that keyword and dense search for, so a per-query store (`SearchReuseStore`) fetches
+each list once, with the most rows any mode asks for, and every mode reads its leading rows.
+Both SQL queries order by score, then issue number, so the leading rows of a longer fetch are
+exactly a shorter fetch's rows. The search time a mode skipped is added to its latency, as
+for the vector.
+
+The results carry a `timing` block, reported only: where the run's time went.
 """
 
 import math
@@ -21,6 +30,7 @@ from fractions import Fraction
 from typing import Any, TypedDict
 
 from ticketscope.core import modes
+from ticketscope.core.model import IssueDetail, Scored
 from ticketscope.core.pairs import Pair, as_pair
 from ticketscope.core.ports import CorpusStore, Embedder, Retriever
 
@@ -49,11 +59,24 @@ class ModeResults(TypedDict):
     first_member_ranks: list[list[int | None]]
 
 
+class Timing(TypedDict):
+    """Where a run's time went, in seconds; reported, never gated."""
+
+    query_text_seconds: float
+    embed_seconds: float
+    embed_calls: int
+    keyword_fetches: int
+    dense_fetches: int
+    # Each mode's own search time, before any reused time is added to its latency.
+    mode_search_seconds: dict[str, float]
+
+
 class Results(TypedDict):
     k: int
     relevance: str
     modes: dict[str, ModeResults]
     skipped_modes: list[str]
+    timing: Timing
 
 
 def query_text(store: CorpusStore, number: int) -> str:
@@ -80,6 +103,8 @@ class QueryVectorCache:
         self._vectors: list[list[float]] = []
         self._embed_ms = 0.0
         self._reused_ms = 0.0
+        self.calls = 0
+        self.total_ms = 0.0
 
     def embed(self, texts: Sequence[str]) -> list[list[float]]:
         key = tuple(texts)
@@ -90,10 +115,87 @@ class QueryVectorCache:
             self._vectors = self._inner.embed(texts)
             self._embed_ms = (self._clock() - started) * 1000
             self._texts = key
+            self.calls += 1
+            self.total_ms += self._embed_ms
         return [list(vector) for vector in self._vectors]
 
     def take_reused_ms(self) -> float:
         """The model time skipped by repeats since the last call; resets it to zero."""
+        reused, self._reused_ms = self._reused_ms, 0.0
+        return reused
+
+
+class SearchReuseStore:
+    """A `CorpusStore` that fetches each keyword and dense candidate list once per query.
+
+    `begin(rows)` starts a query: it forgets the last query's lists and sets how many rows a
+    fetch takes (the most any mode will ask for). A search asking for no more rows than were
+    fetched gets the leading rows of the stored list without a round trip, and books the
+    fetch's time, which `take_reused_ms` hands to the caller's latency. Asking for more rows
+    fetches again. Every other call goes straight to the inner store.
+    """
+
+    def __init__(self, inner: CorpusStore, clock: Callable[[], float] | None = None) -> None:
+        self._inner = inner
+        self._clock = clock or time.perf_counter
+        self._rows = 0
+        # key -> (hits, the fetch's time in ms, the rows it asked for)
+        self._lists: dict[tuple[Any, ...], tuple[list[Scored], float, int]] = {}
+        self._reused_ms = 0.0
+        self.keyword_fetches = 0
+        self.dense_fetches = 0
+
+    def begin(self, rows: int) -> None:
+        self._rows = rows
+        self._lists.clear()
+        self._reused_ms = 0.0
+
+    def _cached(
+        self, key: tuple[Any, ...], k: int, fetch: Callable[[int], list[Scored]]
+    ) -> list[Scored]:
+        stored = self._lists.get(key)
+        if stored is not None:
+            hits, fetch_ms, requested = stored
+            # A fetch of n rows holds every row a smaller fetch returns; one that came back
+            # with fewer than n rows holds every row there is.
+            if k <= requested or len(hits) < requested:
+                self._reused_ms += fetch_ms
+                return hits[:k]
+        requested = max(k, self._rows)
+        started = self._clock()
+        hits = fetch(requested)
+        fetch_ms = (self._clock() - started) * 1000
+        self._lists[key] = (hits, fetch_ms, requested)
+        return hits[:k]
+
+    def keyword_search(self, query: str, k: int) -> list[Scored]:
+        def fetch(rows: int) -> list[Scored]:
+            self.keyword_fetches += 1
+            return self._inner.keyword_search(query, rows)
+
+        return self._cached(("keyword", query), k, fetch)
+
+    def dense_search(self, model_id: str, vector: Sequence[float], k: int) -> list[Scored]:
+        def fetch(rows: int) -> list[Scored]:
+            self.dense_fetches += 1
+            return self._inner.dense_search(model_id, vector, rows)
+
+        return self._cached(("dense", model_id, tuple(vector)), k, fetch)
+
+    def get_issue(self, number: int) -> IssueDetail | None:
+        return self._inner.get_issue(number)
+
+    def corpus_version(self) -> str | None:
+        return self._inner.corpus_version()
+
+    def has_embeddings(self, model_id: str) -> bool:
+        return self._inner.has_embeddings(model_id)
+
+    def embedding_model_id(self) -> str | None:
+        return self._inner.embedding_model_id()
+
+    def take_reused_ms(self) -> float:
+        """The search time skipped by reuse since the last call; resets it to zero."""
         reused, self._reused_ms = self._reused_ms, 0.0
         return reused
 
@@ -176,11 +278,13 @@ def score(
     """Cluster Recall@1/5/10, MRR@10 and p95 latency, per kind and overall, for every mode
     whose `available(store, embedder)` holds; the other registry modes are named in
     `skipped_modes`. Dense and hybrid embed each query's text live through `embedder` inside
-    the timed search, once per query (`QueryVectorCache`); the mode that reuses the vector
-    has the model's time added back, so both p95s include the model."""
+    the timed search, once per query (`QueryVectorCache`), and each keyword and dense list is
+    fetched once per query (`SearchReuseStore`); a mode that reuses a vector or a list has
+    the skipped time added back, so every p95 includes the model and the database."""
     parsed = [as_pair(line) for line in pairs]
     cache = QueryVectorCache(embedder) if embedder is not None else None
     embedder = cache
+    reuse = SearchReuseStore(store)
     registry = modes.REGISTRY
     retrievers: dict[str, Retriever] = {}
     skipped: list[str] = []
@@ -188,17 +292,26 @@ def score(
         # Without an embedder (or its model's embeddings in the store) dense and hybrid are
         # skipped and named.
         if mode.available(store, embedder):
-            retrievers[name] = mode.build(store, embedder)
+            retrievers[name] = mode.build(reuse, embedder)
         else:
             skipped.append(name)
     tallies = {name: _ModeTally() for name in retrievers}
+    search_ms = dict.fromkeys(retrievers, 0.0)
+    query_text_ms = 0.0
     for pair in parsed:
+        started = time.perf_counter()
         text = query_text(store, pair.query)
+        query_text_ms += (time.perf_counter() - started) * 1000
         exclude = frozenset({pair.query})
+        # Hybrid asks each side for k + |exclude| hits, and a side asks the store for
+        # |exclude| more: the most rows any registered mode asks for.
+        reuse.begin(K + 2 * len(exclude))
         for name, retriever in retrievers.items():
             started = time.perf_counter()
             hits = retriever.search(text, K, exclude=exclude)
             latency_ms = (time.perf_counter() - started) * 1000
+            search_ms[name] += latency_ms
+            latency_ms += reuse.take_reused_ms()
             if cache is not None:
                 latency_ms += cache.take_reused_ms()
             ranked = [hit.issue.number for hit in hits]
@@ -208,4 +321,12 @@ def score(
         "relevance": RELEVANCE,
         "modes": {name: tally.results() for name, tally in tallies.items()},
         "skipped_modes": sorted(skipped),
+        "timing": {
+            "query_text_seconds": round(query_text_ms / 1000, 3),
+            "embed_seconds": round((cache.total_ms if cache else 0.0) / 1000, 3),
+            "embed_calls": cache.calls if cache else 0,
+            "keyword_fetches": reuse.keyword_fetches,
+            "dense_fetches": reuse.dense_fetches,
+            "mode_search_seconds": {name: round(ms / 1000, 3) for name, ms in search_ms.items()},
+        },
     }

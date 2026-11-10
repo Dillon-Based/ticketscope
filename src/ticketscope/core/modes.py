@@ -12,6 +12,12 @@ from ticketscope.core.ports import CorpusStore, Embedder, Retriever
 ScoreKind = Literal["bm25", "cosine", "rrf"]
 
 
+def _without(hits: list[Scored], exclude: frozenset[int], k: int) -> list[Scored]:
+    """`hits` minus the excluded issues, trimmed to `k`. Callers over-fetch by |exclude| so an
+    excluded issue never costs a slot (AD-19)."""
+    return [h for h in hits if h.issue.number not in exclude][: max(k, 0)]
+
+
 class KeywordRetriever:
     """BM25 keyword retrieval, ranked by the store."""
 
@@ -19,9 +25,7 @@ class KeywordRetriever:
         self._store = store
 
     def search(self, query: str, k: int, exclude: frozenset[int] = frozenset()) -> list[Scored]:
-        # Over-fetch by |exclude| so an excluded issue never costs a slot (AD-19).
-        hits = self._store.keyword_search(query, k + len(exclude))
-        return [h for h in hits if h.issue.number not in exclude][: max(k, 0)]
+        return _without(self._store.keyword_search(query, k + len(exclude)), exclude, k)
 
 
 class DenseRetriever:
@@ -36,9 +40,8 @@ class DenseRetriever:
         if k <= 0:
             return []
         [vector] = self._embedder.embed([cut_for_embedding(query)])
-        # Over-fetch by |exclude| so an excluded issue never costs a slot (AD-19).
         hits = self._store.dense_search(self._embedder.model_id, vector, k + len(exclude))
-        return [h for h in hits if h.issue.number not in exclude][:k]
+        return _without(hits, exclude, k)
 
 
 RRF_K = 60

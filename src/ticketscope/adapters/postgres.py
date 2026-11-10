@@ -11,7 +11,7 @@ from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, LiteralString, cast
 
 import psycopg
 
@@ -28,14 +28,18 @@ log = logging.getLogger(__name__)
 
 _MIGRATE_LOCK_KEY = 0x7473_6D69  # "tsmi": serializes concurrent migrate runs
 
+# The nine `IssueRecord` columns, in the order `_issue_record` reads them. Every issue query
+# selects these first; `body` or `score` follows as column 9.
+_ISSUE_COLUMNS_SQL = (
+    "number, title, url, kind, state, outcome_status, outcome_summary, outcome_source, outcome_ref"
+)
+
 # The index is named explicitly: psycopg sends parameters out of line, and
 # pg_textsearch needs the index name for parameterized queries.
-_KEYWORD_SQL = """
-SELECT number, title, url, kind, state,
-       outcome_status, outcome_summary, outcome_source, outcome_ref, score
+_KEYWORD_SQL = f"""
+SELECT {_ISSUE_COLUMNS_SQL}, score
 FROM (
-    SELECT number, title, url, kind, state,
-           outcome_status, outcome_summary, outcome_source, outcome_ref,
+    SELECT {_ISSUE_COLUMNS_SQL},
            search_text <@> to_bm25query(%(query)s, 'issue_search_bm25_idx') AS score
     FROM issue
     ORDER BY score, number
@@ -56,9 +60,8 @@ WHERE number = %(number)s
 
 # Exact scan over one model's rows: `<=>` is cosine distance, so the score is `1 - distance`.
 # The vector travels as a text literal (no pgvector Python package).
-_DENSE_SQL = """
-SELECT i.number, i.title, i.url, i.kind, i.state,
-       i.outcome_status, i.outcome_summary, i.outcome_source, i.outcome_ref,
+_DENSE_SQL = f"""
+SELECT {", ".join("i." + c.strip() for c in _ISSUE_COLUMNS_SQL.split(","))},
        1 - (e.embedding <=> %(vector)s::vector) AS score
 FROM issue_embedding e
 JOIN issue i ON i.number = e.issue_number
@@ -88,6 +91,11 @@ def _issue_record(row: Sequence[Any]) -> IssueRecord:
     )
 
 
+def _fetchone(conninfo: str, sql: LiteralString, params: Any = None) -> Sequence[Any] | None:
+    with psycopg.connect(conninfo) as conn:
+        return conn.execute(sql, params).fetchone()
+
+
 class PostgresCorpusStore:
     """`CorpusStore` over the loaded corpus. One short connection per call."""
 
@@ -107,8 +115,7 @@ class PostgresCorpusStore:
         return None if row is None else IssueDetail(issue=_issue_record(row), body=row[9])
 
     def corpus_version(self) -> str | None:
-        with psycopg.connect(self._conninfo) as conn:
-            row = conn.execute("SELECT snapshot_version FROM corpus_meta LIMIT 1").fetchone()
+        row = _fetchone(self._conninfo, "SELECT snapshot_version FROM corpus_meta LIMIT 1")
         return None if row is None else str(row[0])
 
     def dense_search(self, model_id: str, vector: Sequence[float], k: int) -> list[Scored]:
@@ -120,15 +127,15 @@ class PostgresCorpusStore:
         return [Scored(issue=_issue_record(row), score=float(row[9])) for row in rows]
 
     def has_embeddings(self, model_id: str) -> bool:
-        with psycopg.connect(self._conninfo) as conn:
-            row = conn.execute(
-                "SELECT EXISTS (SELECT 1 FROM issue_embedding WHERE model_id = %s)", (model_id,)
-            ).fetchone()
+        row = _fetchone(
+            self._conninfo,
+            "SELECT EXISTS (SELECT 1 FROM issue_embedding WHERE model_id = %s)",
+            (model_id,),
+        )
         return bool(row and row[0])
 
     def embedding_model_id(self) -> str | None:
-        with psycopg.connect(self._conninfo) as conn:
-            row = conn.execute("SELECT embedding_model_id FROM corpus_meta LIMIT 1").fetchone()
+        row = _fetchone(self._conninfo, "SELECT embedding_model_id FROM corpus_meta LIMIT 1")
         return None if row is None else _text(row[0])
 
 
@@ -254,11 +261,11 @@ class CorpusMeta:
 
 def read_corpus_meta(conninfo: str) -> CorpusMeta | None:
     """The `corpus_meta` row, or `None` when nothing has been loaded yet."""
-    with psycopg.connect(conninfo) as conn:
-        row = conn.execute(
-            "SELECT snapshot_version, embedding_model_id, preprocessing_version"
-            " FROM corpus_meta LIMIT 1"
-        ).fetchone()
+    row = _fetchone(
+        conninfo,
+        "SELECT snapshot_version, embedding_model_id, preprocessing_version"
+        " FROM corpus_meta LIMIT 1",
+    )
     if row is None:
         return None
     return CorpusMeta(

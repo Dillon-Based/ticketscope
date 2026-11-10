@@ -2,8 +2,9 @@
 
 import pytest
 
+from tests.factories import issue_record
 from ticketscope.core.fakes import HashEmbedder, InMemoryCorpusStore
-from ticketscope.core.model import IssueRecord, Scored
+from ticketscope.core.model import Scored
 from ticketscope.core.modes import (
     REGISTRY,
     RRF_K,
@@ -22,17 +23,11 @@ TEXTS = {
 }
 
 
-def _issue(number: int, title: str | None = None) -> IssueRecord:
-    return IssueRecord(
-        number=number, title=title or f"t{number}", url="u", kind="short", state="closed"
-    )
-
-
 def _store() -> InMemoryCorpusStore:
     embedder = HashEmbedder(MODEL)
     vectors = dict(zip(TEXTS, embedder.embed(list(TEXTS.values())), strict=True))
     return InMemoryCorpusStore(
-        [(_issue(n), t) for n, t in TEXTS.items()],
+        [(issue_record(n), t) for n, t in TEXTS.items()],
         corpus_version="v1",
         embeddings={MODEL: vectors},
         embedding_model=MODEL,
@@ -86,20 +81,20 @@ def test_search_is_deterministic_over_real_retrievers() -> None:
 
 
 def test_issue_record_comes_from_the_first_side_that_returned_it() -> None:
-    keyword = Fixed([Scored(issue=_issue(7, "from keyword"), score=1.0)])
-    dense = Fixed([Scored(issue=_issue(7, "from dense"), score=0.9)])
+    keyword = Fixed([Scored(issue=issue_record(7, "from keyword"), score=1.0)])
+    dense = Fixed([Scored(issue=issue_record(7, "from dense"), score=0.9)])
     [hit] = HybridRetriever(keyword, dense).search("q", k=1)
     assert hit.issue.title == "from keyword"
     assert hit.score == pytest.approx(2 / (RRF_K + 1))
 
 
 def test_a_side_that_over_returns_still_yields_at_most_k() -> None:
-    many = Fixed([Scored(issue=_issue(n), score=0.0) for n in range(1, 10)])
+    many = Fixed([Scored(issue=issue_record(n), score=0.0) for n in range(1, 10)])
     hits = HybridRetriever(many, Fixed([])).search("q", k=3)
     assert _numbers(hits) == [1, 2, 3]
 
 
 def test_hybrid_unavailable_for_a_store_without_the_embedding_model() -> None:
-    bare = InMemoryCorpusStore([(_issue(1), "x")], corpus_version="v1")
+    bare = InMemoryCorpusStore([(issue_record(1), "x")], corpus_version="v1")
     assert REGISTRY["hybrid"].available(bare, HashEmbedder(MODEL)) is False
     assert REGISTRY["keyword"].available(bare, None) is True

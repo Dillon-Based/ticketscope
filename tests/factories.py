@@ -3,10 +3,18 @@
 from datetime import UTC, datetime
 from typing import Any
 
+from ticketscope.core.model import IssueRecord
 from ticketscope.core.snapshot import SnapshotIssueV2
 
 SNAPSHOT_CREATED = datetime(2025, 1, 1, tzinfo=UTC)
 SNAPSHOT_RESOLVED = datetime(2025, 1, 10, tzinfo=UTC)
+
+
+def issue_record(number: int, title: str | None = None) -> IssueRecord:
+    """A neutral closed short-kind `IssueRecord` titled `t<number>`."""
+    return IssueRecord(
+        number=number, title=title or f"t{number}", url="u", kind="short", state="closed"
+    )
 
 
 def search_payload(query: str, **overrides: object) -> dict[str, object]:

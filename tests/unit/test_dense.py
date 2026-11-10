@@ -14,14 +14,13 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanE
 from opentelemetry.trace import SpanKind, StatusCode
 
 from tests import dense_oracle as oracle
-from tests.factories import search_payload
+from tests.factories import issue_record, search_payload
 from ticketscope import telemetry
 from ticketscope.adapters.embedder import TracedEmbedder
 from ticketscope.adapters.postgres import CorpusMeta, EmbeddingRow, IssueRow
 from ticketscope.contract.search import Problem, SearchResponse
 from ticketscope.core import derive
 from ticketscope.core.fakes import HashEmbedder, InMemoryCorpusStore, cosine
-from ticketscope.core.model import IssueRecord
 from ticketscope.core.modes import REGISTRY, DenseRetriever
 from ticketscope.http.app import create_app
 from ticketscope.jobs.load import main as load
@@ -30,13 +29,9 @@ from ticketscope.settings import Settings
 MODEL = "hash-fake"
 
 
-def _issue(number: int) -> IssueRecord:
-    return IssueRecord(number=number, title=f"t{number}", url="u", kind="short", state="closed")
-
-
 def _oracle_store() -> InMemoryCorpusStore:
     return InMemoryCorpusStore(
-        [(_issue(n), "") for n in oracle.VECTORS],
+        [(issue_record(n), "") for n in oracle.VECTORS],
         corpus_version="v",
         embeddings={MODEL: oracle.VECTORS},
         embedding_model=MODEL,
@@ -74,7 +69,7 @@ def test_cosine_is_not_a_distance_or_an_inner_product() -> None:
 
 def test_ties_break_on_issue_number() -> None:
     store = InMemoryCorpusStore(
-        [(_issue(n), "") for n in (5, 2, 9)],
+        [(issue_record(n), "") for n in (5, 2, 9)],
         embeddings={MODEL: {5: (1.0, 0.0), 2: (1.0, 0.0), 9: (1.0, 0.0)}},
     )
     assert [h.issue.number for h in store.dense_search(MODEL, (1.0, 0.0), 10)] == [2, 5, 9]
@@ -95,14 +90,14 @@ def test_the_store_is_asked_for_k_plus_the_exclusions() -> None:
             asked.append(k)
             return super().dense_search(model_id, vector, k)
 
-    store = Spy([(_issue(n), "") for n in oracle.VECTORS], embeddings={MODEL: oracle.VECTORS})
+    store = Spy([(issue_record(n), "") for n in oracle.VECTORS], embeddings={MODEL: oracle.VECTORS})
     DenseRetriever(store, FixedEmbedder()).search("q", k=2, exclude=frozenset({1, 2}))
     assert asked == [4]
 
 
 def test_another_models_rows_do_not_disturb_the_configured_one() -> None:
     store = InMemoryCorpusStore(
-        [(_issue(n), "") for n in oracle.VECTORS],
+        [(issue_record(n), "") for n in oracle.VECTORS],
         embeddings={MODEL: oracle.VECTORS, "other": {1: (1.0, 0.0, 0.0), 2: (0.0, 1.0, 0.0)}},
     )
     assert [h.issue.number for h in store.dense_search(MODEL, oracle.QUERY, 10)] == [1, 2, 3, 4]
@@ -181,7 +176,7 @@ def _dense_corpus(
 ) -> InMemoryCorpusStore:
     texts = {1: "kernel panic on boot", 2: "texture glitch near spawn", 3: "boot loop after update"}
     return InMemoryCorpusStore(
-        [(_issue(n), text) for n, text in texts.items()],
+        [(issue_record(n), text) for n, text in texts.items()],
         corpus_version="v1",
         embeddings={
             embedder.model_id: dict(zip(texts, embedder.embed(list(texts.values())), strict=True))
@@ -206,7 +201,7 @@ def test_dense_search_returns_ranked_cosine_results() -> None:
 
 def test_dense_is_503_problem_json_when_unavailable() -> None:
     # The flag-off path: no model configured, no embedder, nothing embedded.
-    client = _client(InMemoryCorpusStore([(_issue(1), "alpha")], corpus_version="v1"))
+    client = _client(InMemoryCorpusStore([(issue_record(1), "alpha")], corpus_version="v1"))
     response = client.post("/v1/search", json=search_payload("alpha", mode="dense"))
     assert response.status_code == 503
     assert response.headers["content-type"].startswith("application/problem+json")
@@ -216,7 +211,7 @@ def test_dense_is_503_problem_json_when_unavailable() -> None:
 
 
 def test_readiness_without_a_configured_model_is_ready_on_a_keyword_only_corpus() -> None:
-    client = _client(InMemoryCorpusStore([(_issue(1), "alpha")], corpus_version="v1"))
+    client = _client(InMemoryCorpusStore([(issue_record(1), "alpha")], corpus_version="v1"))
     assert client.get("/readyz").status_code == 200
 
 

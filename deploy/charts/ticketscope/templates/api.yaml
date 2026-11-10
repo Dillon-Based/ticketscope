@@ -48,6 +48,9 @@ spec:
             {{- with include "ticketscope.embeddingEnv" . }}
             {{- . | nindent 12 }}
             {{- end }}
+            # onnxruntime sizes its pool from the host's cores, not the CPU limit (values.yaml).
+            - name: TICKETSCOPE_EMBEDDING_THREADS
+              value: {{ required "api.embeddingThreads is required" .Values.api.embeddingThreads | quote }}
             - name: TICKETSCOPE_TRACE_QUERY_TEXT
               value: {{ .Values.telemetry.recordQueryText | quote }}
           livenessProbe:

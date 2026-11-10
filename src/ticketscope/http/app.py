@@ -148,7 +148,9 @@ def create_app(
     tracer = telemetry.get_tracer(tracer_provider)
     model_id = settings.embedding_model_id
     if embedder is None and model_id:
-        embedder = FastEmbedEmbedder(model_id, settings.embedding_cache_dir)
+        embedder = FastEmbedEmbedder(
+            model_id, settings.embedding_cache_dir, threads=settings.embedding_threads or None
+        )
     # The `embeddings {model}` span comes from the adapter side, whoever the embedder is.
     query_embedder = TracedEmbedder(embedder, tracer) if embedder is not None else None
 

@@ -52,9 +52,14 @@ def _native_output_silenced() -> Generator[None]:
 
 
 class FastEmbedEmbedder:
-    """`Embedder` over fastembed's `TextEmbedding`. Loading the model is eager."""
+    """`Embedder` over fastembed's `TextEmbedding`. Loading the model is eager.
 
-    def __init__(self, model_id: str, cache_dir: Path) -> None:
+    `threads` caps onnxruntime's intra-op threads; None keeps its default (one per host
+    core). A container under a CPU limit should match it: onnxruntime sizes its pool from the
+    host's cores, not the cgroup quota, so four threads on a one-core limit are throttled in
+    bursts and queued requests time out (story 3.7's `test_concurrent_dense_requests`)."""
+
+    def __init__(self, model_id: str, cache_dir: Path, threads: int | None = None) -> None:
         self.model_id = model_id
         with _native_output_silenced():
             # Imported here: jobs and tests that never embed do not load onnxruntime.
@@ -63,7 +68,10 @@ class FastEmbedEmbedder:
 
             cast(Any, onnxruntime).set_default_logger_severity(3)
             factory = cast(Any, TextEmbedding)
-            self._model = cast(_TextModel, factory(model_name=model_id, cache_dir=str(cache_dir)))
+            self._model = cast(
+                _TextModel,
+                factory(model_name=model_id, cache_dir=str(cache_dir), threads=threads),
+            )
         self._inference_lock = Lock()
 
     def embed(self, texts: Sequence[str]) -> list[list[float]]:

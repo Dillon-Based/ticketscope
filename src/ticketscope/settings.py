@@ -5,7 +5,7 @@ Chart values map to these variables; secrets reach them from CNPG or chart Secre
 
 from pathlib import Path
 
-from pydantic import SecretStr
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -30,6 +30,9 @@ class Settings(BaseSettings):
     embeddings_compute: bool = False
     # Where the baked model lives; the runtime is offline (HF_HUB_OFFLINE=1).
     embedding_cache_dir: Path = Path("/models")
+    # api: onnxruntime intra-op threads for query embedding; 0 keeps the runtime's default
+    # (one per host core). The chart sets it to api's CPU limit.
+    embedding_threads: int = Field(default=0, ge=0)
 
     # Traces (AD-10): OTLP/HTTP base URL of the in-cluster collector; empty exports nothing.
     otlp_endpoint: str = ""

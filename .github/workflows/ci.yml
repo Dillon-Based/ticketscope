@@ -73,6 +73,7 @@ jobs:
         run: >-
           uv run pytest tests/unit/test_chart_backup.py tests/unit/test_chart_telemetry.py
           tests/unit/test_chart_eval.py tests/unit/test_chart_embeddings.py
+          tests/unit/test_embedding_threads.py
 
   changes:
     runs-on: ubuntu-24.04

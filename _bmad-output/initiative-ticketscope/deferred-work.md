@@ -29,6 +29,7 @@ source_spec: `tickets/epic-hybrid-retrieval/tickets/story-tracer-dense-search-an
 severity: medium
 reason: No red-mode session ran; the cosine fixture was committed, reference vectors were not producible in-code.
 status: open
+carried_to: epic-eks-environment (5), raised at its refinement together with DW-6 and the R-004 embedding parity row (retro A6); carried at epic 3's closure (user, 2026-11-11)
 
 ### DW-4: Kind run (EMBEDDINGS_COMPUTE=1 and flag-off kind-up), Tempo trace check, OOM and api memory measurement on kind were not run.
 origin: spec-deferred 166db8a1336b
@@ -36,7 +37,8 @@ location: n/a
 source_spec: `tickets/epic-hybrid-retrieval/tickets/story-tracer-dense-search-answers-through-v1-on-kind-plan.md`
 severity: medium
 reason: Verified instead with a local Docker run of migrate, load, api and a --network none embed; ci.yml and eval.yml have not run on a PR.
-status: open
+status: done 2026-11-11
+resolution: resolved by story 3.6's measurement (deploy/charts/ticketscope/values.yaml api resources, with the measured memory, CPU and embedding time) and story 3.8's integrated check on kind (tests/integrated/test_dense_kind.py); ci run 42910706544 integrated-check / deploy success (retro A8)
 
 ### DW-5: tests/postgres (the only tests of the dense SQL, vector literal and embedding transaction) skip in CI because nothing sets TICKETSCOPE_TEST_PG_IMAGE.
 origin: spec-deferred 7e859249ed86
@@ -44,7 +46,8 @@ location: tests/postgres/conftest.py
 source_spec: `tickets/epic-hybrid-retrieval/tickets/story-tracer-dense-search-answers-through-v1-on-kind-plan.md`
 severity: medium
 reason: grep of .github, scripts and pyproject finds no setter; a regression in _DENSE_SQL would stay green.
-status: open
+status: done 2026-11-11
+resolution: resolved by PR #55 (74c1225, retro A3): ci.yml's containers job sets TICKETSCOPE_TEST_PG_IMAGE (.github/workflows/ci.yml:145) with TICKETSCOPE_REQUIRE_CONTAINER_TESTS=1, so a missing image fails instead of skipping; ci run 42915486385 containers success
 
 ### DW-6: Model download has no revision pin or file checksum (test-design C-7), and fastembed resolves a quantized Qdrant export.
 origin: spec-deferred 016b9d8214a7
@@ -53,6 +56,7 @@ source_spec: `tickets/epic-hybrid-retrieval/tickets/story-tracer-dense-search-an
 severity: medium
 reason: images/app.Dockerfile downloads BAAI/bge-small-en-v1.5 unpinned; a changed upstream file would change retrieval under the same model_id.
 status: open
+carried_to: epic-eks-environment (5), the first epic to build the app image for a non-kind environment; overlaps the NFR CONCERNS on cross-machine ranking reproducibility (R-004, retro A6); carried at epic 3's closure (user, 2026-11-11)
 
 ### DW-7: Corpus identity and retrieval use separate connections, so a concurrent reload can label results with the previously read corpus version.
 origin: spec-deferred a5abd69c08c2
@@ -61,3 +65,4 @@ source_spec: `tickets/epic-hybrid-retrieval/tickets/story-tracer-dense-search-an
 severity: medium
 reason: The API reads corpus_version before mode availability and retrieval, each using a separate Postgres connection. Baseline keyword requests already have the same race. A concurrent old/new snapshot reload can therefore interleave with a response; request-snapshot consistency needs its own design.
 status: open
+carried_to: epic-eks-environment (5), where corpus reloads first run under live traffic; carried at epic 3's closure (user, 2026-11-11)

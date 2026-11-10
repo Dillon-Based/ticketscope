@@ -1,0 +1,178 @@
+{
+  "schema_version": "0.3.0",
+  "snapshot_at": "2026-11-10T23:30:00+00:00",
+  "repo": "ticketscope",
+  "collection_mode": "contract_static",
+  "collection_status": "COLLECTED",
+  "inventory_basis": "acceptance_criteria",
+  "gate_basis": "priority_thresholds",
+  "source_sha": "9c6efe0d0d4fa957afde1b4152357bfc5e7e488b",
+  "target": {
+    "type": "epic",
+    "id": "ticketscope--e3",
+    "label": "Epic 3: Dense and hybrid retrieval, scored against keyword"
+  },
+  "decision_mode": "deterministic",
+  "evaluator": "Claude Code / Master Test Architect",
+  "confidence": "high",
+  "oracle": {
+    "resolution_mode": "formal_requirements",
+    "confidence": "high",
+    "granularity": "requirements",
+    "sources": [
+      "_bmad-output/initiative-ticketscope/tickets/epic-hybrid-retrieval/epic-hybrid-retrieval.md",
+      "_bmad-output/initiative-ticketscope/tickets/epic-hybrid-retrieval/tickets/tickets.toml",
+      "_bmad-output/initiative-ticketscope/tickets/epic-hybrid-retrieval/tickets/story-tracer-dense-search-answers-through-v1-on-kind-plan.md",
+      "_bmad-output/initiative-ticketscope/tickets/epic-hybrid-retrieval/tickets/story-hybrid-search-fuses-keyword-and-dense-plan.md",
+      "_bmad-output/initiative-ticketscope/tickets/epic-hybrid-retrieval/tickets/spike-choose-the-embedding-model-plan.md",
+      "_bmad-output/initiative-ticketscope/tickets/epic-hybrid-retrieval/tickets/story-embeddings-load-from-a-published-release-asset-plan.md",
+      "_bmad-output/initiative-ticketscope/tickets/epic-hybrid-retrieval/tickets/story-ci-scores-keyword-dense-and-hybrid-side-by-side-plan.md",
+      "_bmad-output/initiative-ticketscope/tickets/epic-hybrid-retrieval/tickets/story-chart-defaults-carry-the-model-s-needs-and-the-best-mode-plan.md",
+      "_bmad-output/initiative-ticketscope/tickets/epic-hybrid-retrieval/tickets/story-refactor-sweep-plan.md",
+      "_bmad-output/initiative-ticketscope/tickets/epic-hybrid-retrieval/tickets/story-integrated-check-on-kind-plan.md",
+      "_bmad-output/test-artifacts/test-design/test-design-epic-3.md"
+    ],
+    "external_pointer_status": "not_used",
+    "synthetic": false
+  },
+  "gate_status": "FAIL",
+  "coverage": {
+    "inventory": {
+      "covered": 1,
+      "total": 5,
+      "pct": 20
+    },
+    "priority_breakdown": {
+      "P0": {
+        "total": 3,
+        "covered": 0,
+        "pct": 0
+      },
+      "P1": {
+        "total": 2,
+        "covered": 1,
+        "pct": 50
+      },
+      "P2": {
+        "total": 0,
+        "covered": 0,
+        "pct": 100
+      },
+      "P3": {
+        "total": 0,
+        "covered": 0,
+        "pct": 100
+      }
+    },
+    "criteria": {
+      "total": 28,
+      "full": 21,
+      "pct": 75
+    },
+    "by_level": {
+      "e2e": {
+        "tests": 14,
+        "criteria_covered": 12
+      },
+      "api": {
+        "tests": 7,
+        "criteria_covered": 4
+      },
+      "component": {
+        "tests": 0,
+        "criteria_covered": 0
+      },
+      "unit": {
+        "tests": 32,
+        "criteria_covered": 17
+      },
+      "live": {
+        "tests": 0,
+        "criteria_covered": 0
+      },
+      "other": {
+        "tests": 2,
+        "criteria_covered": 2
+      }
+    }
+  },
+  "tests": {
+    "files": 18,
+    "cases": 58,
+    "skipped_cases": 0,
+    "fixme_cases": 0,
+    "pending_cases": 0
+  },
+  "risk_summary": {
+    "critical_open": 0,
+    "high_open": 0,
+    "medium_open": 1,
+    "low_open": 0
+  },
+  "heuristics": {
+    "endpoint_gaps": 0,
+    "auth_negative_path_status": "present",
+    "error_path_status": "present",
+    "ui_journey_status": "not_applicable",
+    "ui_state_status": "not_applicable"
+  },
+  "live_evidence": {
+    "present": true,
+    "results_file": "_bmad-output/test-artifacts/live-verification-results.json",
+    "freshness": "stale",
+    "recorded_source_sha": "424291fa5b0bc6d538614440246249eaadeea1b3",
+    "current_source_sha": "9c6efe0d0d4fa957afde1b4152357bfc5e7e488b",
+    "producer": "",
+    "counted": 0,
+    "stale": 0,
+    "unverifiable": 0,
+    "failed": 0,
+    "contradicted": 0,
+    "blocked": 0,
+    "skipped": 0,
+    "unmatched": 26,
+    "invalid": 0,
+    "requirements_live_only": 0
+  },
+  "gate_criteria": {
+    "p0_coverage_required": "100%",
+    "p0_coverage_actual": "0%",
+    "p0_status": "NOT_MET",
+    "p1_coverage_target": "90%",
+    "p1_coverage_minimum": "80%",
+    "p1_coverage_actual": "50%",
+    "p1_status": "NOT_MET",
+    "overall_coverage_minimum": "80%",
+    "overall_coverage_actual": "20%",
+    "overall_status": "NOT_MET"
+  },
+  "blockers": [
+    {
+      "id": "ticketscope--e3--R1",
+      "severity": "critical",
+      "reason": "P0 requirement PARTIAL: story 1 AC-6 (image embeds with the network disabled), AC-7 (CI on PR #36) and story 4 AC-5 (person-run publish and Release) have no test or live record",
+      "test_file": "",
+      "test_title": "ticketscope--e3--R1"
+    },
+    {
+      "id": "ticketscope--e3--R2",
+      "severity": "critical",
+      "reason": "P0 requirement PARTIAL: story 1 AC-4 (eval untraced), AC-6, AC-7 and story 7 verify (PR #52 CI with baseline unchanged) have no test or live record",
+      "test_file": "",
+      "test_title": "ticketscope--e3--R2"
+    },
+    {
+      "id": "ticketscope--e3--R4",
+      "severity": "critical",
+      "reason": "P0 requirement PARTIAL: story 7 verify rests on a CI observation with no live record",
+      "test_file": "",
+      "test_title": "ticketscope--e3--R4"
+    }
+  ],
+  "links": {
+    "trace_report_path": "_bmad-output/test-artifacts/trace/traceability-matrix-epic-ticketscope--e3.md",
+    "trace_report_url": "",
+    "artifact_url": "",
+    "journey_evidence_url": ""
+  }
+}

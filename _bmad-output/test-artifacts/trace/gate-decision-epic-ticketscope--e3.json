@@ -1,0 +1,24 @@
+{
+  "schema_version": "0.1.0",
+  "evaluated_at": "2026-11-10T23:30:00+00:00",
+  "repo": "ticketscope",
+  "target": {
+    "type": "epic",
+    "id": "ticketscope--e3",
+    "label": "Epic 3: Dense and hybrid retrieval, scored against keyword"
+  },
+  "collection_status": "COLLECTED",
+  "gate_basis": "priority_thresholds",
+  "gate_status": "FAIL",
+  "rationale": "P0 coverage is 0% (required: 100%). 3 critical requirement(s) below FULL coverage (R1, R2, R4 are PARTIAL). Overall FULL coverage is 20% (minimum 80%); P1 is 50% (minimum 80%). 21 of 28 criteria are FULL; the 7 others are PARTIAL or NONE because their clauses rest on CI-run or person-run observations that no test or live verification record carries (story 1 AC-4, AC-6, AC-7; spike AC-1, AC-3; story 4 AC-5; story 7 verify). No live verification results exist for epic 3.",
+  "p0_status": "NOT_MET",
+  "p1_status": "NOT_MET",
+  "overall_status": "NOT_MET",
+  "critical_open": 3,
+  "links": {
+    "trace_report_path": "_bmad-output/test-artifacts/trace/traceability-matrix-epic-ticketscope--e3.md",
+    "trace_report_url": "",
+    "artifact_url": "",
+    "journey_evidence_url": ""
+  }
+}

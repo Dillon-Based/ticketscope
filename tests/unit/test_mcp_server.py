@@ -198,3 +198,13 @@ def test_a_tool_call_logs_one_line(caplog: pytest.LogCaptureFixture) -> None:
     assert len(lines) == 1
     assert "search_similar_issues" in lines[0] and "status=ok" in lines[0]
     assert "secret text" not in lines[0]
+
+
+def test_a_result_carries_a_text_block_of_the_serialised_json_beside_structured_content() -> None:
+    async def scenario(http: httpx2.AsyncClient) -> dict[str, Any]:
+        return _result(await http.post("/mcp", headers=HEADERS, json=_call({"query": "crash"})))
+
+    result = _run(scenario, [])
+    [block] = result["content"]
+    assert block["type"] == "text"
+    assert json.loads(block["text"]) == API_BODY == result["structuredContent"]

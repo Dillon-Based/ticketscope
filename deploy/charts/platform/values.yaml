@@ -5,6 +5,8 @@ gateway:
   name: ticketscope
   # Public hostname; set per environment.
   hostname: ""
+  # The tunnel's hostname (Claude Desktop reaches /mcp through it). Empty adds no listener.
+  tunnelHostname: ""
   className: envoy
   # The GatewayClass this release creates, when createClass is true.
   createClass: true

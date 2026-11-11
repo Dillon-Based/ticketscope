@@ -2,6 +2,8 @@
 # SeaweedFS backup target with its storage class.
 gateway:
   hostname: ticketscope.kind.internal
+  # Stand-in; kind-up.sh TUNNEL_HOSTNAME overrides it, and scripts/tunnel.sh serves the real one.
+  tunnelHostname: tunnel.ticketscope.test
   className: envoy
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
 

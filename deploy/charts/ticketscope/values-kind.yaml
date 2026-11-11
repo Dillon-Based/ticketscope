@@ -5,6 +5,8 @@ hostname: ticketscope.kind.internal
 # Two replicas: the stateless transport is checked across both (story 4.1).
 mcp:
   replicas: 2
+  # Stand-in; kind-up.sh TUNNEL_HOSTNAME overrides it.
+  tunnelHostname: tunnel.ticketscope.test
 
 database:
   storage:

@@ -86,6 +86,8 @@ api:
 mcp:
   replicas: 1
   hosts: []
+  # The tunnel's hostname, added to the route and the allowed hosts. Empty adds nothing.
+  tunnelHostname: ""
   # How long mcp waits for api before the tool call fails.
   apiTimeoutSeconds: 10
   # A starting size, not yet measured (story 4.1 records the peak in its PR).

@@ -177,6 +177,36 @@ def test_fresh_connections_are_served_by_both_replicas() -> None:
     eventually(both_logged, timeout=60, interval=2)
 
 
+STAND_IN_HOST = "tunnel.ticketscope.test"
+MCP_HEADERS = {"content-type": "application/json", "accept": "application/json, text/event-stream"}
+
+
+def _post(path: str, host: str, body: dict[str, Any]) -> httpx2.Response:
+    url, _ = _gateway()
+    return httpx2.post(f"{url}{path}", headers={"Host": host, **MCP_HEADERS}, json=body, timeout=30)
+
+
+def _tools_list(host: str) -> httpx2.Response:
+    return _post("/mcp", host, {"jsonrpc": "2.0", "id": 1, "method": "tools/list"})
+
+
+def test_the_stand_in_tunnel_host_reaches_mcp() -> None:
+    response = _tools_list(STAND_IN_HOST)
+    assert response.status_code == 200, response.text
+    assert TOOL in response.text
+
+
+def test_the_kind_host_still_reaches_mcp() -> None:
+    _, host = _gateway()
+    assert _tools_list(host).status_code == 200
+
+
+@pytest.mark.parametrize("path", ["/v1/search", "/"])
+def test_the_tunnel_host_reaches_nothing_but_mcp(path: str) -> None:
+    response = _post(path, STAND_IN_HOST, {"query": QUERY})
+    assert response.status_code == 404, (path, response.status_code)
+
+
 def test_a_foreign_host_is_refused() -> None:
     url, _ = _gateway()
     response = httpx2.post(

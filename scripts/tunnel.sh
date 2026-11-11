@@ -20,9 +20,14 @@ PROVIDER="${TUNNEL_PROVIDER:-ngrok}"
 GATEWAY_URL="${GATEWAY_URL:-http://127.0.0.1:18080}"
 PID=""
 
+FUNNEL_STARTED=0
+
 cleanup() {
   [[ -n "$PID" ]] && kill "$PID" 2>/dev/null || true
-  [[ "$PROVIDER" == tailscale ]] && tailscale funnel reset >/dev/null 2>&1 || true
+  # Only undo the Funnel this script started.
+  if [[ "$FUNNEL_STARTED" == 1 ]]; then
+    tailscale funnel --https=443 off >/dev/null 2>&1 || true
+  fi
 }
 trap cleanup EXIT INT TERM
 
@@ -35,8 +40,17 @@ case "$PROVIDER" in
     ;;
   tailscale)
     command -v tailscale >/dev/null || { echo "tunnel: tailscale is required" >&2; exit 1; }
+    # Funnel serves on the node's own name: TUNNEL_HOSTNAME must be that exact name (the
+    # Gateway, the route and mcp admit only that Host), or Envoy answers 404.
+    NODE_NAME="$(tailscale status --json | sed -n 's/.*"DNSName": *"\([^"]*\)\.".*/\1/p' | head -1)"
+    if [[ "$NODE_NAME" != "$TUNNEL_HOSTNAME" ]]; then
+      echo "tunnel: Funnel serves ${NODE_NAME:-<unknown>}, not ${TUNNEL_HOSTNAME}; set TUNNEL_HOSTNAME to it and re-run kind-up.sh" >&2
+      exit 1
+    fi
     tailscale funnel --bg "$GATEWAY_URL"
-    sleep infinity &
+    FUNNEL_STARTED=1
+    # BSD sleep (macOS) has no `infinity`.
+    while :; do sleep 3600; done &
     PID=$!
     ;;
   *)

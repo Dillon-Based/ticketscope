@@ -13,7 +13,8 @@ ngrok, curl `https://<host>/mcp` from outside with a non-browser client and conf
 - a streamed (SSE) response arrives intact, not buffered;
 - ngrok's free bandwidth limit covers a demo.
 
-If any check fails, use Tailscale Funnel. Record the choice and why in the story 4.2 plan.
+If any check fails, use Tailscale Funnel. Funnel serves on the node's own `*.ts.net` name, so set
+`TUNNEL_HOSTNAME` to exactly that name; `scripts/tunnel.sh` refuses to start when they differ. Record the choice and why in the story 4.2 plan.
 
 ## Run it
 

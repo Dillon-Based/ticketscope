@@ -3,14 +3,14 @@ title: 'Claude Desktop answers from ticketscope through a tunnel'
 type: 'feature'
 ticket: '2'
 created: '2026-11-11'
-status: 'in-progress'
+status: 'in-review'
 baseline_revision: '5355ad32c976f3d328fac7057a70171bc0e6cd83'
 route: 'full'
 route_source: 'auto'
 risk: 'high'
-review: ''
-review_source: ''
-lenses_ran: []
+review: 'quick'
+review_source: 'pinned'
+lenses_ran: [quick]
 review_loop_iteration: 0
 context: []
 ---
@@ -87,3 +87,17 @@ context: []
 ## Tunnel choice
 
 _Recorded at the human step: ngrok free static domain or Tailscale Funnel, and why._
+
+## Review Triage Log
+
+| Finding | Verdict | Route | Evidence |
+|---|---|---|---|
+| `sleep infinity` on macOS | medium | patch | BSD sleep rejects it; replaced with a `while :; do sleep 3600; done` loop |
+| Tailscale host vs `TUNNEL_HOSTNAME` | medium | patch | Funnel serves the node name; script now refuses on a mismatch, docs say so |
+| `funnel reset` cleanup too broad | low | patch | Cleanup now only undoes a Funnel this script started |
+| allowed_hosts matrix row untested | false | none | `tests/unit/test_mcp_server.py::test_a_foreign_host_is_refused_without_a_stack_trace` proves the server's own check |
+| Unset-default and stand-in tests weak | low | patch | Added a defaults render plus a kind-values check |
+| api route open when `hostname` empty | low | defer | Only a misconfigured release; recorded in deferred-work.md |
+| kind-up cannot disable the tunnel host | low | patch | `${TUNNEL_HOSTNAME-...}` now honours an explicit empty value |
+| Import reflow | low | rejected | Cosmetic, no harm |
+| Text block only unit-tested | false | none | The unit test asserts the text block; the SDK default is verified there |

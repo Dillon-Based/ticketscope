@@ -116,3 +116,9 @@ def test_the_tunnel_host_is_on_no_other_route() -> None:
     others = [d for d in _docs(docs, "HTTPRoute") if "name: ticketscope-mcp\n" not in d]
     assert others, "expected the api route"
     assert all(TUNNEL not in d for d in others)
+
+
+def test_chart_defaults_carry_no_tunnel_host_and_kind_carries_the_stand_in() -> None:
+    assert 'tunnelHostname: ""' in (TICKETSCOPE / "values.yaml").read_text()
+    kind = (TICKETSCOPE / "values-kind.yaml").read_text()
+    assert "tunnelHostname: tunnel.ticketscope.test" in kind

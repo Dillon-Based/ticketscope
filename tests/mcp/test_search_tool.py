@@ -177,7 +177,8 @@ def test_fresh_connections_are_served_by_both_replicas() -> None:
     eventually(both_logged, timeout=60, interval=2)
 
 
-STAND_IN_HOST = "tunnel.ticketscope.test"
+# The stand-in in kind values; locally, the host kind-up.sh was given as TUNNEL_HOSTNAME.
+STAND_IN_HOST = os.environ.get("TICKETSCOPE_TUNNEL_HOST", "tunnel.ticketscope.test")
 MCP_HEADERS = {"content-type": "application/json", "accept": "application/json, text/event-stream"}
 
 

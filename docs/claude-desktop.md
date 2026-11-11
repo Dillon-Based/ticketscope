@@ -36,6 +36,13 @@ and answers citing the returned issues.
 
 ## Capture the requests
 
-Save the session's `initialize`, `notifications/initialized`, `tools/list` and `tools/call`
-requests, with the protocol version and headers and no credentials, under `tests/mcp/captured/`.
-`mcp-e2e.yml` replays them on every PR. Later stories do not edit them.
+Claude Desktop speaks the stateless 2026-07-28 protocol, so its handshake is `server/discover`, not
+`initialize`. The captured set is `server/discover`, `tools/list`, `tools/call`, `resources/list`
+and `prompts/list` in `tests/mcp/captured/`, taken from ngrok's local inspector
+(`http://127.0.0.1:4040`) with every header except the proxy's (`Host`, `Content-Length`,
+`Accept-Encoding`, `X-Forwarded-*`). Keep all the others: the server rejects a `tools/call` without
+its `Mcp-Name` header. `subscriptions/listen` is a long-lived stream and is not replayed.
+
+`mcp-e2e.yml` replays them against `/mcp` with the stand-in tunnel host on every PR. Locally,
+set `TICKETSCOPE_TUNNEL_HOST` to the host you gave kind-up.sh. Later stories do not edit the
+fixtures; `tests/unit/test_mcp_captured_pin.py` pins their bytes.

@@ -3,7 +3,7 @@ title: 'Claude Desktop answers from ticketscope through a tunnel'
 type: 'feature'
 ticket: '2'
 created: '2026-11-11'
-status: 'in-review'
+status: 'built'
 baseline_revision: '5355ad32c976f3d328fac7057a70171bc0e6cd83'
 route: 'full'
 route_source: 'auto'
@@ -109,3 +109,11 @@ Bandwidth: a demo sends small JSON responses; the person confirms the free plan'
 | kind-up cannot disable the tunnel host | low | patch | `${TUNNEL_HOSTNAME-...}` now honours an explicit empty value |
 | Import reflow | low | rejected | Cosmetic, no harm |
 | Text block only unit-tested | false | none | The unit test asserts the text block; the SDK default is verified there |
+
+## Human Steps Result (2026-11-11)
+
+- **Claude Desktop session:** connected `https://blitz-utmost-jarring.ngrok-free.dev/mcp` as a custom connector with no auth, in a Chat-tab conversation. Claude called `search_similar_issues` (query "Minecraft Mojang launcher crashes when opening with a corrupted options file", k 10) and answered citing MCL-4563, MCL-16049, MCL-20384 and MC-134224. The ngrok inspector recorded the `tools/call` (200) from `Claude-User`.
+- **Screenshot: waived by the user.** The ticket asks for a committed screenshot linked here; the user decided it was not needed ("we all know its fine"). The evidence above stands in for it, and the closing session on the final head (epic Done when) still repeats and links the run.
+- **Captured requests:** `tests/mcp/captured/` holds `server/discover`, `tools/list`, `tools/call`, `resources/list` and `prompts/list` (protocol 2026-07-28, stateless; Claude Desktop sends no `initialize`). Pinned by `tests/unit/test_mcp_captured_pin.py`; replayed by `tests/mcp/test_claude_desktop_replay.py`, which passed on both replicas against kind.
+- **After the script exited:** the hostname answers 404 from ngrok's edge and no ngrok process is running, so it no longer reaches the cluster.
+- **Open:** the ngrok free-plan bandwidth limit is for the person to confirm on the dashboard.

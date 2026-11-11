@@ -15,7 +15,15 @@ from tests.target import REPO
 CHARTS = REPO / "deploy" / "charts"
 PLATFORM = CHARTS / "platform"
 TICKETSCOPE = CHARTS / "ticketscope"
-_IMAGE_TAGS = ["--set-string", "image.app.tag=t", "--set-string", "image.postgres.tag=18-t"]
+# mcp refuses to render without a host (story 4.1), so every render has one.
+_IMAGE_TAGS = [
+    "--set-string",
+    "image.app.tag=t",
+    "--set-string",
+    "image.postgres.tag=18-t",
+    "--set",
+    "hostname=ticketscope.test",
+]
 
 pytestmark = pytest.mark.skipif(shutil.which("helm") is None, reason="needs helm")
 

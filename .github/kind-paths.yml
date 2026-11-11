@@ -11,6 +11,7 @@ kind:
   - 'tests/integrated/**'
   - 'tests/smoke/**'
   - 'tests/eval/**'
+  - 'tests/mcp/**'
   - 'tests/*.py'
   - 'pyproject.toml'
   - 'uv.lock'

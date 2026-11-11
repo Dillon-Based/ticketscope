@@ -12,6 +12,7 @@ pytestmark = pytest.mark.skipif(shutil.which("helm") is None, reason="needs helm
 COLLECTOR = "http://otel-collector.platform.svc:4318"
 WORKLOADS = (
     ("Deployment", "ticketscope-api"),
+    ("Deployment", "ticketscope-mcp"),
     ("Job", "ticketscope-migrate"),
     ("Job", "ticketscope-load"),
 )
@@ -28,9 +29,9 @@ def test_record_query_text_true_reaches_the_api_as_a_string() -> None:
     assert '- name: TICKETSCOPE_TRACE_QUERY_TEXT value: "true"' in _flat(api)
 
 
-def test_query_text_opt_in_is_on_the_api_only() -> None:
+def test_query_text_opt_in_is_absent_from_the_jobs() -> None:
     docs = _ticketscope("--set", "telemetry.recordQueryText=true")
-    for kind, name in WORKLOADS[1:]:
+    for kind, name in WORKLOADS[2:]:
         [doc] = _docs(docs, kind, name)
         assert "TICKETSCOPE_TRACE_QUERY_TEXT" not in doc, name
 

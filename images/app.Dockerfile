@@ -1,5 +1,5 @@
 # The one app image (AD-2). The process is chosen by command:
-#   ticketscope-api | ticketscope-migrate | ticketscope-load | ticketscope-eval
+#   ticketscope-api | ticketscope-mcp | ticketscope-migrate | ticketscope-load | ticketscope-eval
 # ingest runs on a person's machine (scripts/publish-snapshot.sh); its `ingest`
 # dependency group (pymongo) is not installed here.
 # Build from the repo root: docker build -f images/app.Dockerfile .

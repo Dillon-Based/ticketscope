@@ -292,6 +292,9 @@ def test_api_route_matches_exact_root_and_v1_prefix_only() -> None:
             # Backups need an environment's destinationPath (story 8).
             "--set",
             "backup.enabled=false",
+            # mcp refuses to render without a host (story 4.1).
+            "--set",
+            "hostname=ticketscope.test",
         ],
         capture_output=True,
         text=True,

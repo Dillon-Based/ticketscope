@@ -5,7 +5,8 @@
 #
 # Builds the two images for the native arch if missing, creates the kind
 # cluster, starts cloud-provider-kind, loads the images, installs `platform`
-# (--wait) and then `ticketscope`, and waits for api to be Ready. Prints
+# (--wait) and then `ticketscope`, and waits for api and mcp to be Ready (a rebuilt
+# image under the deployed tag restarts both). Prints
 # timestamps and the Gateway address. Idempotent: re-running upgrades in place.
 #
 # Env overrides:
@@ -116,6 +117,8 @@ k -n "$PLATFORM_NS" wait "gateway/${GATEWAY_NAME}" --for=condition=Programmed --
 # tag (or no api yet) needs no restart; Helm's rollout covers it.
 DEPLOYED_APP_IMAGE=$(k -n "$APP_NS" get deploy/ticketscope-api \
   -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || true)
+DEPLOYED_MCP_IMAGE=$(k -n "$APP_NS" get deploy/ticketscope-mcp \
+  -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || true)
 # EVAL_ENABLED=1 adds the eval hook after load; Helm blocks on it, so allow it longer.
 EVAL_ARGS=()
 HELM_TIMEOUT=25m
@@ -146,10 +149,17 @@ if [[ "$APP_BUILT" == 1 && "$DEPLOYED_APP_IMAGE" == "$APP_IMAGE" ]]; then
   log "app image rebuilt under the deployed tag: restarting api"
   k -n "$APP_NS" rollout restart deploy/ticketscope-api
 fi
+if [[ "$APP_BUILT" == 1 && "$DEPLOYED_MCP_IMAGE" == "$APP_IMAGE" ]]; then
+  log "app image rebuilt under the deployed tag: restarting mcp"
+  k -n "$APP_NS" rollout restart deploy/ticketscope-mcp
+fi
 log "waiting for api to be Ready"
 k -n "$APP_NS" rollout status deploy/ticketscope-api --timeout=5m
 READY_EPOCH=$(date +%s)
 log "api Ready: $((READY_EPOCH - START_EPOCH))s from kind-up start"
+# mcp is stateless and its probes never call api, so it is Ready on its own.
+log "waiting for mcp to be Ready"
+k -n "$APP_NS" rollout status deploy/ticketscope-mcp --timeout=5m
 # api is Ready once the primary serves; the replica may still be joining.
 # Bring-up is done when the Cluster reports every instance ready (AD-18: 2).
 log "waiting for Cluster ticketscope-db to be Ready"

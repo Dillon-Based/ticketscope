@@ -81,6 +81,21 @@ api:
   # (story 3.7's integrated check). Keep it equal to limits.cpu, in whole cores.
   embeddingThreads: 1
 
+# The MCP server (epic-mcp-server): stateless, so any replica answers any request. It reaches
+# api over /v1 only. It answers to `hostname` plus these extra hosts (never a wildcard).
+mcp:
+  replicas: 1
+  hosts: []
+  # How long mcp waits for api before the tool call fails.
+  apiTimeoutSeconds: 10
+  # A starting size, not yet measured (story 4.1 records the peak in its PR).
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 256Mi
+
 # Resources for the migrate and load Jobs. With the pinned asset, load only downloads and inserts vectors: it
 # completed in 16 s on kind within the 512Mi limit (story 3.6); it embeds nothing.
 # embeddings.loadMemoryLimit applies only when computeOnKind embeds the corpus.

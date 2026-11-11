@@ -27,6 +27,7 @@ type = forbidden
 source_modules =
     ticketscope.contract
 forbidden_modules =
+    ticketscope.apiclient
     ticketscope.core
     ticketscope.adapters
     ticketscope.http
@@ -103,3 +104,44 @@ forbidden_modules =
     ticketscope.http
     ticketscope.jobs
     ticketscope.settings
+
+[importlinter:contract:mcp]
+name = mcp reaches api only through apiclient
+type = forbidden
+source_modules =
+    ticketscope.mcp
+forbidden_modules =
+    ticketscope.core
+    ticketscope.adapters
+    ticketscope.http
+    ticketscope.jobs
+    psycopg
+    fastembed
+
+[importlinter:contract:apiclient]
+name = apiclient imports only contract and httpx2, never the server side
+type = forbidden
+source_modules =
+    ticketscope.apiclient
+forbidden_modules =
+    ticketscope.core
+    ticketscope.adapters
+    ticketscope.http
+    ticketscope.jobs
+    psycopg
+    fastembed
+
+[importlinter:contract:mcp-leaf]
+name = nothing imports mcp
+type = forbidden
+source_modules =
+    ticketscope.core
+    ticketscope.contract
+    ticketscope.adapters
+    ticketscope.http
+    ticketscope.jobs
+    ticketscope.apiclient
+    ticketscope.settings
+    ticketscope.telemetry
+forbidden_modules =
+    ticketscope.mcp

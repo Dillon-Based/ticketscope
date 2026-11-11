@@ -27,6 +27,7 @@ if TYPE_CHECKING:
 
 SERVICE_API = "ticketscope-api"
 SERVICE_JOBS = "ticketscope-jobs"
+SERVICE_MCP = "ticketscope-mcp"
 
 # AD-10: every process opts in before any instrumentor reads it.
 SEMCONV_OPT_IN_VAR = "OTEL_SEMCONV_STABILITY_OPT_IN"

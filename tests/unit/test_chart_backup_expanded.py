@@ -24,7 +24,15 @@ PLATFORM = CHARTS / "platform"
 TICKETSCOPE = CHARTS / "ticketscope"
 PLATFORM_KIND = PLATFORM / "values-kind.yaml"
 TICKETSCOPE_KIND = TICKETSCOPE / "values-kind.yaml"
-_IMAGE_TAGS = ["--set-string", "image.app.tag=t", "--set-string", "image.postgres.tag=18-t"]
+# mcp refuses to render without a host (story 4.1), so every render has one.
+_IMAGE_TAGS = [
+    "--set-string",
+    "image.app.tag=t",
+    "--set-string",
+    "image.postgres.tag=18-t",
+    "--set",
+    "hostname=ticketscope.test",
+]
 
 needs_helm = pytest.mark.skipif(shutil.which("helm") is None, reason="needs helm")
 needs_openssl = pytest.mark.skipif(shutil.which("openssl") is None, reason="needs openssl")

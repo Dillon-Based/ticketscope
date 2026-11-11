@@ -17,6 +17,9 @@ _ARGS = [
     "image.postgres.tag=18-t",
     "--set",
     "backup.enabled=false",
+    # mcp refuses to render without a host (story 4.1).
+    "--set",
+    "hostname=ticketscope.test",
 ]
 MODEL_ENV = "TICKETSCOPE_EMBEDDING_MODEL_ID"
 COMPUTE_ENV = "TICKETSCOPE_EMBEDDINGS_COMPUTE"

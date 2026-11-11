@@ -1,0 +1,33 @@
+# PR check for the MCP server (epic-mcp-server): one kind deploy, then an MCP client calls
+# `search_similar_issues` through the Gateway. Skipped inside the reusable workflow, so the
+# check keeps its name, `mcp-e2e / deploy`, when no path a kind deploy depends on changed.
+name: mcp-e2e
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcp-e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    runs-on: ubuntu-24.04
+    outputs:
+      kind: ${{ steps.kind.outputs.kind }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dorny/paths-filter@v4
+        id: kind
+        with:
+          filters: .github/kind-paths.yml
+
+  mcp-e2e:
+    needs: changes
+    uses: ./.github/workflows/_kind-deploy.yml
+    with:
+      enabled: ${{ needs.changes.outputs.kind == 'true' }}
+      check: uv run pytest -m kind tests/mcp --junitxml=reports/mcp.xml

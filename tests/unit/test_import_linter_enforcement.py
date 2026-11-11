@@ -47,7 +47,7 @@ def test_clean_source_copy_keeps_all_layer_contracts(copied_project: Path) -> No
     result = _lint(copied_project)
     output = result.stdout + result.stderr
     assert result.returncode == 0, output
-    assert "Contracts: 7 kept, 0 broken." in output
+    assert "Contracts: 10 kept, 0 broken." in output
 
 
 @pytest.mark.parametrize(
@@ -63,8 +63,41 @@ def test_clean_source_copy_keeps_all_layer_contracts(copied_project: Path) -> No
             "ticketscope.core.model",
             "contract imports only pydantic",
         ),
+        (
+            "contract/search.py",
+            "ticketscope.apiclient",
+            "contract imports only pydantic",
+        ),
+        (
+            "mcp/server.py",
+            "ticketscope.core.model",
+            "mcp reaches api only through apiclient",
+        ),
+        (
+            "mcp/server.py",
+            "psycopg",
+            "mcp reaches api only through apiclient",
+        ),
+        (
+            "apiclient/__init__.py",
+            "ticketscope.adapters.postgres",
+            "apiclient imports only contract and httpx2, never the server side",
+        ),
+        (
+            "core/modes.py",
+            "ticketscope.mcp.server",
+            "nothing imports mcp",
+        ),
     ],
-    ids=["core-imports-adapter", "contract-imports-core"],
+    ids=[
+        "core-imports-adapter",
+        "contract-imports-core",
+        "contract-imports-apiclient",
+        "mcp-imports-core",
+        "mcp-imports-psycopg",
+        "apiclient-imports-adapter",
+        "core-imports-mcp",
+    ],
 )
 def test_forbidden_import_breaks_its_named_contract(
     copied_project: Path, source: str, forbidden: str, contract: str
@@ -79,4 +112,5 @@ def test_forbidden_import_breaks_its_named_contract(
     assert f"{contract} BROKEN" in output
     assert forbidden in output
     source_module = "ticketscope." + source.removesuffix(".py").replace("/", ".")
+    source_module = source_module.removesuffix(".__init__")
     assert f"{source_module} -> {forbidden}" in output

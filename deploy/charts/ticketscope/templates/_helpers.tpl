@@ -64,3 +64,21 @@ asset always wins over computeOnKind (story 4). Renders "true" or nothing. */}}
 - name: TICKETSCOPE_OTLP_ENDPOINT
   value: {{ .Values.telemetry.otlpEndpoint | quote }}
 {{- end }}
+
+{{/* The hosts mcp answers to and its route matches: `hostname` plus `mcp.hosts`, as a JSON
+list. A wildcard or an empty list fails the render (AD-5's DNS-rebinding guard). */}}
+{{- define "ticketscope.mcpHosts" -}}
+{{- $hosts := list -}}
+{{- with .Values.hostname }}{{ $hosts = append $hosts . }}{{ end -}}
+{{- range .Values.mcp.hosts }}{{ $hosts = append $hosts . }}{{ end -}}
+{{- $hosts = $hosts | uniq -}}
+{{- if not $hosts -}}
+{{- fail "hostname or mcp.hosts must name at least one host: mcp refuses an empty host list" -}}
+{{- end -}}
+{{- range $hosts -}}
+{{- if or (not .) (contains "*" .) -}}
+{{- fail (printf "mcp.hosts and hostname must not be empty or contain a wildcard: %q" .) -}}
+{{- end -}}
+{{- end -}}
+{{- $hosts | toJson -}}
+{{- end }}

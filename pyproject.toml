@@ -15,10 +15,12 @@ dependencies = [
     "opentelemetry-instrumentation-fastapi~=0.66b2",
     "opentelemetry-instrumentation-psycopg~=0.66b2",
     "fastembed~=0.9.1",
+    "mcp~=2.3.0",
 ]
 
 [project.scripts]
 ticketscope-api = "ticketscope.http.app:main"
+ticketscope-mcp = "ticketscope.mcp.main:main"
 ticketscope-migrate = "ticketscope.jobs.migrate.main:main"
 ticketscope-load = "ticketscope.jobs.load.main:main"
 ticketscope-eval = "ticketscope.jobs.eval.main:main"

@@ -4,9 +4,10 @@ Chart values map to these variables; secrets reach them from CNPG or chart Secre
 """
 
 from pathlib import Path
+from typing import Annotated, Any
 
-from pydantic import Field, SecretStr
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field, SecretStr, field_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -43,6 +44,12 @@ class Settings(BaseSettings):
     http_host: str = "0.0.0.0"
     http_port: int = 8080
 
+    # mcp (AD-25): reaches api only over /v1. `api_base_url` has no default; the process
+    # refuses to start without it. `mcp_allowed_hosts` is comma-separated in the environment.
+    api_base_url: str = ""
+    api_timeout_seconds: float = 10
+    mcp_allowed_hosts: Annotated[list[str], NoDecode] = Field(default_factory=list)
+
     # migrate
     migrations_dir: Path = Path("migrations")
     ro_role: str = "ticketscope_ro"
@@ -63,6 +70,13 @@ class Settings(BaseSettings):
 
     # eval: the labelled pairs, one `<snapshot_version>.jsonl` per snapshot (AD-26).
     eval_pairs_dir: Path = Path("eval/pairs")
+
+    @field_validator("mcp_allowed_hosts", mode="before")
+    @classmethod
+    def _split_hosts(cls, value: Any) -> Any:
+        if isinstance(value, str):
+            return [host.strip() for host in value.split(",") if host.strip()]
+        return value
 
     def conninfo(self) -> str:
         """A libpq keyword/value connection string."""

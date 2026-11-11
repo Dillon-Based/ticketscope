@@ -86,7 +86,15 @@ context: []
 
 ## Tunnel choice
 
-_Recorded at the human step: ngrok free static domain or Tailscale Funnel, and why._
+**Chosen: ngrok free static domain, `blitz-utmost-jarring.ngrok-free.dev` (2026-11-11).**
+
+Checked from outside with a non-browser client (curl) against `https://blitz-utmost-jarring.ngrok-free.dev/mcp`:
+- `tools/list` returned HTTP 200 straight from the server (`server: uvicorn`), with no interstitial page.
+- The response arrived as an intact `text/event-stream` (`x-accel-buffering: no`), not buffered or rewritten.
+- `/v1/search` and `/` on the same host returned 404, so the tunnel host reaches only `/mcp`.
+- The Host header reached Envoy unchanged; no rewrite is configured.
+
+Bandwidth: a demo sends small JSON responses; the person confirms the free plan's limit on the ngrok dashboard. Tailscale Funnel stays the fallback.
 
 ## Review Triage Log
 

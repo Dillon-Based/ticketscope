@@ -34,7 +34,10 @@ trap cleanup EXIT INT TERM
 case "$PROVIDER" in
   ngrok)
     command -v ngrok >/dev/null || { echo "tunnel: ngrok is required" >&2; exit 1; }
-    : "${NGROK_AUTHTOKEN:?tunnel: set NGROK_AUTHTOKEN in your environment}"
+    # The credential comes from NGROK_AUTHTOKEN or ngrok's own saved config, never this repo.
+    if [[ -z "${NGROK_AUTHTOKEN:-}" ]]; then
+      ngrok config check >/dev/null 2>&1 || { echo "tunnel: set NGROK_AUTHTOKEN or run: ngrok config add-authtoken <token>" >&2; exit 1; }
+    fi
     ngrok http "$GATEWAY_URL" --url "https://${TUNNEL_HOSTNAME}" --log=stdout &
     PID=$!
     ;;

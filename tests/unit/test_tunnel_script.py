@@ -10,7 +10,7 @@ SCRIPT = REPO / "scripts" / "tunnel.sh"
 
 def test_the_script_commits_no_credential() -> None:
     text = SCRIPT.read_text()
-    assert "${NGROK_AUTHTOKEN:?" in text
+    assert "NGROK_AUTHTOKEN:-" in text and "ngrok config check" in text
     assert not re.search(r"authtoken[= ]+['\"]?[A-Za-z0-9_]{20,}", text, re.IGNORECASE)
     assert not re.search(r"\b\d[A-Za-z0-9]{20,}_[A-Za-z0-9]{20,}\b", text)  # ngrok token shape
 

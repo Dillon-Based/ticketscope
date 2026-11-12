@@ -18,7 +18,11 @@ def test_mcp_e2e_runs_on_pull_request_through_kind_deploy_behind_the_kind_filter
     assert "needs: changes" in text
     assert "filters: .github/kind-paths.yml" in text
     assert "enabled: ${{ needs.changes.outputs.kind == 'true' }}" in text
-    assert "check: uv run pytest -m kind tests/mcp --junitxml=reports/mcp.xml" in text
+    # The main suite excludes the api scale-down file, which runs last on its own (R-009).
+    main = "uv run pytest -m kind tests/mcp --deselect tests/mcp/test_unreachable_api.py"
+    last = "uv run pytest -m kind tests/mcp/test_unreachable_api.py"
+    assert main in text and last in text
+    assert text.index(main) < text.index(last)
     assert "eval_enabled" not in text
 
 

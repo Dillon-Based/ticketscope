@@ -1,6 +1,7 @@
-"""Composition root for `ticketscope-mcp`: settings, JSON logs, the API client, uvicorn.
+"""Composition root for `ticketscope-mcp`: settings, telemetry, the API client, uvicorn.
 
-It does not call `telemetry.setup`, which instruments psycopg; tracing is story 4.5.
+Telemetry is set up as `ticketscope-mcp` without psycopg instrumentation: this process
+holds no database connection (AD-3). The MCP SDK emits the tool span on the global provider.
 """
 
 import sys
@@ -17,7 +18,7 @@ def main() -> None:
     settings = Settings()
     if not settings.api_base_url.strip():
         sys.exit("TICKETSCOPE_API_BASE_URL is required")
-    telemetry.configure_logging()
+    telemetry.setup(telemetry.SERVICE_MCP, settings.otlp_endpoint, instrument_db=False)
     client = ApiClient(settings.api_base_url, settings.api_timeout_seconds)
     app = build_app(settings, client)
     uvicorn.run(app, host=settings.http_host, port=settings.http_port, log_config=None)

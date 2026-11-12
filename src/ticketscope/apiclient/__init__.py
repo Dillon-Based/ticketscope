@@ -6,13 +6,15 @@ API does not know reaches the API's own validation instead of being rejected her
 `/v1/search` body, validated as `SearchResponse` with unknown fields passed through (AD-20).
 """
 
-from collections.abc import Awaitable
 from typing import Any, cast
 from urllib.parse import quote
 
 import httpx2
+from opentelemetry import propagate, trace
+from opentelemetry.trace import SpanKind, StatusCode
 from pydantic import BaseModel, ValidationError
 
+from ticketscope import telemetry
 from ticketscope.contract.search import IssueResponse, SearchResponse
 
 PROBLEM_JSON = "application/problem+json"
@@ -68,6 +70,15 @@ def _problem_detail(response: httpx2.Response) -> str | None:
     return None
 
 
+async def _inject_traceparent(request: httpx2.Request) -> None:
+    """Request event hook: the current span's context becomes the `traceparent` header."""
+    propagate.inject(request.headers)
+
+
+def _url_without_query(url: httpx2.URL) -> str:
+    return f"{url.scheme}://{url.netloc.decode()}{url.raw_path.decode().split('?', 1)[0]}"
+
+
 class ApiClient:
     def __init__(
         self,
@@ -77,18 +88,46 @@ class ApiClient:
     ) -> None:
         self._timeout = timeout
         self._http = httpx2.AsyncClient(
-            base_url=base_url.rstrip("/"), timeout=timeout, transport=transport
+            base_url=base_url.rstrip("/"),
+            timeout=timeout,
+            transport=transport,
+            event_hooks={"request": [_inject_traceparent]},
         )
 
-    async def _send(self, request: Awaitable[httpx2.Response]) -> httpx2.Response:
-        try:
-            return await request
-        except httpx2.ConnectError as error:
-            raise ApiUnreachable("connection refused") from error
-        except httpx2.TimeoutException as error:
-            raise ApiUnreachable(f"timed out after {self._timeout:g}s") from error
-        except httpx2.RequestError as error:
-            raise ApiUnreachable("connection lost") from error
+    async def _send(self, request: httpx2.Request) -> httpx2.Response:
+        """Send under a CLIENT span named by the method; its context is the injected header."""
+        url = request.url
+        port = url.port or (443 if url.scheme == "https" else 80)
+        attributes: dict[str, str | int] = {
+            "http.request.method": request.method,
+            "url.full": _url_without_query(url),
+            "server.address": url.host,
+            "server.port": port,
+        }
+        with telemetry.get_tracer().start_as_current_span(
+            request.method, kind=SpanKind.CLIENT, attributes=attributes
+        ) as span:
+            try:
+                response = await self._http.send(request)
+            except httpx2.ConnectError as error:
+                self._failed(span, error)
+                raise ApiUnreachable("connection refused") from error
+            except httpx2.TimeoutException as error:
+                self._failed(span, error)
+                raise ApiUnreachable(f"timed out after {self._timeout:g}s") from error
+            except httpx2.RequestError as error:
+                self._failed(span, error)
+                raise ApiUnreachable("connection lost") from error
+            span.set_attribute("http.response.status_code", response.status_code)
+            if response.status_code >= 500:
+                span.set_attribute("error.type", str(response.status_code))
+                span.set_status(StatusCode.ERROR)
+            return response
+
+    @staticmethod
+    def _failed(span: trace.Span, error: Exception) -> None:
+        span.set_attribute("error.type", type(error).__qualname__)
+        span.set_status(StatusCode.ERROR, str(error))
 
     @staticmethod
     def _validated[M: BaseModel](model: type[M], response: httpx2.Response) -> M:
@@ -110,7 +149,7 @@ class ApiClient:
             body["mode"] = mode
         if k is not None:
             body["k"] = k
-        response = await self._send(self._http.post("/v1/search", json=body))
+        response = await self._send(self._http.build_request("POST", "/v1/search", json=body))
         return self._validated(SearchResponse, response)
 
     async def get_issue(self, key: str) -> IssueResponse:
@@ -123,7 +162,7 @@ class ApiClient:
         segment = (
             quote(key, safe="").replace(".", "%2E") if set(key) == {"."} else quote(key, safe="")
         )
-        response = await self._send(self._http.get(f"/v1/issues/by-key/{segment}"))
+        response = await self._send(self._http.build_request("GET", f"/v1/issues/by-key/{segment}"))
         return self._validated(IssueResponse, response)
 
     async def aclose(self) -> None:

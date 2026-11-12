@@ -11,6 +11,7 @@ from typing import Annotated
 from mcp.server.mcpserver import MCPServer
 from mcp.server.transport_security import TransportSecuritySettings
 from mcp.types import CallToolResult, TextContent
+from opentelemetry import trace
 from pydantic import Field
 from starlette.applications import Starlette
 from starlette.requests import Request
@@ -18,6 +19,7 @@ from starlette.responses import PlainTextResponse, Response
 
 from ticketscope.apiclient import ApiClient, ApiClientError, ApiError
 from ticketscope.contract.search import K_MAX, K_MIN, IssueResponse, SearchResponse
+from ticketscope.mcp.spans import QUERY_TEXT
 from ticketscope.settings import Settings
 
 TOOL_NAME = "search_similar_issues"
@@ -37,7 +39,7 @@ def check_allowed_hosts(hosts: list[str]) -> list[str]:
     return cleaned
 
 
-def build_server(client: ApiClient) -> MCPServer:
+def build_server(client: ApiClient, *, trace_query_text: bool = False) -> MCPServer:
     server = MCPServer("ticketscope")
 
     @server.tool(
@@ -61,6 +63,9 @@ def build_server(client: ApiClient) -> MCPServer:
         started = time.monotonic()
         status = "ok"
         count = 0
+        if trace_query_text:
+            # The SDK's tool span is current here; query text is an explicit opt-in (AD-10).
+            trace.get_current_span().set_attribute(QUERY_TEXT, query)
         try:
             response = await client.search(query, mode, k)
             count = len(response.results)
@@ -132,7 +137,7 @@ def build_server(client: ApiClient) -> MCPServer:
 
 def build_app(settings: Settings, client: ApiClient) -> Starlette:
     hosts = check_allowed_hosts(settings.mcp_allowed_hosts)
-    return build_server(client).streamable_http_app(
+    return build_server(client, trace_query_text=settings.trace_query_text).streamable_http_app(
         stateless_http=True,
         transport_security=TransportSecuritySettings(allowed_hosts=hosts),
         host=settings.http_host,

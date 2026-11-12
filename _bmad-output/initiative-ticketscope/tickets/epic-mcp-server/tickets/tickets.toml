@@ -75,12 +75,13 @@ risk = "medium"
 id = 6
 type = "story"
 title = "Refactor sweep"
-description = "Cleanup only, scoped at its start from the plans' deferred items and review findings in this epic: duplication between the two tools and apiclient, chart template repetition between api and mcp, and test structure in tests/mcp/, including whether tests/mcp's Tempo lookup is unified with tests/smoke's helpers; the plan records that decision (R-008). Behaviour, the /v1 contract and the span tree do not change."
-verify = "On a PR, mcp-e2e.yml (with the Claude Desktop replay), ci.yml and the eval check pass with eval/baseline.json unchanged, and import-linter keeps every contract (R1, R2, R3, R5)."
+description = "Cleanup only, scoped at its start from this epic's plans, review findings, and relevant entries in _bmad-output/initiative-ticketscope/deferred-work.md and _bmad-output/deferred-work.md. Candidate areas are duplication between the two tools and apiclient, chart template repetition between api and mcp, and test structure in tests/mcp/. The plan links each considered finding to an include, defer, or reject decision with a reason; behaviour-changing work stays in linked follow-ups. It records whether tests/mcp's Tempo lookup is unified with tests/smoke's helpers: unification identifies the shared owner and both consumers; deferral records a reason and follow-up reference (R-008). Behaviour, the /v1 contract and the span tree do not change."
+verify = "On a PR, mcp-e2e.yml (with the Claude Desktop replay) and ci.yml pass, and import-linter keeps every contract (R1, R2, R3, R5). The eval job passes when the PR matches the eval filter in .github/kind-paths.yml; otherwise its filtered skip is acceptable and the plan records why. In either case, eval/baseline.json is byte-identical to the PR base revision. If chart templates are refactored, before/after rendered api and mcp resources agree for default, kind, and tunnel-host values. If Tempo helpers are unified, focused tests preserve hex/base64 ids, string intValue parsing, MCP's since_ns cutoff, and its search limit of 200; both MCP and smoke suites pass. Any new shared helper directory is included in the kind path filter so subsequent helper-only changes run both suites."
 covers = []
 after = [1, 2, 3, 4, 5]
 hitl = false
 risk = "low"
+notes = ["Preserve the captured Claude Desktop request bytes and their independent pin test, as required by story 4.2."]
 
 [[entry]]
 id = 7

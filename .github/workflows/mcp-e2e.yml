@@ -30,4 +30,8 @@ jobs:
     uses: ./.github/workflows/_kind-deploy.yml
     with:
       enabled: ${{ needs.changes.outputs.kind == 'true' }}
-      check: uv run pytest -m kind tests/mcp --junitxml=reports/mcp.xml
+      # The unreachable-API case scales api to zero, so it is its own invocation after the
+      # main suite, never ordered within it (R-009). Its finalizer restores api.
+      check: |
+        uv run pytest -m kind tests/mcp --deselect tests/mcp/test_unreachable_api.py --junitxml=reports/mcp.xml
+        uv run pytest -m kind tests/mcp/test_unreachable_api.py --junitxml=reports/mcp-unreachable.xml

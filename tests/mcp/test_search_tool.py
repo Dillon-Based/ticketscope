@@ -263,9 +263,7 @@ def test_get_issue_round_trips_a_key_taken_from_a_search() -> None:
 
     missing_key = "MCL-99999999999999999999"
     url, host = _gateway()
-    direct = httpx2.get(
-        f"{url}/v1/issues/by-key/{missing_key}", headers={"Host": host}, timeout=30
-    )
+    direct = httpx2.get(f"{url}/v1/issues/by-key/{missing_key}", headers={"Host": host}, timeout=30)
     assert direct.status_code == 404, direct.text
     missing = asyncio.run(call({"key": missing_key}))
     assert missing.is_error

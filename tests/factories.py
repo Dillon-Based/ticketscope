@@ -46,6 +46,15 @@ def issue_payload(number: int = 1, **overrides: object) -> dict[str, object]:
     }
 
 
+def issue_response_payload(number: int, key: str, url: str | None = None) -> dict[str, object]:
+    """A `/v1/issues/by-key` answer: the issue with its key and a null body."""
+    url = url or f"https://bugs.mojang.com/browse/{key}"
+    return {
+        "issue": issue_payload(number, url=url, key=key, body=None),
+        "outcome": outcome_payload(),
+    }
+
+
 def snapshot_issue(**overrides: Any) -> SnapshotIssueV2:
     """A closed, fixed v2 snapshot issue with a plain body; scenarios override what they test."""
     number = overrides.get("number", 1)

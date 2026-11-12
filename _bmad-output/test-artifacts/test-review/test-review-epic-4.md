@@ -151,6 +151,12 @@ No critical issues detected. ✅
 
 ---
 
+## Resolution
+
+All three findings were patched after this review (the score above is the review-time score): finding 1 split into four single-subject tests sharing a `psycopg_calls` fixture; findings 2 and 3 now build the issue answer from the new `tests.factories.issue_response_payload`, which wraps `issue_payload` and `outcome_payload`.
+
+---
+
 ## Decision
 
 **Recommendation**: Approve with Comments

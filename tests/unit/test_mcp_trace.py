@@ -18,6 +18,7 @@ from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 from opentelemetry.trace import SpanContext, SpanKind, StatusCode
 
+from tests.factories import issue_response_payload
 from ticketscope import telemetry
 from ticketscope.apiclient import ApiClient
 from ticketscope.mcp import spans
@@ -42,18 +43,7 @@ SEARCH_BODY: dict[str, Any] = {
     "corpus_version": "v1",
     "results": [],
 }
-ISSUE_BODY: dict[str, Any] = {
-    "issue": {
-        "number": 6629,
-        "title": "t",
-        "url": "https://bugs.mojang.com/browse/MCL-6629",
-        "kind": "short",
-        "state": "open",
-        "key": "MCL-6629",
-        "body": None,
-    },
-    "outcome": {"status": "unknown", "summary": None, "source": None, "ref": None},
-}
+ISSUE_BODY = issue_response_payload(6629, "MCL-6629")
 QUERY = "secretquery"
 TRACE_A = "0af7651916cd43dd8448eb211c80319c"
 TRACE_B = "4bf92f3577b34da6a3ce929d0e0e4736"
@@ -323,12 +313,28 @@ def test_an_empty_endpoint_creates_no_exporter() -> None:
     assert not provider._active_span_processor._span_processors  # pyright: ignore[reportPrivateUsage]
 
 
-def test_setup_without_db_does_not_instrument_psycopg(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.fixture
+def psycopg_calls(monkeypatch: pytest.MonkeyPatch) -> list[object]:
     called: list[object] = []
     monkeypatch.setattr(telemetry, "instrument_psycopg", called.append)
-    provider = telemetry.setup(telemetry.SERVICE_MCP, "", instrument_db=False)
-    assert called == []
-    assert provider.resource.attributes["service.name"] == "ticketscope-mcp"
-    assert os.environ[telemetry.SEMCONV_OPT_IN_VAR] == telemetry.SEMCONV_OPT_IN
+    return called
+
+
+def test_setup_without_db_does_not_instrument_psycopg(psycopg_calls: list[object]) -> None:
+    telemetry.setup(telemetry.SERVICE_MCP, "", instrument_db=False)
+    assert psycopg_calls == []
+
+
+def test_setup_with_db_instruments_psycopg_once(psycopg_calls: list[object]) -> None:
     telemetry.setup(telemetry.SERVICE_API, "")
-    assert len(called) == 1
+    assert len(psycopg_calls) == 1
+
+
+def test_setup_names_the_provider_after_the_service(psycopg_calls: list[object]) -> None:
+    provider = telemetry.setup(telemetry.SERVICE_MCP, "", instrument_db=False)
+    assert provider.resource.attributes["service.name"] == "ticketscope-mcp"
+
+
+def test_setup_sets_the_semconv_opt_in(psycopg_calls: list[object]) -> None:
+    telemetry.setup(telemetry.SERVICE_MCP, "", instrument_db=False)
+    assert os.environ[telemetry.SEMCONV_OPT_IN_VAR] == telemetry.SEMCONV_OPT_IN

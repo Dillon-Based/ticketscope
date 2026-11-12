@@ -18,6 +18,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from tests import key_oracle as oracle
+from tests.factories import issue_response_payload
 from tests.target import SNAPSHOT_DIR
 from ticketscope.apiclient import ApiClient, ApiError
 from ticketscope.contract.search import IssueResponse, SearchResponse
@@ -65,18 +66,7 @@ def spy_store(fixture_store: InMemoryCorpusStore) -> _SpyStore:
 
 
 def _issue_line(key: str, number: int, url: str | None = None) -> dict[str, Any]:
-    return {
-        "issue": {
-            "number": number,
-            "title": "t",
-            "url": url or f"https://bugs.mojang.com/browse/{key}",
-            "kind": "short",
-            "state": "closed",
-            "key": key,
-            "body": None,
-        },
-        "outcome": {"status": "unknown", "summary": None, "source": None, "ref": None},
-    }
+    return issue_response_payload(number, key, url)  # pyright: ignore[reportReturnType]
 
 
 # --- key derivation --------------------------------------------------------------------------

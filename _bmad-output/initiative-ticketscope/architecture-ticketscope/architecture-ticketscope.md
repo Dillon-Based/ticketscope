@@ -7,7 +7,7 @@ paradigm: ports and adapters (hexagonal) around a pure retrieval core, with batc
 scope: the whole ticketscope initiative — epics 1–8 (search-baseline, eval-gate, hybrid-retrieval, mcp-server, eks-environment, mcp-oauth, grafana-dashboard, reviewer-package)
 status: final
 created: '2026-11-05'
-updated: '2026-11-06'
+updated: '2026-11-12'
 binds: [R1, R2, R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13]
 sources:
   - _bmad-output/initiative-ticketscope/initiative-ticketscope.md
@@ -236,7 +236,7 @@ flowchart TD
 - **Prevents:** operator and CRD ordering breakage, and kind/EKS chart drift.
 - **Rule:** Two releases are installed the same way in every environment.
   - **`platform`**:
-    - Gateway API CRDs and the one `Gateway`
+    - the one `Gateway`. On EKS the workflow installs the standard-channel Gateway API CRDs and the controller's own CRDs before this release, because the controller's chart ships neither (amended 2026-11-12, EKS research)
     - the GatewayClass implementation: Envoy Gateway with cloud-provider-kind on kind; the AWS Load Balancer Controller on EKS
     - external-dns, on EKS only
     - the CNPG operator and the Barman Cloud Plugin
@@ -259,7 +259,7 @@ flowchart TD
     | `/`, `/v1` | `api` |
     | `/mcp`, `/.well-known/oauth-protected-resource` | `mcp` |
 
-  - **Hostname.** The hostname is set on the listener and the routes. On EKS, the ALB picks up the bootstrap ACM certificate by that hostname, and external-dns writes the record into the bootstrap zone.
+  - **Hostname.** The hostname is set on the listener and the routes. On EKS, a `LoadBalancerConfiguration` names the bootstrap ACM certificate by explicit ARN, because listener `certificateRefs` are unsupported and hostname discovery runs only when no certificate is given. external-dns writes the record into the bootstrap zone, reading the Gateway's address, or an `external-dns.kubernetes.io/target` annotation if the address is not usable (amended 2026-11-12, EKS research; end-to-end behaviour is proven by epic 5's tracer).
   - **Not public.** Grafana, Tempo and SeaweedFS are never public; reach them by port-forward.
 
 ### AD-15 — Terraform: persistent `bootstrap`, ephemeral `env` [ADOPTED]
@@ -310,6 +310,7 @@ flowchart TD
   - **Backups.** It backs up through the Barman Cloud Plugin to an S3-compatible endpoint taken from values:
     - on EKS, the bootstrap bucket, through an IRSA role created in the `env` stack;
     - on kind, SeaweedFS.
+  - **Archive naming.** Each environment incarnation archives under its own `serverName`, set as a plugin parameter on the `Cluster`, and a restore reads the previous incarnation's. A cluster recreated with the same name against the same bucket path fails the WAL archive check ("Expected empty archive"). `skipEmptyWalArchiveCheck` is never used (amended 2026-11-12, EKS research).
   - **Drills.** The restore drill and the failure drill are recorded on EKS, or on kind if epic 5 is cut.
 
 ### AD-19 — Retriever port and mode registry [ADOPTED]
@@ -371,10 +372,11 @@ flowchart TD
   - **Teardown order.** `env-down.yml` runs:
     1. `helm uninstall ticketscope`
     2. delete the PVCs
-    3. `helm uninstall platform`
-    4. wait until the tagged ALB, ENIs and EBS volumes are gone
-    5. `terraform destroy` the `env` stack
-    6. run a tag-scoped leftover check, which fails the job if anything but `bootstrap` remains
+    3. delete the `Gateway` and wait until its ALB is gone, while the controller still runs (the controller removes the Gateway's finalizer only after it deletes the ALB, target groups and security group; amended 2026-11-12, EKS research)
+    4. `helm uninstall platform`
+    5. wait until the tagged ENIs and EBS volumes are gone
+    6. `terraform destroy` the `env` stack
+    7. run a tag-scoped leftover check, which fails the job if anything but `bootstrap` remains
   - **Expiry.** `env-up` stamps an expiry, 4 hours by default. A scheduled run of `env-down.yml` tears down any expired environment.
   - **Budget.** About 25 env-hours a month.
 
@@ -422,7 +424,7 @@ flowchart TD
 | opentelemetry-sdk / instrumentation / otelcol-contrib | 1.45 / ≥0.66b2 / 0.164 |
 | import-linter | 2.15 |
 | PostgreSQL / pgvector / pg_textsearch | 18 / 0.8.7 / 1.5.1 |
-| CloudNativePG / Barman Cloud Plugin | 1.30 / 0.15 |
+| CloudNativePG / Barman Cloud Plugin | 1.30 / 0.16 |
 | Kubernetes (EKS + kind node) / kind / cloud-provider-kind | 1.36 / 0.33 / 0.12 |
 | Helm / Terraform / terraform-aws-modules/eks | 4.3 / 1.17 / 21 |
 | AWS Load Balancer Controller / Envoy Gateway / external-dns | 3.6 / 1.9 / 0.24 |
@@ -547,7 +549,7 @@ ticketscope/
 ### Open questions
 
 - **Corpus terms.** Settled 2026-11-06 in epic 1: yes, with attribution, no author logins, masking of emails and secrets, and a takedown path (epic-search-baseline Constraints). No AD changes.
-- **AWS account plan and credits.** Owner: epic 5. Revisit before the first `env-up`.
+- **AWS account plan and credits.** Owner: epic 5. Partly answered 2026-11-12 (EKS research): the account runs on the Paid plan, because the Free plan closes the account after 6 months or when credits run out and would take the bootstrap layer with it. Whether the sign-up credits cover EKS is still open and does not gate the build.
 - **Ground truth volume and corpus fit.** Answered by spike 12 (2026-11-06): 10,466 in-subset duplicate pairs (304 log-heavy at threshold 3, close to epic 2's floor), support-style player reports. The corpus switch drove AD-6, AD-8, AD-10, AD-17 and the Identifiers and Provenance conventions.
 - **Embedding-model choice.** Stays on the initiative ticket. It doesn't change any AD.
 - **MCP `get_issue` argument.** `number` is an internal Jira id, but an agent sees `MCL-6629` in a `url` and may call `get_issue(6629)`, silently getting a different issue. Owner: epic 4. It must settle this before the tool ships: either the tool takes `key`, or it exposes no bare integer argument.

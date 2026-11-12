@@ -104,6 +104,23 @@ def test_a_keyword_call_equals_the_direct_v1_body() -> None:
     assert body == _direct_search({"query": QUERY, "mode": "keyword"})
 
 
+def test_an_unknown_mode_is_a_tool_error_with_the_api_detail() -> None:
+    url, host = _gateway()
+    payload = {"query": QUERY, "mode": "bogus"}
+    direct = httpx2.post(f"{url}/v1/search", json=payload, headers={"Host": host}, timeout=30)
+    assert direct.status_code == 422, direct.text
+    detail = direct.json()["detail"]
+
+    async def call() -> Any:
+        async with _client() as client:
+            return await client.call_tool(TOOL, payload)
+
+    result = asyncio.run(call())
+    assert result.is_error
+    [block] = result.content
+    assert block.text == detail
+
+
 def test_tools_call_works_without_initialize() -> None:
     url, host = _gateway()
     response = httpx2.post(

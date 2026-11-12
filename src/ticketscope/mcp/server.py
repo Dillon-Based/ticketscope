@@ -10,12 +10,13 @@ from typing import Annotated
 
 from mcp.server.mcpserver import MCPServer
 from mcp.server.transport_security import TransportSecuritySettings
+from mcp.types import CallToolResult, TextContent
 from pydantic import Field
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse, Response
 
-from ticketscope.apiclient import ApiClient, ApiError
+from ticketscope.apiclient import ApiClient, ApiClientError, ApiError
 from ticketscope.contract.search import K_MAX, K_MIN, SearchResponse
 from ticketscope.settings import Settings
 
@@ -55,17 +56,20 @@ def build_server(client: ApiClient) -> MCPServer:
             int | None,
             Field(description="How many results to return.", ge=K_MIN, le=K_MAX),
         ] = None,
-    ) -> SearchResponse:
+    ) -> Annotated[CallToolResult, SearchResponse]:
         started = time.monotonic()
         status = "ok"
         count = 0
         try:
             response = await client.search(query, mode, k)
             count = len(response.results)
-            return response
-        except ApiError as error:
-            status = f"api_{error.status}"
-            raise
+            return CallToolResult(
+                content=[TextContent(text=response.model_dump_json(indent=2))],
+                structured_content=response.model_dump(mode="json", by_alias=True),
+            )
+        except ApiClientError as error:
+            status = f"api_{error.status}" if isinstance(error, ApiError) else "error"
+            return CallToolResult(content=[TextContent(text=error.message)], is_error=True)
         except BaseException:
             status = "error"
             raise

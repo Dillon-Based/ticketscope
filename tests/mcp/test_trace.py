@@ -7,7 +7,6 @@ trace (C-2). Run with `uv run pytest -m kind tests/mcp`.
 
 import asyncio
 import json
-import os
 import secrets
 import time
 from collections.abc import AsyncIterator, Callable
@@ -19,7 +18,8 @@ import pytest
 from mcp import Client
 from mcp.client.streamable_http import streamable_http_client
 
-from tests.mcp import tempo
+from tests import tempo
+from tests.kind import gateway
 from tests.waiting import eventually
 from ticketscope.mcp import spans as tool_spans
 
@@ -39,17 +39,9 @@ GET_ISSUE = "get_issue"
 TRACE_TIMEOUT_SECONDS = 60
 
 
-def _gateway() -> tuple[str, str]:
-    url = os.environ.get("TICKETSCOPE_GATEWAY_URL")
-    host = os.environ.get("TICKETSCOPE_GATEWAY_HOST")
-    if not url or not host:
-        pytest.fail("TICKETSCOPE_GATEWAY_URL and TICKETSCOPE_GATEWAY_HOST must be set")
-    return url.rstrip("/"), host
-
-
 @asynccontextmanager
 async def _client(extra_headers: dict[str, str] | None = None) -> AsyncIterator[Client]:
-    url, host = _gateway()
+    url, host = gateway()
     headers = {"Host": host, **(extra_headers or {})}
     async with (
         httpx2.AsyncClient(headers=headers, timeout=30) as http,

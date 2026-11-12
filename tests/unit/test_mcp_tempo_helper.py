@@ -1,10 +1,10 @@
-"""The `tests/mcp` Tempo helper on recorded-shape bodies (story 4.5, R-008): base64 and hex
+"""The shared Tempo helper (`tests/tempo.py`) on recorded-shape bodies (R-008): base64 and hex
 span ids, string `intValue`s, numeric and named span kinds."""
 
 import base64
 from typing import Any
 
-from tests.mcp import tempo
+from tests import tempo
 
 SPAN_ID = "00f067aa0ba902b7"
 PARENT_ID = "b7ad6b7169203331"

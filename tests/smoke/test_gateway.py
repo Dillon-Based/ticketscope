@@ -29,7 +29,9 @@ from urllib.parse import urlencode
 import httpx2
 import pytest
 
+from tests import tempo
 from tests.factories import form_payload, search_payload
+from tests.kind import gateway
 from tests.target import NO_MATCH_QUERY, REPO, embeddings_pin, snapshot_pin
 from tests.waiting import eventually, wait_for_output
 from ticketscope.contract.search import IssueResponse, Problem, SearchResponse
@@ -60,16 +62,8 @@ RESULTS_QUERY = "launcher crash"
 OUTCOMES = ("fixed", "duplicate", "not_planned", "stale", "answered", "unknown")
 
 
-def _gateway() -> tuple[str, str]:
-    url = os.environ.get("TICKETSCOPE_GATEWAY_URL")
-    host = os.environ.get("TICKETSCOPE_GATEWAY_HOST")
-    if not url or not host:
-        pytest.fail("TICKETSCOPE_GATEWAY_URL and TICKETSCOPE_GATEWAY_HOST must be set")
-    return url.rstrip("/"), host
-
-
 def _post_search(payload: dict[str, object]) -> httpx2.Response:
-    url, host = _gateway()
+    url, host = gateway()
     return httpx2.post(f"{url}/v1/search", json=payload, headers={"Host": host}, timeout=30)
 
 
@@ -80,7 +74,7 @@ def _search(query: str) -> SearchResponse:
 
 
 def _get_issue(number: int) -> httpx2.Response:
-    url, host = _gateway()
+    url, host = gateway()
     return httpx2.get(f"{url}/v1/issues/{number}", headers={"Host": host}, timeout=30)
 
 
@@ -192,7 +186,7 @@ def test_search_serves_the_pinned_snapshot_with_outcomes() -> None:
     assert any(r.outcome.status != "unknown" for r in body.results)
 
 
-def test_no_match_is_empty_through_the_gateway() -> None:
+def test_no_match_is_empty_through_thegateway() -> None:
     body = _search(NO_MATCH_QUERY)
     assert body.corpus_version == PIN
     assert body.results == []
@@ -285,7 +279,7 @@ class _Rows(HTMLParser):
 
 
 def _page(query: str) -> tuple[httpx2.Response, _Rows]:
-    url, host = _gateway()
+    url, host = gateway()
     response = httpx2.post(
         f"{url}/",
         content=urlencode(form_payload(query)),
@@ -300,7 +294,7 @@ def _page(query: str) -> tuple[httpx2.Response, _Rows]:
 
 
 def test_page_serves_the_form() -> None:
-    url, host = _gateway()
+    url, host = gateway()
     response = httpx2.get(f"{url}/", headers={"Host": host}, timeout=30)
     assert response.status_code == 200, response.text
     assert response.headers["content-type"].startswith("text/html")
@@ -613,55 +607,22 @@ TRACE_TIMEOUT_SECONDS = 60
 TRACE_QUERY = str(GOLDEN["queries"][0]["query"])
 
 
-def _attributes(item: dict[str, Any]) -> dict[str, Any]:
-    """OTLP JSON attributes as a plain dict (`intValue` arrives as a string)."""
-    out: dict[str, Any] = {}
-    for attribute in item.get("attributes") or []:
-        value: dict[str, Any] = attribute.get("value") or {}
-        if "intValue" in value:
-            out[attribute["key"]] = int(value["intValue"])
-        elif value:
-            out[attribute["key"]] = next(iter(value.values()))
-    return out
-
-
-def _spans(trace: dict[str, Any]) -> list[dict[str, Any]]:
-    """Every span of a Tempo `/api/v2/traces` body, with its resource's `service.name`."""
-    body: dict[str, Any] = trace.get("trace", trace)
-    spans: list[dict[str, Any]] = []
-    for resource_spans in body.get("resourceSpans") or []:
-        service = _attributes(resource_spans.get("resource") or {}).get("service.name")
-        for scope_spans in resource_spans.get("scopeSpans") or []:
-            for span in scope_spans.get("spans") or []:
-                spans.append({**span, "service": service, "attrs": _attributes(span)})
-    return spans
-
-
-_KINDS = {"1": "INTERNAL", "2": "SERVER", "3": "CLIENT"}
-
-
-def _kind(span: dict[str, Any]) -> str:
-    """`SPAN_KIND_SERVER` or a bare enum number, as `SERVER`."""
-    kind = str(span.get("kind", ""))
-    return _KINDS.get(kind, kind.removeprefix("SPAN_KIND_"))
-
-
 def _assert_ad10_tree(trace: dict[str, Any]) -> None:
     """SERVER `POST /v1/search` -> INTERNAL `retrieval keyword` -> psycopg CLIENT.
     Span ids are compared as returned (base64 or hex), within this one response."""
-    spans = _spans(trace)
+    spans = tempo.spans(trace)
     servers = [
         s
         for s in spans
         if s["service"] == "ticketscope-api"
-        and _kind(s) == "SERVER"
+        and tempo.kind(s) == "SERVER"
         and s.get("name") == "POST /v1/search"
     ]
     assert len(servers) == 1, spans
     server = servers[0]
     [retrieval] = [s for s in spans if s.get("name") == "retrieval keyword"]
     assert retrieval["service"] == "ticketscope-api"
-    assert _kind(retrieval) == "INTERNAL"
+    assert tempo.kind(retrieval) == "INTERNAL"
     assert retrieval.get("parentSpanId") == server["spanId"]
     attrs = retrieval["attrs"]
     assert attrs["gen_ai.operation.name"] == "retrieval"
@@ -677,7 +638,7 @@ def _assert_ad10_tree(trace: dict[str, Any]) -> None:
     db = [
         s
         for s in spans
-        if _kind(s) == "CLIENT"
+        if tempo.kind(s) == "CLIENT"
         and s["attrs"].get("db.system.name") == "postgresql"
         and s.get("parentSpanId") == retrieval["spanId"]
     ]
@@ -704,7 +665,7 @@ def _search_with_traceparent() -> str:
     """POST one golden query with a fresh `traceparent`; return its trace id (hex)."""
     trace_id = secrets.token_hex(16)
     parent_id = secrets.token_hex(8)
-    url, host = _gateway()
+    url, host = gateway()
     response = httpx2.post(
         f"{url}/v1/search",
         json=search_payload(TRACE_QUERY, mode="keyword", k=10),
@@ -722,28 +683,9 @@ def traced_search_id() -> str:
     return _search_with_traceparent()
 
 
-def _tempo(trace_id: str) -> tuple[int, str]:
-    """Tempo's trace-by-id through the API server's service proxy (Tempo is not exposed)."""
-    result = subprocess.run(
-        [
-            "kubectl",
-            "get",
-            "--raw",
-            f"/api/v1/namespaces/{PLATFORM_NAMESPACE}/services/tempo:3200/proxy"
-            f"/api/v2/traces/{trace_id}",
-        ],
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-    if result.returncode == 0:
-        return 200, result.stdout
-    return 404 if "NotFound" in result.stderr else 0, result.stdout + result.stderr
-
-
 def test_one_search_yields_one_trace_in_tempo(traced_search_id: str) -> None:
     trace_id = traced_search_id
-    _poll_trace(lambda: _tempo(trace_id))
+    _poll_trace(lambda: tempo.trace_by_id(trace_id))
 
 
 # (8b) --------------------------------------------------------------------------------------

@@ -19,6 +19,7 @@ import pytest
 from mcp import Client
 from mcp.client.streamable_http import streamable_http_client
 
+from tests.kind import gateway
 from tests.target import CHART_VALUES
 from tests.waiting import eventually
 from ticketscope.contract.search import IssueResponse, SearchResponse
@@ -32,14 +33,6 @@ GET_ISSUE = "get_issue"
 FRESH_CONNECTIONS = 20
 
 
-def _gateway() -> tuple[str, str]:
-    url = os.environ.get("TICKETSCOPE_GATEWAY_URL")
-    host = os.environ.get("TICKETSCOPE_GATEWAY_HOST")
-    if not url or not host:
-        pytest.fail("TICKETSCOPE_GATEWAY_URL and TICKETSCOPE_GATEWAY_HOST must be set")
-    return url.rstrip("/"), host
-
-
 def _default_mode() -> str:
     match = re.search(r"^\s*defaultMode:\s*(\w+)", CHART_VALUES.read_text(), re.MULTILINE)
     assert match, "values.yaml has no retrieval.defaultMode"
@@ -48,7 +41,7 @@ def _default_mode() -> str:
 
 @asynccontextmanager
 async def _client() -> AsyncIterator[Client]:
-    url, host = _gateway()
+    url, host = gateway()
     async with (
         httpx2.AsyncClient(headers={"Host": host}, timeout=30) as http,
         Client(streamable_http_client(f"{url}/mcp", http_client=http)) as client,
@@ -77,7 +70,7 @@ def _output_schema() -> dict[str, Any]:
 
 
 def _direct_search(payload: dict[str, Any]) -> dict[str, Any]:
-    url, host = _gateway()
+    url, host = gateway()
     response = httpx2.post(f"{url}/v1/search", json=payload, headers={"Host": host}, timeout=30)
     assert response.status_code == 200, response.text
     return response.json()
@@ -107,7 +100,7 @@ def test_a_keyword_call_equals_the_direct_v1_body() -> None:
 
 
 def test_an_unknown_mode_is_a_tool_error_with_the_api_detail() -> None:
-    url, host = _gateway()
+    url, host = gateway()
     payload = {"query": QUERY, "mode": "bogus"}
     direct = httpx2.post(f"{url}/v1/search", json=payload, headers={"Host": host}, timeout=30)
     assert direct.status_code == 422, direct.text
@@ -124,7 +117,7 @@ def test_an_unknown_mode_is_a_tool_error_with_the_api_detail() -> None:
 
 
 def test_tools_call_works_without_initialize() -> None:
-    url, host = _gateway()
+    url, host = gateway()
     response = httpx2.post(
         f"{url}/mcp",
         headers={
@@ -202,7 +195,7 @@ MCP_HEADERS = {"content-type": "application/json", "accept": "application/json, 
 
 
 def _post(path: str, host: str, body: dict[str, Any]) -> httpx2.Response:
-    url, _ = _gateway()
+    url, _ = gateway()
     return httpx2.post(f"{url}{path}", headers={"Host": host, **MCP_HEADERS}, json=body, timeout=30)
 
 
@@ -217,7 +210,7 @@ def test_the_stand_in_tunnel_host_reaches_mcp() -> None:
 
 
 def test_the_kind_host_still_reaches_mcp() -> None:
-    _, host = _gateway()
+    _, host = gateway()
     assert _tools_list(host).status_code == 200
 
 
@@ -228,7 +221,7 @@ def test_the_tunnel_host_reaches_nothing_but_mcp(path: str) -> None:
 
 
 def test_a_foreign_host_is_refused() -> None:
-    url, _ = _gateway()
+    url, _ = gateway()
     response = httpx2.post(
         f"{url}/mcp",
         headers={
@@ -262,7 +255,7 @@ def test_get_issue_round_trips_a_key_taken_from_a_search() -> None:
     jsonschema.validate(body, IssueResponse.model_json_schema())
 
     missing_key = "MCL-99999999999999999999"
-    url, host = _gateway()
+    url, host = gateway()
     direct = httpx2.get(f"{url}/v1/issues/by-key/{missing_key}", headers={"Host": host}, timeout=30)
     assert direct.status_code == 404, direct.text
     missing = asyncio.run(call({"key": missing_key}))

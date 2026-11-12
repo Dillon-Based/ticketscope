@@ -31,6 +31,7 @@ import httpx2
 import pytest
 from jsonschema import Draft202012Validator
 
+from tests import tempo
 from tests.factories import search_payload
 from tests.integrated.golden import (
     GoldenRow,
@@ -39,18 +40,17 @@ from tests.integrated.golden import (
     summary_table,
     twin_verdict,
 )
+from tests.kind import gateway
 from tests.smoke.test_gateway import (
     GOLDEN,
     OUTCOMES,
     PIN,
     _assert_on_demand_backup_completes,
     _corpus_meta,
-    _gateway,
     _page,
     _poll_trace,
     _search_with_traceparent,
     _sql,
-    _tempo,
 )
 from tests.target import SNAPSHOT_DIR, snapshot_pin
 from ticketscope.adapters.release import fetch_snapshot
@@ -149,7 +149,7 @@ def test_golden_queries_return_their_twins_with_outcomes_via_v1_and_page(
 ) -> None:
     k, mode = int(GOLDEN["k"]), str(GOLDEN["mode"])
     assert GOLDEN["snapshot_version"] == PIN
-    url, host = _gateway()
+    url, host = gateway()
     rows: list[GoldenRow] = []
     failures: list[str] = []
     try:
@@ -210,7 +210,7 @@ def test_golden_queries_return_their_twins_with_outcomes_via_v1_and_page(
 
 def test_one_search_reaches_tempo_as_the_ad10_tree() -> None:
     trace_id = _search_with_traceparent()
-    _poll_trace(lambda: _tempo(trace_id))
+    _poll_trace(lambda: tempo.trace_by_id(trace_id))
 
 
 # (5) ---------------------------------------------------------------------------------------

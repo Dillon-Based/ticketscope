@@ -42,7 +42,7 @@ def test_best_match(client: TestClient) -> None:
     assert body.results[0].outcome.status == "fixed"
     raw = response.json()["results"][0]
     assert set(raw) == {"rank", "score", "issue", "outcome"}
-    assert set(raw["issue"]) == {"number", "title", "url", "kind", "state"}
+    assert set(raw["issue"]) == {"number", "title", "url", "kind", "state", "key"}
     assert set(raw["outcome"]) == {"status", "summary", "source", "ref"}
 
 
@@ -152,7 +152,7 @@ def test_issue_detail(client: TestClient) -> None:
     assert response.headers["content-type"].startswith("application/json")
     raw = response.json()
     assert set(raw) == {"issue", "outcome"}
-    assert set(raw["issue"]) == {"number", "title", "url", "kind", "state", "body"}
+    assert set(raw["issue"]) == {"number", "title", "url", "kind", "state", "key", "body"}
     assert set(raw["outcome"]) == {"status", "summary", "source", "ref"}
     body = IssueResponse.model_validate(raw)
     assert body.issue.number == TARGET_NUMBER
@@ -210,6 +210,9 @@ class _BrokenStore:
         raise ConnectionError("database down")
 
     def get_issue(self, number: int) -> IssueDetail | None:
+        raise ConnectionError("database down")
+
+    def get_issue_by_key(self, key: str) -> IssueDetail | None:
         raise ConnectionError("database down")
 
     def corpus_version(self) -> str | None:

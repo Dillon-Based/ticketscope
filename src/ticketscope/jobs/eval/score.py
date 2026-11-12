@@ -185,6 +185,9 @@ class SearchReuseStore:
     def get_issue(self, number: int) -> IssueDetail | None:
         return self._inner.get_issue(number)
 
+    def get_issue_by_key(self, key: str) -> IssueDetail | None:
+        return self._inner.get_issue_by_key(key)
+
     def corpus_version(self) -> str | None:
         return self._inner.corpus_version()
 

@@ -75,13 +75,15 @@ def instrument_psycopg(provider: TracerProvider) -> None:
         )
 
 
-def setup(service_name: str, otlp_endpoint: str) -> TracerProvider:
-    """Opt in, install JSON logging, build and register the provider, instrument psycopg."""
+def setup(service_name: str, otlp_endpoint: str, *, instrument_db: bool = True) -> TracerProvider:
+    """Opt in, install JSON logging, build and register the provider, and instrument psycopg
+    unless `instrument_db` is false (`mcp` holds no database connection)."""
     set_semconv_opt_in()
     configure_logging()
     provider = tracer_provider(service_name, otlp_endpoint)
     trace.set_tracer_provider(provider)
-    instrument_psycopg(provider)
+    if instrument_db:
+        instrument_psycopg(provider)
     return provider
 
 

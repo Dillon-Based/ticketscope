@@ -83,6 +83,24 @@ def derive_outcome(issue: SnapshotIssueV2) -> Outcome:
 
 MOJANG_BROWSE_URL = "https://bugs.mojang.com/browse/"
 
+# The one shape of an issue key (C-4): matched exactly, with no case or whitespace handling.
+KEY_PATTERN = r"^[A-Z][A-Z0-9]*-[1-9][0-9]*$"
+_KEY_RE = re.compile(KEY_PATTERN)
+
+
+def is_issue_key(key: str) -> bool:
+    """Whether `key` is exactly an issue key. `$` would admit a trailing newline: no."""
+    return _KEY_RE.fullmatch(key) is not None
+
+
+def key_from_url(url: str) -> str | None:
+    """The issue key of a browse url, or None when `url` is anything else."""
+    if not url.startswith(MOJANG_BROWSE_URL):
+        return None
+    key = url[len(MOJANG_BROWSE_URL) :]
+    return key if is_issue_key(key) else None
+
+
 # `resolution` (trimmed, lower-cased) -> outcome, per spike 12's `outcome-mapping.md`.
 # Anything else, and no resolution, is `unknown`.
 RESOLUTION_OUTCOME: dict[str, OutcomeStatus] = {

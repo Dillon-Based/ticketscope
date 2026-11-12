@@ -386,7 +386,7 @@ flowchart TD
 - **Prevents:** an environment file silently overriding product defaults, and `mcp` growing its own default mode.
 - **Rule:**
   - **`values.yaml`.** It holds every default, including the retrieval default mode and the `api` resources (epic 3 owns those keys), and the snapshot version pin with its checksum. No environment file overrides the pin.
-  - **Environment files.** `values-kind.yaml` and `values-eks.yaml` hold only environment facts: hostname, gateway class, storage class, backup endpoint, auth on/off and issuer, and replica counts.
+  - **Environment files.** `values-kind.yaml` and `values-eks.yaml` hold only environment facts: hostname, gateway class, storage class, backup endpoint, auth on/off and issuer, replica counts, the IRSA role annotation and the instance placement rule (the last two added 2026-11-12, epic 5 test design C-4).
   - **`mcp`.** It has no mode default of its own.
 
 ### AD-26 — One duplicate rule, in `core`

@@ -1,0 +1,32 @@
+{
+  "body": {
+    "id": 1038729754,
+    "jsonrpc": "2.0",
+    "method": "prompts/list",
+    "params": {
+      "_meta": {
+        "io.modelcontextprotocol/clientCapabilities": {
+          "extensions": {
+            "io.modelcontextprotocol/ui": {
+              "mimeTypes": [
+                "text/html;profile=mcp-app"
+              ]
+            }
+          }
+        },
+        "io.modelcontextprotocol/clientInfo": {
+          "name": "Anthropic/ClaudeAI",
+          "version": "1.0.0"
+        },
+        "io.modelcontextprotocol/protocolVersion": "2026-07-28"
+      }
+    }
+  },
+  "headers": {
+    "Accept": "application/json, text/event-stream",
+    "Content-Type": "application/json",
+    "Mcp-Method": "prompts/list",
+    "Mcp-Protocol-Version": "2026-07-28",
+    "User-Agent": "Claude-User"
+  }
+}

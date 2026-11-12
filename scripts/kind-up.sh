@@ -19,6 +19,9 @@
 #                  model and api serves mode=dense; Helm waits longer for the load (default: off).
 #                  The no-pin path: when values.yaml pins an embedding asset, load loads that
 #                  asset and computes nothing, whatever this flag says.
+#   TUNNEL_HOSTNAME  the tunnel's hostname, added to the Gateway, the /mcp route and mcp's
+#                  allowed hosts (default: the stand-in in the kind values files;
+#                  set it empty, TUNNEL_HOSTNAME=, to add no tunnel host)
 #
 # When $GITHUB_ENV is set, exports TICKETSCOPE_GATEWAY_URL,
 # TICKETSCOPE_GATEWAY_HOST and TICKETSCOPE_KIND_UP_TO_READY_SECONDS to later steps.
@@ -32,6 +35,8 @@ CLUSTER_NAME="${CLUSTER_NAME:-ticketscope}"
 KIND_NODE_IMAGE="kindest/node:v1.36.4@sha256:099e049362a1526b2db71494e1947aae99bd16290d7c895f2b7ea312e3cbfaed"
 CPK_IMAGE="registry.k8s.io/cloud-provider-kind/cloud-controller-manager:v0.12.0"
 CPK_CONTAINER="${CLUSTER_NAME}-cloud-provider-kind"
+# Default read from the kind values so there is one stand-in, not two.
+TUNNEL_HOSTNAME="${TUNNEL_HOSTNAME-$(sed -n 's/^  tunnelHostname: *//p' deploy/charts/platform/values-kind.yaml | head -1)}"
 TAG="${TAG:-$(git rev-parse HEAD)}"
 APP_IMAGE="ticketscope-app:${TAG}"
 # CNPG reads the Postgres major from the tag (regex ^(\d\.?)+), so the
@@ -106,6 +111,7 @@ helm dependency build deploy/charts/platform
 helm --kube-context "$KCTX" upgrade --install platform deploy/charts/platform \
   --namespace "$PLATFORM_NS" --create-namespace \
   -f deploy/charts/platform/values-kind.yaml \
+  --set-string "gateway.tunnelHostname=${TUNNEL_HOSTNAME}" \
   --wait --timeout 10m
 log "waiting for Gateway $GATEWAY_NAME to be Programmed"
 k -n "$PLATFORM_NS" wait "gateway/${GATEWAY_NAME}" --for=condition=Programmed --timeout=5m
@@ -141,6 +147,7 @@ fi
 helm --kube-context "$KCTX" upgrade --install ticketscope deploy/charts/ticketscope \
   --namespace "$APP_NS" --create-namespace \
   -f deploy/charts/ticketscope/values-kind.yaml \
+  --set-string "mcp.tunnelHostname=${TUNNEL_HOSTNAME}" \
   --set-string "image.app.tag=${TAG}" \
   --set-string "image.postgres.tag=${PG_TAG}" \
   ${EVAL_ARGS[@]+"${EVAL_ARGS[@]}"} \

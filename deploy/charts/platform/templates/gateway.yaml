@@ -30,3 +30,13 @@ spec:
       allowedRoutes:
         namespaces:
           from: All
+    {{- with .Values.gateway.tunnelHostname }}
+    # The tunnel's public hostname: only routes naming it attach here (the /mcp route).
+    - name: tunnel
+      protocol: HTTP
+      port: {{ $.Values.gateway.port }}
+      hostname: {{ . | quote }}
+      allowedRoutes:
+        namespaces:
+          from: All
+    {{- end }}

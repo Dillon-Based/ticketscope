@@ -71,6 +71,7 @@ list. A wildcard or an empty list fails the render (AD-5's DNS-rebinding guard).
 {{- $hosts := list -}}
 {{- with .Values.hostname }}{{ $hosts = append $hosts . }}{{ end -}}
 {{- range .Values.mcp.hosts }}{{ $hosts = append $hosts . }}{{ end -}}
+{{- with .Values.mcp.tunnelHostname }}{{ $hosts = append $hosts . }}{{ end -}}
 {{- $hosts = $hosts | uniq -}}
 {{- if not $hosts -}}
 {{- fail "hostname or mcp.hosts must name at least one host: mcp refuses an empty host list" -}}

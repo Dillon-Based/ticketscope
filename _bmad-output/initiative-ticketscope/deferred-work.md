@@ -66,3 +66,7 @@ severity: medium
 reason: The API reads corpus_version before mode availability and retrieval, each using a separate Postgres connection. Baseline keyword requests already have the same race. A concurrent old/new snapshot reload can therefore interleave with a response; request-snapshot consistency needs its own design.
 status: open
 carried_to: epic-eks-environment (5), where corpus reloads first run under live traffic; carried at epic 3's closure (user, 2026-11-11)
+
+- source_plan: `_bmad-output/initiative-ticketscope/tickets/epic-mcp-server/tickets/story-claude-desktop-answers-from-ticketscope-through-a-tunnel-plan.md`
+  summary: The api HTTPRoute pins hostnames only when `hostname` is set, so with an empty `hostname` the tunnel host would also reach `/v1` and `/`.
+  evidence: deploy/charts/ticketscope/templates/api.yaml:99 renders `hostnames` inside `with .Values.hostname`; kind and every real environment set it, so it needs a misconfigured release, but a chart guard (fail when mcp.tunnelHostname is set and hostname is empty) would close it.

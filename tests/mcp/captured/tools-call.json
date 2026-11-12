@@ -1,0 +1,51 @@
+{
+  "body": {
+    "id": 2,
+    "jsonrpc": "2.0",
+    "method": "tools/call",
+    "params": {
+      "_meta": {
+        "claudecode/toolUseId": "toolu_01A1xQofsMhPsmBJnWQpVTVC",
+        "io.modelcontextprotocol/clientCapabilities": {
+          "elicitation": {
+            "form": {},
+            "url": {}
+          },
+          "extensions": {
+            "io.modelcontextprotocol/ui": {
+              "mimeTypes": [
+                "text/html;profile=mcp-app"
+              ]
+            }
+          },
+          "roots": {
+            "listChanged": true
+          }
+        },
+        "io.modelcontextprotocol/clientInfo": {
+          "description": "Anthropic's agentic coding tool",
+          "name": "claude-code",
+          "title": "Claude Code",
+          "version": "2.1.322-ccs.sha0164ba1e30d2",
+          "websiteUrl": "https://claude.com/claude-code"
+        },
+        "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+        "progressToken": 2
+      },
+      "arguments": {
+        "k": 10,
+        "query": "Minecraft Mojang launcher crashes when opening with a corrupted options file"
+      },
+      "name": "search_similar_issues"
+    }
+  },
+  "headers": {
+    "Accept": "application/json, text/event-stream",
+    "Content-Type": "application/json",
+    "Mcp-Method": "tools/call",
+    "Mcp-Name": "search_similar_issues",
+    "Mcp-Protocol-Version": "2026-07-28",
+    "User-Agent": "Claude-User",
+    "X-Anthropic-Client": "Cowork"
+  }
+}

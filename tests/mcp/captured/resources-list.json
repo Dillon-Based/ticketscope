@@ -1,0 +1,43 @@
+{
+  "body": {
+    "id": 0,
+    "jsonrpc": "2.0",
+    "method": "resources/list",
+    "params": {
+      "_meta": {
+        "io.modelcontextprotocol/clientCapabilities": {
+          "elicitation": {
+            "form": {},
+            "url": {}
+          },
+          "extensions": {
+            "io.modelcontextprotocol/ui": {
+              "mimeTypes": [
+                "text/html;profile=mcp-app"
+              ]
+            }
+          },
+          "roots": {
+            "listChanged": true
+          }
+        },
+        "io.modelcontextprotocol/clientInfo": {
+          "description": "Anthropic's agentic coding tool",
+          "name": "claude-code",
+          "title": "Claude Code",
+          "version": "2.1.322-ccs.sha0164ba1e30d2",
+          "websiteUrl": "https://claude.com/claude-code"
+        },
+        "io.modelcontextprotocol/protocolVersion": "2026-07-28"
+      }
+    }
+  },
+  "headers": {
+    "Accept": "application/json, text/event-stream",
+    "Content-Type": "application/json",
+    "Mcp-Method": "resources/list",
+    "Mcp-Protocol-Version": "2026-07-28",
+    "User-Agent": "Claude-User",
+    "X-Anthropic-Client": "Cowork"
+  }
+}

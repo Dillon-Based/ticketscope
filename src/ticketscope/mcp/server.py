@@ -17,10 +17,11 @@ from starlette.requests import Request
 from starlette.responses import PlainTextResponse, Response
 
 from ticketscope.apiclient import ApiClient, ApiClientError, ApiError
-from ticketscope.contract.search import K_MAX, K_MIN, SearchResponse
+from ticketscope.contract.search import K_MAX, K_MIN, IssueResponse, SearchResponse
 from ticketscope.settings import Settings
 
 TOOL_NAME = "search_similar_issues"
+GET_ISSUE_TOOL_NAME = "get_issue"
 
 logger = logging.getLogger("ticketscope.mcp")
 
@@ -84,6 +85,42 @@ def build_server(client: ApiClient) -> MCPServer:
                 count,
                 (time.monotonic() - started) * 1000,
             )
+
+    @server.tool(
+        name=GET_ISSUE_TOOL_NAME,
+        description=(
+            "Fetch one issue from the Mojang bug tracker by its key, such as MCL-6629, as "
+            "search_similar_issues returns it. The result carries the issue, its body and "
+            "what became of it."
+        ),
+    )
+    async def get_issue(  # pyright: ignore[reportUnusedFunction]
+        key: Annotated[str, Field(description="The issue key, for example MCL-6629.")],
+    ) -> Annotated[CallToolResult, IssueResponse]:
+        status = "ok"
+        try:
+            response = await client.get_issue(key)
+            if response.issue.key != key:
+                # Never hand back an issue the caller did not name (R-007).
+                status = "key_mismatch"
+                return CallToolResult(
+                    content=[
+                        TextContent(text=f"ticketscope API returned a different issue than {key}")
+                    ],
+                    is_error=True,
+                )
+            return CallToolResult(
+                content=[TextContent(text=response.model_dump_json(indent=2))],
+                structured_content=response.model_dump(mode="json", by_alias=True),
+            )
+        except ApiClientError as error:
+            status = f"api_{error.status}" if isinstance(error, ApiError) else "error"
+            return CallToolResult(content=[TextContent(text=error.message)], is_error=True)
+        except BaseException:
+            status = "error"
+            raise
+        finally:
+            logger.info("tool call %s status=%s", GET_ISSUE_TOOL_NAME, status)
 
     @server.custom_route("/healthz", methods=["GET"])
     async def healthz(request: Request) -> Response:  # pyright: ignore[reportUnusedFunction]

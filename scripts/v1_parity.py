@@ -2,13 +2,15 @@
 """Capture and compare `POST /v1/search` responses across two deployed revisions.
 
     python3 scripts/v1_parity.py capture --url <gateway url> --host <gateway host> --out a.json
-    python3 scripts/v1_parity.py compare a.json b.json
+    python3 scripts/v1_parity.py compare [--drop-issue-key] a.json b.json
 
 `capture` posts one keyword request per query in eval/golden-queries.json, plus one
 plain query, and saves each request with its status and exact body. `compare` exits 0
 only when every request's status and body are byte-identical in both files. Stories 6,
 7 and 10 (AC-3 each) state this as "the same request after the change returns an
-identical body". Standard library only, so any revision's checkout can run it.
+identical body". `--drop-issue-key` removes exactly `issue.key` from every result before
+comparing, for a capture taken before story 4.4 added the field. Standard library only, so
+any revision's checkout can run it.
 """
 
 from __future__ import annotations
@@ -56,7 +58,20 @@ def capture(url: str, host: str, out: Path, label: str) -> int:
     return 0 if all(s["status"] == 200 for s in saved) else 1
 
 
-def compare(before: Path, after: Path) -> int:
+def _without_issue_key(body: str) -> str:
+    """The body with `issue.key` dropped from each result, and nothing else changed."""
+    try:
+        data = json.loads(body)
+    except ValueError:
+        return body
+    if isinstance(data, dict):
+        for result in data.get("results", []):
+            if isinstance(result, dict) and isinstance(result.get("issue"), dict):
+                result["issue"].pop("key", None)
+    return json.dumps(data, sort_keys=True)
+
+
+def compare(before: Path, after: Path, drop_issue_key: bool = False) -> int:
     a = json.loads(before.read_text(encoding="utf-8"))
     b = json.loads(after.read_text(encoding="utf-8"))
     rows_b = {r["id"]: r for r in b["responses"]}
@@ -67,7 +82,11 @@ def compare(before: Path, after: Path) -> int:
             other is not None
             and row["request"] == other["request"]
             and row["status"] == other["status"]
-            and row["body"] == other["body"]
+            and (
+                _without_issue_key(row["body"]) == _without_issue_key(other["body"])
+                if drop_issue_key
+                else row["body"] == other["body"]
+            )
         )
         hits = len(json.loads(row["body"]).get("results", [])) if row["status"] == 200 else 0
         verdict = "identical" if same else "DIFFERENT"
@@ -88,10 +107,15 @@ def main(argv: list[str] | None = None) -> int:
     cmp_ = sub.add_parser("compare")
     cmp_.add_argument("before", type=Path)
     cmp_.add_argument("after", type=Path)
+    cmp_.add_argument(
+        "--drop-issue-key",
+        action="store_true",
+        help="drop exactly issue.key from each result before comparing",
+    )
     args = parser.parse_args(argv)
     if args.command == "capture":
         return capture(args.url, args.host, args.out, args.label or str(args.out))
-    return compare(args.before, args.after)
+    return compare(args.before, args.after, args.drop_issue_key)
 
 
 if __name__ == "__main__":

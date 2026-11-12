@@ -35,6 +35,8 @@ class Issue(_Wire):
     url: str
     kind: IssueKind
     state: str
+    # The Jira key (`MCL-6629`) read from `url`; null for a url that is not a browse url (C-8).
+    key: str | None = None
 
 
 class Outcome(_Wire):

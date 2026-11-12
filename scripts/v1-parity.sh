@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Before/after /v1 parity on the local kind cluster (stories 6, 7 and 10, AC-3 each).
 #
-#   scripts/v1-parity.sh <before-rev> <after-rev> <out-dir>
+#   scripts/v1-parity.sh <before-rev> <after-rev> <out-dir> [compare options]
+#
+# Extra arguments go to `v1_parity.py compare`, e.g. --drop-issue-key (story 4.4).
 #
 # Deploys each revision in turn onto the existing kind cluster with that revision's own
 # scripts/kind-up.sh (from a `git archive` export, image tag = its full SHA), captures
@@ -11,8 +13,8 @@
 # comparison to <out-dir>.
 set -euo pipefail
 
-if [[ $# -ne 3 ]]; then
-  echo "usage: $0 <before-rev> <after-rev> <out-dir>" >&2
+if [[ $# -lt 3 ]]; then
+  echo "usage: $0 <before-rev> <after-rev> <out-dir> [compare options]" >&2
   exit 2
 fi
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -55,4 +57,4 @@ deploy_and_capture() {  # <rev> <label>
 
 deploy_and_capture "$1" before
 deploy_and_capture "$2" after
-python3 "$ROOT/scripts/v1_parity.py" compare "$OUT/before.json" "$OUT/after.json" | tee "$OUT/compare.txt"
+python3 "$ROOT/scripts/v1_parity.py" compare "${@:4}" "$OUT/before.json" "$OUT/after.json" | tee "$OUT/compare.txt"

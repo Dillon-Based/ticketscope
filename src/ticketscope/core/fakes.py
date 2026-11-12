@@ -6,6 +6,7 @@ import re
 from collections import Counter
 from collections.abc import Iterable, Mapping, Sequence
 
+from ticketscope.core.derive import MOJANG_BROWSE_URL
 from ticketscope.core.model import IssueDetail, IssueRecord, Scored
 
 _TOKEN = re.compile(r"\w+")
@@ -87,6 +88,13 @@ class InMemoryCorpusStore:
         for issue, _counts in self._docs:
             if issue.number == number:
                 return IssueDetail(issue=issue, body=self._bodies.get(number))
+        return None
+
+    def get_issue_by_key(self, key: str) -> IssueDetail | None:
+        url = MOJANG_BROWSE_URL + key
+        for issue, _counts in self._docs:
+            if issue.url == url:
+                return IssueDetail(issue=issue, body=self._bodies.get(issue.number))
         return None
 
     def dense_search(self, model_id: str, vector: Sequence[float], k: int) -> list[Scored]:

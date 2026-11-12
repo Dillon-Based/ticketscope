@@ -62,13 +62,13 @@ def _run(
     return asyncio.run(main())
 
 
-def test_tools_list_has_one_tool_with_the_contract_output_schema() -> None:
+def test_tools_list_has_the_search_tool_with_the_contract_output_schema() -> None:
     async def scenario(http: httpx2.AsyncClient) -> dict[str, Any]:
         return _result(await http.post("/mcp", headers=HEADERS, json=_rpc("tools/list")))
 
     result = _run(scenario, [])
-    [tool] = result["tools"]
-    assert tool["name"] == "search_similar_issues"
+    assert {t["name"] for t in result["tools"]} == {"search_similar_issues", "get_issue"}
+    [tool] = [t for t in result["tools"] if t["name"] == "search_similar_issues"]
     assert tool["inputSchema"]["required"] == ["query"]
     assert set(tool["inputSchema"]["properties"]) == {"query", "mode", "k"}
     assert tool["outputSchema"] == SearchResponse.model_json_schema()

@@ -28,6 +28,8 @@ from ticketscope.contract.search import (
     SearchResponse,
     SearchResult,
 )
+from ticketscope.core.derive import is_issue_key, key_from_url
+from ticketscope.core.model import IssueDetail as IssueDetailRecord
 from ticketscope.core.model import IssueRecord, Scored
 from ticketscope.core.modes import REGISTRY
 from ticketscope.core.ports import CorpusStore, Embedder
@@ -116,6 +118,7 @@ def _results(hits: list[Scored]) -> list[SearchResult]:
                 url=hit.issue.url,
                 kind=hit.issue.kind,
                 state=hit.issue.state,
+                key=key_from_url(hit.issue.url),
             ),
             outcome=_outcome(hit.issue),
         )
@@ -269,13 +272,7 @@ def create_app(
         # The store call blocks: keep it off the event loop, as FastAPI does for sync routes.
         return await run_in_threadpool(render_page, form.get("q", [""])[-1])
 
-    @app.get("/v1/issues/{number}")
-    def get_issue(number: int) -> IssueResponse:  # pyright: ignore[reportUnusedFunction]
-        if corpus.corpus_version() is None:
-            raise HTTPException(status_code=503, detail="corpus not loaded")
-        found = corpus.get_issue(number)
-        if found is None:
-            raise HTTPException(status_code=404, detail=f"issue {number} not found")
+    def issue_response(found: IssueDetailRecord) -> IssueResponse:
         issue = found.issue
         return IssueResponse(
             issue=IssueDetail(
@@ -284,10 +281,33 @@ def create_app(
                 url=issue.url,
                 kind=issue.kind,
                 state=issue.state,
+                key=key_from_url(issue.url),
                 body=found.body,
             ),
             outcome=_outcome(issue),
         )
+
+    # Declared before `/v1/issues/{number}`; `by-key` could not be a number anyway.
+    @app.get("/v1/issues/by-key/{key}")
+    def get_issue_by_key(key: str) -> IssueResponse:  # pyright: ignore[reportUnusedFunction]
+        # C-4: the exact pattern, no normalisation; a miss and a malformed key are both 404.
+        if not is_issue_key(key):
+            raise HTTPException(status_code=404, detail=f"issue {key} not found")
+        if corpus.corpus_version() is None:
+            raise HTTPException(status_code=503, detail="corpus not loaded")
+        found = corpus.get_issue_by_key(key)
+        if found is None:
+            raise HTTPException(status_code=404, detail=f"issue {key} not found")
+        return issue_response(found)
+
+    @app.get("/v1/issues/{number}")
+    def get_issue(number: int) -> IssueResponse:  # pyright: ignore[reportUnusedFunction]
+        if corpus.corpus_version() is None:
+            raise HTTPException(status_code=503, detail="corpus not loaded")
+        found = corpus.get_issue(number)
+        if found is None:
+            raise HTTPException(status_code=404, detail=f"issue {number} not found")
+        return issue_response(found)
 
     return app
 

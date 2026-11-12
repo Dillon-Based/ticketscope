@@ -46,7 +46,11 @@ def test_response_has_the_v1_shape() -> None:
         ],
     }
     response = SearchResponse.model_validate(body)
-    assert response.model_dump() == body
+    # `key` is the one optional field the contract adds (C-8): absent in, null out.
+    assert response.model_dump() == {
+        **body,
+        "results": [{**body["results"][0], "issue": {**body["results"][0]["issue"], "key": None}}],
+    }
 
 
 @pytest.mark.parametrize(

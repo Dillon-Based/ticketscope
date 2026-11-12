@@ -71,8 +71,8 @@ def test_the_discover_response_serves_the_protocol_version_claude_desktop_sends(
 
 def test_tools_list_returns_the_tool_with_its_schemas() -> None:
     result = _send(CAPTURED / "tools-list.json")
-    [tool] = result["tools"]
-    assert tool["name"] == "search_similar_issues"
+    assert {t["name"] for t in result["tools"]} == {"search_similar_issues", "get_issue"}
+    [tool] = [t for t in result["tools"] if t["name"] == "search_similar_issues"]
     assert tool["inputSchema"]["required"] == ["query"]
     assert tool["outputSchema"]["required"] == ["mode", "score_kind", "corpus_version", "results"]
 

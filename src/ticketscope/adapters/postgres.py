@@ -15,6 +15,7 @@ from typing import Any, LiteralString, cast
 
 import psycopg
 
+from ticketscope.core.derive import MOJANG_BROWSE_URL
 from ticketscope.core.model import (
     IssueDetail,
     IssueRecord,
@@ -55,6 +56,16 @@ SELECT number, title, url, kind, state,
        outcome_status, outcome_summary, outcome_source, outcome_ref, body
 FROM issue
 WHERE number = %(number)s
+"""
+
+# The same columns, looked up by the exact `url`; the value is always a bound parameter.
+_ISSUE_BY_URL_SQL = """
+SELECT number, title, url, kind, state,
+       outcome_status, outcome_summary, outcome_source, outcome_ref, body
+FROM issue
+WHERE url = %(url)s
+ORDER BY number
+LIMIT 1
 """
 
 
@@ -112,6 +123,11 @@ class PostgresCorpusStore:
     def get_issue(self, number: int) -> IssueDetail | None:
         with psycopg.connect(self._conninfo) as conn:
             row = conn.execute(_ISSUE_SQL, {"number": number}).fetchone()
+        return None if row is None else IssueDetail(issue=_issue_record(row), body=row[9])
+
+    def get_issue_by_key(self, key: str) -> IssueDetail | None:
+        with psycopg.connect(self._conninfo) as conn:
+            row = conn.execute(_ISSUE_BY_URL_SQL, {"url": MOJANG_BROWSE_URL + key}).fetchone()
         return None if row is None else IssueDetail(issue=_issue_record(row), body=row[9])
 
     def corpus_version(self) -> str | None:

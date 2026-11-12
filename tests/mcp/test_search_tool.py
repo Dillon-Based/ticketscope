@@ -21,13 +21,14 @@ from mcp.client.streamable_http import streamable_http_client
 
 from tests.target import CHART_VALUES
 from tests.waiting import eventually
-from ticketscope.contract.search import SearchResponse
+from ticketscope.contract.search import IssueResponse, SearchResponse
 
 pytestmark = pytest.mark.kind
 
 NAMESPACE = os.environ.get("TICKETSCOPE_NAMESPACE", "ticketscope")
 QUERY = "game crashes when I open the launcher"
 TOOL = "search_similar_issues"
+GET_ISSUE = "get_issue"
 FRESH_CONNECTIONS = 20
 
 
@@ -67,8 +68,8 @@ async def _search(arguments: dict[str, Any]) -> dict[str, Any]:
 def _output_schema() -> dict[str, Any]:
     async def fetch() -> dict[str, Any]:
         async with _client() as client:
-            [tool] = (await client.list_tools()).tools
-        assert tool.name == TOOL
+            tools = {t.name: t for t in (await client.list_tools()).tools}
+        tool = tools[TOOL]
         assert tool.output_schema is not None
         return tool.output_schema
 
@@ -87,8 +88,9 @@ def test_tools_list_advertises_search_similar_issues() -> None:
         async with _client() as client:
             return (await client.list_tools()).tools
 
-    [tool] = asyncio.run(fetch())
-    assert tool.name == TOOL
+    tools = {tool.name: tool for tool in asyncio.run(fetch())}
+    assert set(tools) == {TOOL, GET_ISSUE}
+    tool = tools[TOOL]
     assert tool.output_schema == SearchResponse.model_json_schema()
 
 
@@ -239,3 +241,33 @@ def test_a_foreign_host_is_refused() -> None:
     )
     assert 400 <= response.status_code < 500, response.status_code
     assert "Traceback" not in response.text
+
+
+def test_get_issue_round_trips_a_key_taken_from_a_search() -> None:
+    hit = asyncio.run(_search({"query": QUERY, "mode": "keyword", "k": 1}))["results"][0]
+    key = hit["issue"]["key"]
+    assert key, "the v2 corpus gives every issue a key"
+
+    async def call(arguments: dict[str, Any]) -> Any:
+        async with _client() as client:
+            return await client.call_tool(GET_ISSUE, arguments)
+
+    result = asyncio.run(call({"key": key}))
+    assert not result.is_error, result
+    body = result.structured_content
+    assert body is not None
+    assert body["issue"]["key"] == key
+    assert body["issue"]["number"] == hit["issue"]["number"]
+    assert body["outcome"] == hit["outcome"]
+    jsonschema.validate(body, IssueResponse.model_json_schema())
+
+    missing_key = "MCL-99999999999999999999"
+    url, host = _gateway()
+    direct = httpx2.get(
+        f"{url}/v1/issues/by-key/{missing_key}", headers={"Host": host}, timeout=30
+    )
+    assert direct.status_code == 404, direct.text
+    missing = asyncio.run(call({"key": missing_key}))
+    assert missing.is_error
+    [block] = missing.content
+    assert block.text == direct.json()["detail"]

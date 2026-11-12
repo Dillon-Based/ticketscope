@@ -64,6 +64,9 @@ class _BrokenStore:
     def get_issue(self, number: int) -> IssueDetail | None:
         raise ConnectionError("database down at 10.0.0.5")
 
+    def get_issue_by_key(self, key: str) -> IssueDetail | None:
+        raise ConnectionError("database down at 10.0.0.5")
+
     def corpus_version(self) -> str | None:
         raise ConnectionError("database down at 10.0.0.5")
 

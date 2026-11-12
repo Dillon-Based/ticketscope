@@ -17,6 +17,10 @@ class CorpusStore(Protocol):
         """Return the issue with its body, or None when `number` is not loaded."""
         ...
 
+    def get_issue_by_key(self, key: str) -> IssueDetail | None:
+        """Return the issue whose url is the browse url of `key`, or None."""
+        ...
+
     def corpus_version(self) -> str | None:
         """Return the loaded snapshot version, or None when no corpus is loaded."""
         ...

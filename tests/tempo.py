@@ -1,5 +1,4 @@
-"""Tempo lookups for `tests/mcp` (story 4.5): a copy of the pattern in `tests/smoke`, which this
-package neither imports nor edits (R-008; unifying the two is left for a later sweep)."""
+"""Tempo lookups shared by `tests/smoke` and `tests/mcp` (one copy since story 4.6, R-008)."""
 
 import base64
 import json

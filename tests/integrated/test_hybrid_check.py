@@ -26,7 +26,8 @@ from typing import Any
 import httpx2
 import pytest
 
-from tests.smoke.test_gateway import _gateway, _kubectl, _sql
+from tests.kind import gateway
+from tests.smoke.test_gateway import _kubectl, _sql
 from tests.target import CHART_VALUES, REPO, embeddings_pin
 from tests.waiting import eventually
 from ticketscope.contract.search import SearchResponse
@@ -64,7 +65,7 @@ def test_omitted_mode_is_served_by_the_chart_default() -> None:
     assert mode == (
         "hybrid" if overall["hybrid"] == best else max(overall, key=overall.__getitem__)
     )
-    url, host = _gateway()
+    url, host = gateway()
     response = httpx2.post(
         f"{url}/v1/search",
         json={"query": "my world disappears when I try to play", "k": 10},

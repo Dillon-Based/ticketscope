@@ -14,7 +14,9 @@ from concurrent.futures import ThreadPoolExecutor
 import httpx2
 import pytest
 
-from tests.smoke.test_gateway import _gateway, _kubectl, _spans, _sql, _tempo
+from tests import tempo
+from tests.kind import gateway
+from tests.smoke.test_gateway import _kubectl, _sql
 from tests.target import embeddings_pin
 from tests.waiting import eventually
 from ticketscope.contract.search import SearchResponse
@@ -48,7 +50,7 @@ MODEL = "BAAI/bge-small-en-v1.5"
     ],
 )
 def test_dense_gateway_queries_and_tempo(query: str) -> None:
-    url, host = _gateway()
+    url, host = gateway()
     trace_id = secrets.token_hex(16)
     response = httpx2.post(
         f"{url}/v1/search",
@@ -82,9 +84,9 @@ def test_dense_gateway_queries_and_tempo(query: str) -> None:
     assert all(r.outcome.model_dump() == outcomes[str(r.issue.number)] for r in body.results)
 
     def trace_has_embeddings() -> None:
-        status, text = _tempo(trace_id)
+        status, text = tempo.trace_by_id(trace_id)
         assert status == 200, text
-        spans = _spans(json.loads(text))
+        spans = tempo.spans(json.loads(text))
         retrievals = [s for s in spans if s["name"] == "retrieval dense"]
         embeddings = [s for s in spans if s["name"] == f"embeddings {MODEL}"]
         assert len(retrievals) == len(embeddings) == 1, spans
@@ -98,7 +100,7 @@ def test_dense_gateway_queries_and_tempo(query: str) -> None:
 def test_concurrent_dense_requests() -> None:
     if not _dense_enabled():
         pytest.skip("concurrent inference needs computeOnKind")
-    url, host = _gateway()
+    url, host = gateway()
 
     def search(_number: int) -> None:
         response = httpx2.post(
@@ -190,7 +192,7 @@ def test_api_reports_ready_on_the_loaded_corpus() -> None:
     ],
 )
 def test_hybrid_gateway_queries_and_tempo(query: str) -> None:
-    url, host = _gateway()
+    url, host = gateway()
     trace_id = secrets.token_hex(16)
     response = httpx2.post(
         f"{url}/v1/search",
@@ -213,9 +215,9 @@ def test_hybrid_gateway_queries_and_tempo(query: str) -> None:
     assert all(r.outcome.status for r in body.results)
 
     def trace_has_embeddings() -> None:
-        status, text = _tempo(trace_id)
+        status, text = tempo.trace_by_id(trace_id)
         assert status == 200, text
-        spans = _spans(json.loads(text))
+        spans = tempo.spans(json.loads(text))
         # `assert`, not unpacking: `eventually` retries AssertionError only, and Tempo may not
         # hold every span of the trace yet.
         retrievals = [s for s in spans if s["name"] == "retrieval hybrid"]

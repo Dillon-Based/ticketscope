@@ -12,7 +12,7 @@ from mcp.server.mcpserver import MCPServer
 from mcp.server.transport_security import TransportSecuritySettings
 from mcp.types import CallToolResult, TextContent
 from opentelemetry import trace
-from pydantic import Field
+from pydantic import BaseModel, Field
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse, Response
@@ -37,6 +37,24 @@ def check_allowed_hosts(hosts: list[str]) -> list[str]:
         if "*" in host.split(":", 1)[0]:
             raise ValueError(f"TICKETSCOPE_MCP_ALLOWED_HOSTS must not contain a wildcard: {host}")
     return cleaned
+
+
+def _ok(response: BaseModel) -> CallToolResult:
+    """The `/v1` body unchanged: structured content plus a text block of the same JSON."""
+    return CallToolResult(
+        content=[TextContent(text=response.model_dump_json(indent=2))],
+        structured_content=response.model_dump(mode="json", by_alias=True),
+    )
+
+
+def _tool_error(message: str) -> CallToolResult:
+    return CallToolResult(content=[TextContent(text=message)], is_error=True)
+
+
+def _failure(error: ApiClientError) -> tuple[str, CallToolResult]:
+    """The log status and the tool error for a failed `/v1` call."""
+    status = f"api_{error.status}" if isinstance(error, ApiError) else "error"
+    return status, _tool_error(error.message)
 
 
 def build_server(client: ApiClient, *, trace_query_text: bool = False) -> MCPServer:
@@ -69,13 +87,10 @@ def build_server(client: ApiClient, *, trace_query_text: bool = False) -> MCPSer
         try:
             response = await client.search(query, mode, k)
             count = len(response.results)
-            return CallToolResult(
-                content=[TextContent(text=response.model_dump_json(indent=2))],
-                structured_content=response.model_dump(mode="json", by_alias=True),
-            )
+            return _ok(response)
         except ApiClientError as error:
-            status = f"api_{error.status}" if isinstance(error, ApiError) else "error"
-            return CallToolResult(content=[TextContent(text=error.message)], is_error=True)
+            status, result = _failure(error)
+            return result
         except BaseException:
             status = "error"
             raise
@@ -108,19 +123,11 @@ def build_server(client: ApiClient, *, trace_query_text: bool = False) -> MCPSer
             if response.issue.key != key:
                 # Never hand back an issue the caller did not name (R-007).
                 status = "key_mismatch"
-                return CallToolResult(
-                    content=[
-                        TextContent(text=f"ticketscope API returned a different issue than {key}")
-                    ],
-                    is_error=True,
-                )
-            return CallToolResult(
-                content=[TextContent(text=response.model_dump_json(indent=2))],
-                structured_content=response.model_dump(mode="json", by_alias=True),
-            )
+                return _tool_error(f"ticketscope API returned a different issue than {key}")
+            return _ok(response)
         except ApiClientError as error:
-            status = f"api_{error.status}" if isinstance(error, ApiError) else "error"
-            return CallToolResult(content=[TextContent(text=error.message)], is_error=True)
+            status, result = _failure(error)
+            return result
         except BaseException:
             status = "error"
             raise

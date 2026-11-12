@@ -83,3 +83,23 @@ list. A wildcard or an empty list fails the render (AD-5's DNS-rebinding guard).
 {{- end -}}
 {{- $hosts | toJson -}}
 {{- end }}
+
+{{/* The ClusterIP Service for a component's http port; call with (dict "root" . "component" "api"). */}}
+{{- define "ticketscope.service" -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: ticketscope-{{ .component }}
+  namespace: {{ .root.Release.Namespace }}
+  labels:
+    {{- include "ticketscope.labels" .root | nindent 4 }}
+    app.kubernetes.io/component: {{ .component }}
+spec:
+  selector:
+    app.kubernetes.io/instance: {{ .root.Release.Name }}
+    app.kubernetes.io/component: {{ .component }}
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+{{- end }}

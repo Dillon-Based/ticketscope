@@ -109,16 +109,22 @@ def test_an_extra_api_field_passes_through() -> None:
     assert result["structuredContent"]["future_field"] == [1, 2]
 
 
+def _problem_422() -> httpx2.Response:
+    problem = {"type": "t", "title": "x", "status": 422, "detail": "bad mode"}
+    return httpx2.Response(422, json=problem, headers={"content-type": "application/problem+json"})
+
+
 def test_an_api_422_reaches_the_client_as_a_tool_error() -> None:
     def api(request: httpx2.Request) -> httpx2.Response:
-        problem = {"type": "t", "title": "x", "status": 422, "detail": "bad mode"}
-        return httpx2.Response(422, json=problem)
+        return _problem_422()
 
     async def scenario(http: httpx2.AsyncClient) -> dict[str, Any]:
         call = _call({"query": "q", "mode": "bogus"})
         return _result(await http.post("/mcp", headers=HEADERS, json=call))
 
-    assert _run(scenario, [], api)["isError"] is True
+    result = _run(scenario, [], api)
+    assert result["isError"] is True
+    assert result["content"] == [{"type": "text", "text": "bad mode"}]
 
 
 def _logged_lines(caplog: pytest.LogCaptureFixture) -> list[str]:
@@ -127,8 +133,7 @@ def _logged_lines(caplog: pytest.LogCaptureFixture) -> list[str]:
 
 def test_an_api_422_logs_one_line_with_its_status(caplog: pytest.LogCaptureFixture) -> None:
     def api(request: httpx2.Request) -> httpx2.Response:
-        problem = {"type": "t", "title": "x", "status": 422, "detail": "bad mode"}
-        return httpx2.Response(422, json=problem)
+        return _problem_422()
 
     async def scenario(http: httpx2.AsyncClient) -> None:
         await http.post("/mcp", headers=HEADERS, json=_call({"query": "q", "mode": "bogus"}))

@@ -70,3 +70,11 @@ carried_to: epic-eks-environment (5), where corpus reloads first run under live 
 - source_plan: `_bmad-output/initiative-ticketscope/tickets/epic-mcp-server/tickets/story-claude-desktop-answers-from-ticketscope-through-a-tunnel-plan.md`
   summary: The api HTTPRoute pins hostnames only when `hostname` is set, so with an empty `hostname` the tunnel host would also reach `/v1` and `/`.
   evidence: deploy/charts/ticketscope/templates/api.yaml:99 renders `hostnames` inside `with .Values.hostname`; kind and every real environment set it, so it needs a misconfigured release, but a chart guard (fail when mcp.tunnelHostname is set and hostname is empty) would close it.
+
+- source_plan: `_bmad-output/initiative-ticketscope/tickets/epic-eks-environment/tickets/story-tracer-setup-the-aws-account-and-bootstrap-layer-exist-plan.md`
+  summary: The deploy role can still attach any managed policy to the `ticketscope-env-*` roles it creates, so CI can escalate through a new role.
+  evidence: infra/bootstrap/policies/deploy-permissions.json.tftpl allows iam:AttachRolePolicy and iam:PutRolePolicy on `ticketscope-env-*` with no permissions boundary or iam:PolicyARN condition; story 5.2 shows which policies env needs, then a boundary closes it.
+
+- source_plan: `_bmad-output/initiative-ticketscope/tickets/epic-eks-environment/tickets/story-tracer-setup-the-aws-account-and-bootstrap-layer-exist-plan.md`
+  summary: The read-only agent role may read `bootstrap/` state objects through ReadOnlyAccess (unverified).
+  evidence: Would be settled by `aws s3 cp` of the bootstrap state under the read-only profile; state holds no secrets, so a deny on `bootstrap/*` is low value.

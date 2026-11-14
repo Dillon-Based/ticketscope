@@ -20,3 +20,10 @@ deploy/charts/*/charts/*.tgz
 
 # Snapshot assets fetched locally (load, scripts/derive_pairs.py)
 /snapshots/
+
+# Terraform: local state, plans, secrets-bearing vars (.terraform.lock.hcl is committed)
+*.tfstate*
+*.tfplan
+.terraform/
+*.tfvars
+infra/bootstrap/backend.tf

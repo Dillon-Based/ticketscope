@@ -27,5 +27,14 @@ variable "admin_principal_arn" {
 
 variable "repo" {
   type        = string
-  description = "GitHub repository as owner/name, trusted by the deploy role."
+  description = <<-EOT
+    The repository exactly as it appears in the OIDC `sub` claim, between `repo:` and
+    `:environment:eks`. A repo with immutable subjects uses `owner@<owner id>/name@<repo id>`;
+    otherwise `owner/name`. Read it from the diagnostic step in aws-oidc-check.yml.
+  EOT
+
+  validation {
+    condition     = !can(regex("[*?]", var.repo))
+    error_message = "repo must be the exact subject text, with no wildcard."
+  }
 }

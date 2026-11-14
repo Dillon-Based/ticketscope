@@ -37,8 +37,14 @@ account_id          = "<12-digit account id>"
 alert_email         = "<your address>"
 domain              = "<your domain>"
 admin_principal_arn = "<admin identity ARN>"
-repo                = "<owner>/<repo>"
+repo                = "<owner>/<repo>"   # or owner@<id>/repo@<id>, see below
 ```
+
+`repo` must match the OIDC `sub` claim exactly. Repositories that use GitHub's immutable
+subjects present `repo:<owner>@<owner id>/<repo>@<repo id>:environment:eks`, and the plain
+`owner/repo` then never matches (`Not authorized to perform sts:AssumeRoleWithWebIdentity`).
+Run `.github/workflows/aws-oidc-check.yml`: its first step prints the `sub`. The ids are
+account details, so they stay in the untracked tfvars.
 
 ## 4. Apply (local state)
 

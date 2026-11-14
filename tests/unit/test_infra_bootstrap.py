@@ -21,7 +21,7 @@ CI = (REPO / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
 VARS = {
     "account_id": "000000000000",
     "region": "us-east-1",
-    "repo": "example-owner/example-repo",
+    "repo": "example-owner@1/example-repo@2",
     "bucket": "ticketscope-test-bucket",
     "oidc_provider_arn": (
         "arn:aws:iam::000000000000:oidc-provider/token.actions.githubusercontent.com"

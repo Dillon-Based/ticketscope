@@ -203,3 +203,12 @@ def test_ci_terraform_job_checks_bootstrap_without_a_backend_and_gates_evidence(
     assert needs and "terraform" in [n.strip() for n in needs.group(1).split(",")]
     paths = (REPO / ".github" / "kind-paths.yml").read_text(encoding="utf-8")
     assert "infra" not in paths
+
+
+@pytest.mark.criterion("ticketscope--e5-s1--AC-1")
+def test_admin_login_script_clears_env_checks_identity_and_hides_the_account_id() -> None:
+    script = (REPO / "scripts" / "aws-admin-login.sh").read_text(encoding="utf-8")
+    assert "unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN AWS_PROFILE" in script
+    assert "*:user/ticketscope-admin" in script and "exit 1" in script
+    assert not re.search(r"(?<!\d)\d{12}(?!\d)", script)
+    assert "--query Account" not in script

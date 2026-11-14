@@ -93,6 +93,18 @@ source_profile = ticketscope-admin
 region         = us-east-1
 ```
 
+## Signing in as the admin
+
+Only changes to `infra/bootstrap` need the admin. Deploys use OIDC and checks use the
+read-only profile. `aws login` reuses whatever AWS session the browser already has, so an
+Identity Center session in the browser gets handed to the CLI instead of the IAM user.
+
+1. Sign in as the IAM user in a private window, or in a browser profile used only for this:
+   `https://<account id>.signin.aws.amazon.com/console`, choose IAM user, `ticketscope-admin`, MFA.
+2. Run `scripts/aws-admin-login.sh`. It clears stray `AWS_*` variables, runs
+   `aws login --remote`, and fails unless the identity is `user/ticketscope-admin`.
+3. `export AWS_PROFILE=ticketscope-admin`. The read-only profile assumes its role from this one.
+
 ## Verify
 
 ```sh

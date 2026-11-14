@@ -212,3 +212,12 @@ def test_admin_login_script_clears_env_checks_identity_and_hides_the_account_id(
     assert "*:user/ticketscope-admin" in script and "exit 1" in script
     assert not re.search(r"(?<!\d)\d{12}(?!\d)", script)
     assert "--query Account" not in script
+
+
+@pytest.mark.criterion("ticketscope--e5-s1--AC-1")
+def test_oidc_check_workflow_uses_the_eks_environment_and_no_stored_aws_credential() -> None:
+    wf = (REPO / ".github" / "workflows" / "aws-oidc-check.yml").read_text(encoding="utf-8")
+    assert "environment: eks" in wf and "id-token: write" in wf
+    assert "role-to-assume: ${{ vars.AWS_ROLE_ARN }}" in wf
+    assert "secrets." not in wf and "AWS_ACCESS_KEY_ID" not in wf
+    assert not re.search(r"(?<!\d)\d{12}(?!\d)", wf)

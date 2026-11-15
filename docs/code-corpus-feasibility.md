@@ -9,6 +9,7 @@ Findings from a first look, 2026-11-15. Nothing here is built or decided. The qu
 - **The code may be read locally but not published.** The mappings licence allows copying and use "for development purposes"; the EULA forbids distributing anything Mojang made. A code index or its embeddings cannot ship in a snapshot Release, a CI artifact or an image.
 - **So a code prototype needs two things the project does not have:** MC issues in the corpus, and a corpus that is built and kept on the machine that uses it.
 - **Keyword search over code is good enough for an agent that reads the top 10.** On versions that changed 40 files or fewer, a file the fix changed is in the top 10 for 53% of issues, against 15% for issues scored on the wrong version and 5% by chance. It is first for far fewer, so it suits a consumer that reads several results and searches again.
+- **A live model with the two tools does better than the ranking.** On 37 issues its first pick was a file the fix changed for 57%, against 27% for the top search result.
 - **A local prototype works end to end.** `scripts/code_corpus_spike/` builds a SQLite index from a source tree and serves `search_code` and `get_code` over MCP.
 
 ## What the data holds
@@ -129,13 +130,27 @@ claude mcp add ticketscope-code \
 
 The index holds the source text, and tool results carry it to the client. Build it locally and connect it only to a client that may see the code.
 
+## Measured with a live model
+
+`llm_agent_check.py` gives a headless Claude Code run (model alias `sonnet`, 2026-11-15) one ticket and only the two MCP tools, over the code as it was before the fix. The model answers with up to three file paths. The sample is 37 issues, two from each of the 20 versions that changed 11 to 40 Java files; a path is right when that version changed the file. The ranking row is `search_code` on the ticket text alone, for the same issues.
+
+| | First pick right | Any of top 3 right | Any of top 10 right |
+| --- | ---: | ---: | ---: |
+| Live model, up to 3 picks | 21 of 37 (57%) | 27 of 37 (73%) | |
+| Ranking alone | 10 of 37 (27%) | 19 of 37 (51%) | 28 of 37 (76%) |
+
+- **The model turns a top-10 list into a first pick.** It reads the candidates and searches again in its own words; it found the file for 4 issues where the ranking had nothing in the top 10.
+- **It is cheap.** A run took 3.5 turns on average and the 37 cost $2.67 in total.
+- **About half the 10 misses look like fixes outside the Java code:** an armour texture, font glyphs, a block's sound volume, a missing translation, a held-item model. The index holds no data or asset files, so neither the ranking nor the model could find them. This reading is from the ticket titles and is not checked against the diffs.
+- **Caveats.** 37 issues is a small sample. The label is still "a file this version changed", so a few hits are coincidence. The model may also know this game's code and bug history from training, which a private codebase would not give it.
+
 ## What a real version would need
 
 1. **A corpus the project may hold.** The prototype works on any source tree. With a team's own repositories the publishing problem goes away, and so does the coarse label: tickets link to the pull requests that fixed them.
 2. **A place in the architecture.** A code table and a search path beside the issue ones, a `/v1` endpoint, and the MCP tool calling it like `search_similar_issues` does. Postgres already has BM25 through pg_textsearch; the camelCase splitting would move into the load job.
 3. **A way to keep it current.** Re-index what changed on each push. This prototype rebuilds the whole index, which is fine at this size.
 4. **An eval that reads beside a control.** Top-10 hit rate on small change sets, with the wrong-version control, is the measure that held up here.
-5. **Still untested:** dense embeddings over code, data and asset files, and whether an agent given these tools reaches the right file more often than the ranking alone suggests.
+5. **Still untested:** dense embeddings over code, and indexing data and asset files.
 
 ## Reproduce
 

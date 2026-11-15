@@ -8,7 +8,8 @@ Findings from a first look, 2026-11-15. Nothing here is built or decided. The qu
 - **The Java Edition project (MC) can.** 11,870 Fixed MC issues name exactly one fix version. 3,691 of those, across 131 versions from September 2019 to January 2022, were released with Mojang's official obfuscation mappings, so their code can be read with real names.
 - **The code may be read locally but not published.** The mappings licence allows copying and use "for development purposes"; the EULA forbids distributing anything Mojang made. A code index or its embeddings cannot ship in a snapshot Release, a CI artifact or an image.
 - **So a code prototype needs two things the project does not have:** MC issues in the corpus, and a corpus that is built and kept on the machine that uses it.
-- **Keyword search finds the fix, but weakly, and the label flatters it.** The top-ranked file is one the fix version changed for 50% of issues. Issues scored against the wrong version's changes still reach 27%, against a base rate of 8%.
+- **Keyword search over code is good enough for an agent that reads the top 10.** On versions that changed 40 files or fewer, a file the fix changed is in the top 10 for 53% of issues, against 15% for issues scored on the wrong version and 5% by chance. It is first for far fewer, so it suits a consumer that reads several results and searches again.
+- **A local prototype works end to end.** `scripts/code_corpus_spike/` builds a SQLite index from a source tree and serves `search_code` and `get_code` over MCP.
 
 ## What the data holds
 
@@ -87,12 +88,54 @@ What this shows:
 - **"Any changed file in the top 10" and AUC cannot be used.** They barely separate the real run from the control.
 - **The signal is in ordinary words, not identifiers.** Only 29 of 545 issues name a class and 19 hold a stack frame. Of the 29 named classes, 25 were in the change set.
 
-## Next steps, if this goes ahead
+## Measured for an agent: is a changed file in the top k?
 
-1. Decide whether the code angle belongs in this project at all. The measurement says a keyword index over code would find the right area about half the time, and that the fix-version label is too coarse to gate CI on.
-2. If yes, score every later experiment against the wrong-version control, and report the gap, not the raw number.
-3. Test the two things not measured here: dense embeddings over code, and data and asset files, which many gameplay bugs are fixed in.
-4. Only then write the stories: `fixVersions` in the snapshot, a separate code table and search tool, the local-only build.
+The consumer is an LLM calling a tool over MCP. It reads the top 10 to 20 results and can search again, so the first result matters less than whether a relevant file is in the set. The coarse label hides that: when a version changes hundreds of files, almost any top 10 contains one.
+
+So this run uses the 64 pre-release, release-candidate and patch versions with fixed issues. They are bug-fix builds, and 43 of them changed 40 Java files or fewer, which makes "the files this version changed" a precise label. Ranking is the prototype's own index (`code_index.py`, SQLite FTS5 BM25). The control scores each change set with 60 issues fixed a year or more away.
+
+Share of issues with a changed file in the top k, ranking whole files:
+
+| Changed files | Pairs | Issues | Top 5 | Top 10 | Top 20 |
+| --- | ---: | ---: | --- | --- | --- |
+| 1 to 10 | 23 | 117 | 0.16 (control 0.02, chance 0.01) | 0.21 (0.05, 0.01) | 0.29 (0.09, 0.03) |
+| 11 to 40 | 20 | 168 | 0.67 (0.15, 0.03) | 0.75 (0.26, 0.07) | 0.83 (0.39, 0.13) |
+| 41 to 150 | 15 | 449 | 0.64 (0.38, 0.10) | 0.79 (0.53, 0.19) | 0.92 (0.72, 0.34) |
+| 151 or more | 6 | 400 | 0.87 (0.65, 0.29) | 0.94 (0.81, 0.50) | 0.98 (0.92, 0.74) |
+| 40 or fewer, together | 43 | 285 | 0.46 (0.08, 0.02) | 0.53 (0.15, 0.05) | 0.61 (0.23, 0.09) |
+
+- **The signal is clear where the label is precise.** With 40 changed files or fewer, the real run is three to six times the control in the top 5 and top 10.
+- **The 1 to 10 row is a floor, not the truth.** Those versions fixed 117 issues with 4 changed Java files on average, so many of those fixes were probably in data or asset files, which this index does not hold.
+- **Whole files rank slightly better than methods.** Ranking one chunk per method gave 0.49 in the top 10 for the 40-or-fewer group, against 0.53. The prototype ranks files and returns the best-matching method as the snippet.
+- **Some hits are coincidence.** A few files (`Player.java`, `Minecraft.java`, the version constant) change in most builds. The control measures how often that happens; it is why the real figure should always be read beside it.
+
+One pair as an example, 1.16-pre6 to 1.16-pre7 (34 changed files, 24 issues): 22 issues have a changed file in the top 20 and 8 have it first. "Turtle eggs hatching broken" ranks `TurtleEggBlock.java` first, "Striders left/right leg uses the same texture" ranks `StriderModel.java` first, and "Heads and skulls on a wall cause z-fighting" ranks `SkullBlockRenderer.java` second.
+
+## The prototype
+
+Three scripts in `scripts/code_corpus_spike/`. They are not product code: nothing in `src/`, the chart or CI knows about them.
+
+- `code_index.py` builds one SQLite file from any source tree: a full-text table of files and one of methods, with identifiers split on camelCase. Minecraft 1.18 (4,203 files, 37,840 chunks) indexes in a few seconds into about 80 MB.
+- `mcp_code_server.py` is a stdio MCP server over that file with two tools. `search_code(query, k)` returns the top files with the best-matching method of each as a snippet. `get_code(path, start_line, end_line)` reads further.
+- `mcp_smoke.py` starts the server and calls both tools as a client would.
+
+To use it from Claude Code beside the ticketscope server, with an index already built:
+
+```sh
+claude mcp add ticketscope-code \
+    -e TICKETSCOPE_CODE_INDEX=$HOME/.local/share/ticketscope-code/minecraft-1.18.sqlite \
+    -- uv run --project /path/to/ticketscope python /path/to/ticketscope/scripts/code_corpus_spike/mcp_code_server.py
+```
+
+The index holds the source text, and tool results carry it to the client. Build it locally and connect it only to a client that may see the code.
+
+## What a real version would need
+
+1. **A corpus the project may hold.** The prototype works on any source tree. With a team's own repositories the publishing problem goes away, and so does the coarse label: tickets link to the pull requests that fixed them.
+2. **A place in the architecture.** A code table and a search path beside the issue ones, a `/v1` endpoint, and the MCP tool calling it like `search_similar_issues` does. Postgres already has BM25 through pg_textsearch; the camelCase splitting would move into the load job.
+3. **A way to keep it current.** Re-index what changed on each push. This prototype rebuilds the whole index, which is fine at this size.
+4. **An eval that reads beside a control.** Top-10 hit rate on small change sets, with the wrong-version control, is the measure that held up here.
+5. **Still untested:** dense embeddings over code, data and asset files, and whether an agent given these tools reaches the right file more often than the ranking alone suggests.
 
 ## Reproduce
 
@@ -121,3 +164,10 @@ uv run python $S/keyword_check.py $ROOT/mc_fixed.jsonl $ROOT/mc 21w10a:21w11a:20
 ```
 
 `$ROOT` holds Mojang's code and issue text with unmasked mentions. Never commit or publish it.
+
+The top-k table is `topk_check.py` over the pairs `bugfix_pairs.py` lists, each fetched, decompiled and diffed as above:
+
+```sh
+PAIRS=$(uv run python $S/bugfix_pairs.py /tmp/manifest.json $ROOT/mc_fixed.jsonl pairs)
+(cd $S && uv run python topk_check.py $ROOT/mc_fixed.jsonl $ROOT/mc /tmp/manifest.json $PAIRS)
+```

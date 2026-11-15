@@ -14,6 +14,7 @@ connect this server only to a client that may see that code.
 import os
 import sqlite3
 import sys
+from dataclasses import asdict
 from pathlib import Path
 from typing import Annotated
 
@@ -23,8 +24,27 @@ from pydantic import BaseModel, Field
 
 sys.path.insert(0, str(Path(__file__).parent))
 import code_index
+import log_evidence
 
 K_MAX = 30
+TEXT_MATCHES_MAX = 60
+TEXT_MATCHES_PER_FILE = 3
+WORKFLOW = """Work out where in the code this ticket lives, using the logs through the person.
+
+1. search_code with the ticket's words, then get_code to read the likely files.
+2. In those files, find what they log: logger names and message strings (find_text helps).
+3. Write log queries from that evidence, not from guesses: the exact message text and the
+   logger or class name, with the time window the ticket gives. You cannot run them. Ask the
+   person which query language and field names their log viewer uses if you do not know, then
+   give them the queries to run and ask them to paste the results back.
+4. Pass what they paste to code_from_log. It returns the files and lines behind the stack
+   frames, class names and messages in the paste.
+5. Read those lines with get_code, then say which files most likely need to change and why,
+   and what you could not confirm.
+
+Ticket:
+{ticket}
+"""
 SNIPPET_LINES = 60
 READ_LINES_MAX = 400
 
@@ -41,6 +61,46 @@ class CodeResult(BaseModel):
 class CodeSearchResponse(BaseModel):
     index: str
     results: list[CodeResult]
+
+
+class TextMatch(BaseModel):
+    path: str
+    line: int
+    text: str
+
+
+class TextSearchResponse(BaseModel):
+    matches: list[TextMatch]
+    files_matched: int
+    case_sensitive: bool
+
+
+class LogFrame(BaseModel):
+    path: str
+    line: int
+    symbol: str
+    count: int
+    source: str
+
+
+class LogClass(BaseModel):
+    name: str
+    path: str
+    count: int
+
+
+class LogMessage(BaseModel):
+    path: str
+    line: int
+    literal: str
+    count: int
+
+
+class LogEvidenceResponse(BaseModel):
+    frames: list[LogFrame]
+    classes: list[LogClass]
+    messages: list[LogMessage]
+    unresolved: list[str]
 
 
 class CodeFile(BaseModel):
@@ -136,6 +196,69 @@ def build_server(index: Path) -> MCPServer:
             total_lines=len(lines),
             text="\n".join(lines[start_line - 1 : last]),
         )
+
+    @server.tool(
+        name="find_text",
+        description=(
+            "Find an exact piece of text in the code: an error message, a log message, a "
+            "configuration key, a name. Use it to find the statement that wrote a log line, "
+            "or the logger names and message strings of a file so a log query can quote them. "
+            "Matches the text as written; it falls back to ignoring case when nothing matches."
+        ),
+    )
+    def find_text(  # pyright: ignore[reportUnusedFunction]
+        text: Annotated[str, Field(description="The exact text to find.", min_length=3)],
+    ) -> TextSearchResponse:
+        with connect() as db:
+            rows = db.execute("SELECT path, text FROM file").fetchall()
+        for fold in (False, True):
+            needle = text.lower() if fold else text
+            matches: list[TextMatch] = []
+            files = 0
+            for path, body in rows:
+                if needle not in (body.lower() if fold else body):
+                    continue
+                files += 1
+                found = 0
+                for number, line in enumerate(body.splitlines(), 1):
+                    if needle in (line.lower() if fold else line):
+                        if len(matches) < TEXT_MATCHES_MAX and found < TEXT_MATCHES_PER_FILE:
+                            matches.append(TextMatch(path=path, line=number, text=line.strip()))
+                        found += 1
+            if files:
+                return TextSearchResponse(
+                    matches=matches, files_matched=files, case_sensitive=not fold
+                )
+        return TextSearchResponse(matches=[], files_matched=0, case_sensitive=True)
+
+    resolver: list[log_evidence.Resolver] = []
+
+    @server.tool(
+        name="code_from_log",
+        description=(
+            "Map log output to the code that produced it. Pass the text a person pasted from "
+            "their log viewer: log lines, a stack trace, or exported JSON. Returns the files "
+            "and lines behind its stack frames, the files of the classes it names (logger "
+            "names, exception types), and the string in the code that produced each message. "
+            "You cannot query the logs yourself: write a query, ask the person to run it and "
+            "paste the result, then call this."
+        ),
+    )
+    def code_from_log(  # pyright: ignore[reportUnusedFunction]
+        log_text: Annotated[str, Field(description="The pasted log output, unedited.")],
+    ) -> LogEvidenceResponse:
+        if not resolver:
+            resolver.append(
+                log_evidence.Resolver(sqlite3.connect(f"file:{index}?mode=ro", uri=True))
+            )
+        return LogEvidenceResponse.model_validate(asdict(resolver[0].evidence(log_text)))
+
+    @server.prompt(
+        name="investigate_ticket",
+        description="Find where a ticket lives in the code, using logs a person pastes in.",
+    )
+    def investigate_ticket(ticket: str) -> str:  # pyright: ignore[reportUnusedFunction]
+        return WORKFLOW.format(ticket=ticket)
 
     return server
 

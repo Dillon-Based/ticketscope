@@ -10,6 +10,7 @@ Findings from a first look, 2026-11-15. Nothing here is built or decided. The qu
 - **So a code prototype needs two things the project does not have:** MC issues in the corpus, and a corpus that is built and kept on the machine that uses it.
 - **Keyword search over code is good enough for an agent that reads the top 10.** On versions that changed 40 files or fewer, a file the fix changed is in the top 10 for 53% of issues, against 15% for issues scored on the wrong version and 5% by chance. It is first for far fewer, so it suits a consumer that reads several results and searches again.
 - **A live model with the two tools does better than the ranking.** On 37 issues its first pick was a file the fix changed for 57%, against 27% for the top search result.
+- **Logs can join the loop without a log connector.** The model writes log queries from the logger names and messages it finds in the code, a person pastes the results back, and `code_from_log` maps the paste to files and lines. Tried once with a live model on a made-up paste.
 - **A local prototype works end to end.** `scripts/code_corpus_spike/` builds a SQLite index from a source tree and serves `search_code` and `get_code` over MCP.
 
 ## What the data holds
@@ -118,7 +119,7 @@ Three scripts in `scripts/code_corpus_spike/`. They are not product code: nothin
 
 - `code_index.py` builds one SQLite file from any source tree: a full-text table of files and one of methods, with identifiers split on camelCase. Minecraft 1.18 (4,203 files, 37,840 chunks) indexes in a few seconds into about 80 MB.
 - `mcp_code_server.py` is a stdio MCP server over that file with two tools. `search_code(query, k)` returns the top files with the best-matching method of each as a snippet. `get_code(path, start_line, end_line)` reads further.
-- `mcp_smoke.py` starts the server and calls both tools as a client would.
+- `mcp_smoke.py` starts the server and calls both tools as a client would; `mcp_log_smoke.py` does the same for the log tools described below.
 
 To use it from Claude Code beside the ticketscope server, with an index already built:
 
@@ -143,6 +144,26 @@ The index holds the source text, and tool results carry it to the client. Build 
 - **It is cheap.** A run took 3.5 turns on average and the 37 cost $2.67 in total.
 - **About half the 10 misses look like fixes outside the Java code:** an armour texture, font glyphs, a block's sound volume, a missing translation, a held-item model. The index holds no data or asset files, so neither the ranking nor the model could find them. This reading is from the ticket titles and is not checked against the diffs.
 - **Caveats.** 37 issues is a small sample. The label is still "a file this version changed", so a few hits are coincidence. The model may also know this game's code and bug history from training, which a private codebase would not give it.
+
+## Logs through a person
+
+A common constraint: the model cannot query the log store. It can write a query, and a person runs it in the log viewer and pastes the result back. The prototype supports that loop with two more tools and a prompt, in `mcp_code_server.py` and `log_evidence.py`:
+
+- `find_text(text)` finds exact text in the code: an error message, a log message, a configuration key. The model uses it to find the statements a file logs, so a query can quote the real message and logger name.
+- `code_from_log(log_text)` takes the paste as it is (log lines, a stack trace, or exported JSON with escaped newlines) and returns three things: the file and line of each stack frame, the file of each class the paste names (logger names, exception types), and the string in the code that produced each message, with placeholders matched (`"Failed to save chunk {},{}"` for `Failed to save chunk 12,-7`). Frames in code the index does not hold are listed as unresolved.
+- The `investigate_ticket` prompt lays out the order: search the code, find what it logs, write queries and ask for a paste, map the paste back, read those lines, answer.
+
+It reads text and knows no log schema, so the model has to be told, or ask, which query language and field names the log viewer uses.
+
+**Tried once with a live model.** The ticket named no code ("parts of their world reset after the server restarts ... errors around saving at about 09:12"). In the first run the model found `ChunkMap`'s two "Failed to save chunk" statements and wrote three KQL queries quoting those messages and the logger name, with the ticket's time window. In the second run it was given a paste, called `code_from_log`, and named `ChunkMap.save` and `ChunkSerializer.write`, with a mechanism that fits the ticket: the chunk is marked saved before the write, so a failed write is never retried. It also reported that the pasted stack frame's line number did not match the code.
+
+What this does not show:
+
+- **The paste was made up for the trial**, from real class names and log messages in the index. Real log output has not been tried, and the line number in it was invented, which the model noticed.
+- **Line numbers only line up when the index is built from the commit that was running.** A real version needs the deployed version for each log line.
+- **Message matching needs the message to be a string in the code.** Messages assembled at run time, or logged by a library, will not match.
+- **`find_text` scans every file.** That is instant at 4,000 files; a large codebase needs a substring index.
+- **Pasted logs can carry personal or customer data**, and they go into the model's conversation.
 
 ## What a real version would need
 

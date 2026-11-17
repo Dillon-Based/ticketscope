@@ -78,3 +78,7 @@ carried_to: epic-eks-environment (5), where corpus reloads first run under live 
 - source_plan: `_bmad-output/initiative-ticketscope/tickets/epic-eks-environment/tickets/story-tracer-setup-the-aws-account-and-bootstrap-layer-exist-plan.md`
   summary: The read-only agent role may read `bootstrap/` state objects through ReadOnlyAccess (unverified).
   evidence: Would be settled by `aws s3 cp` of the bootstrap state under the read-only profile; state holds no secrets, so a deny on `bootstrap/*` is low value.
+
+- source_plan: none
+  summary: A demo consumer outside the service: a small LangGraph agent that triages a new bug report by calling `search_similar_issues` and `get_issue` over MCP and drafts a "likely duplicate of" note.
+  evidence: The initiative rules out server-side LLM use (no server-side LLM generation; the MCP client's model writes the answer) and the spine keeps tool-call-behaviour evals out of scope, so a framework agent does not belong in the service. As a separate example or small repo it would show the MCP server works with a client other than Claude Desktop and could illustrate epic 8's README; the langchain-mcp-adapters API was not checked and needs verifying before any promise.

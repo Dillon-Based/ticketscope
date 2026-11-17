@@ -4,14 +4,19 @@ locals {
   oidc   = "token.actions.githubusercontent.com"
 }
 
-# DNS and certificate: the hosted zone is created by registering the domain in Route53.
-data "aws_route53_zone" "main" {
-  name         = var.domain
-  private_zone = false
+# DNS and certificate. The domain is registered outside AWS (Route53 registration was declined
+# for a new account), so this stack creates the hosted zone and the registrar's name servers
+# are pointed at it by hand (README step 2). Destroying the zone would change its name servers.
+resource "aws_route53_zone" "main" {
+  name = var.domain
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_acm_certificate" "main" {
-  domain_name       = var.domain
+  domain_name       = var.hostname
   validation_method = "DNS"
 
   lifecycle {
@@ -24,7 +29,7 @@ resource "aws_route53_record" "cert_validation" {
     for o in aws_acm_certificate.main.domain_validation_options : o.domain_name => o
   }
 
-  zone_id         = data.aws_route53_zone.main.zone_id
+  zone_id         = aws_route53_zone.main.zone_id
   name            = each.value.resource_record_name
   type            = each.value.resource_record_type
   records         = [each.value.resource_record_value]

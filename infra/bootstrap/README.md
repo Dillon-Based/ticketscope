@@ -4,7 +4,7 @@ The persistent AWS layer (AD-15): the hostname certificate, the GitHub OIDC prov
 deploy role, the state and backup bucket, two ECR repositories (last 10 images kept), a
 $8/month budget alarm, and a read-only role for the agent. It is applied once, by hand, from
 your machine. The ephemeral `env` stack (story 5.2 onward) is not here. Nothing in this stack
-destroys the bucket or the hosted zone (`prevent_destroy` on the bucket).
+destroys the bucket or the hosted zone (`prevent_destroy` on both).
 
 Region is `us-east-1`. No AWS credential, account id or email is stored in the repo.
 
@@ -24,9 +24,17 @@ yours: it needs your account.
 
 ## 2. Domain
 
-Register the domain in Route53 (this creates the hosted zone), or create a hosted zone for a
-domain registered elsewhere and point the registrar's name servers at it. The stack reads the
-zone by name and validates the certificate through it.
+The domain is registered at a registrar outside AWS (Route53 registration was declined for a
+new account). This stack creates the hosted zone, and you point the registrar at it:
+
+1. Register the domain. Turn DNSSEC off at the registrar.
+2. Create only the zone first, then read its name servers:
+   `terraform -chdir=infra/bootstrap apply -target=aws_route53_zone.main`, then
+   `terraform -chdir=infra/bootstrap output name_servers`.
+3. At the registrar, replace the domain's name servers with those four. Wait until
+   `dig NS <domain>` shows them (minutes, rarely a day).
+4. Then the full apply (step 4). The certificate waits for validation through the zone, so the
+   apply blocks until delegation is live.
 
 ## 3. tfvars
 
@@ -36,6 +44,7 @@ Create `infra/bootstrap/terraform.tfvars` (untracked, ignored by `*.tfvars`):
 account_id          = "<12-digit account id>"
 alert_email         = "<your address>"
 domain              = "<your domain>"
+hostname            = "<the fixed hostname, e.g. ticketscope.<your domain>>"
 admin_principal_arn = "<admin identity ARN>"
 repo                = "<owner>/<repo>"   # or owner@<id>/repo@<id>, see below
 ```

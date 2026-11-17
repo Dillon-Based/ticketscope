@@ -66,6 +66,8 @@ context: []
 
 ## Implementation Notes
 
+- 2026-11-17, user decision: AWS declined the Route53 domain registration for the new account (support case; account age, not permanent). The domain is registered elsewhere (heffernan.dev), so `infra/bootstrap` now creates the hosted zone (`prevent_destroy`) and the registrar's name servers are pointed at it by hand. This reverses the epic's recorded choice to register in Route53; the epic's Notes should get a decision line from the ticket owner, as the build never writes ticket files. The certificate covers a separate `hostname` variable (a subdomain of the domain), so the apex stays free.
+
 ## Plan Change Log
 
 ## Review Triage Log

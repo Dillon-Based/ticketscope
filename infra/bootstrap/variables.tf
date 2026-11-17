@@ -17,7 +17,17 @@ variable "alert_email" {
 
 variable "domain" {
   type        = string
-  description = "Registered domain with a Route53 hosted zone; also the fixed hostname."
+  description = "Registered domain the stack hosts a Route53 zone for."
+}
+
+variable "hostname" {
+  type        = string
+  description = "The fixed hostname the certificate covers: the domain or a subdomain of it."
+
+  validation {
+    condition     = var.hostname == var.domain || endswith(var.hostname, ".${var.domain}")
+    error_message = "hostname must be the domain or a subdomain of it."
+  }
 }
 
 variable "admin_principal_arn" {

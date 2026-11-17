@@ -138,7 +138,7 @@ def test_readonly_extras_allow_only_reads() -> None:
 @pytest.mark.criterion("ticketscope--e5-s1--AC-1")
 def test_identifying_variables_have_no_defaults_and_region_is_us_east_1() -> None:
     text = (BOOTSTRAP / "variables.tf").read_text(encoding="utf-8")
-    for name in ("account_id", "alert_email", "domain", "admin_principal_arn", "repo"):
+    for name in ("account_id", "alert_email", "domain", "hostname", "admin_principal_arn", "repo"):
         block = re.search(rf'variable "{name}" \{{(.*?)\n\}}', text, re.S)
         assert block, name
         assert "default" not in block.group(1), name
@@ -221,3 +221,12 @@ def test_oidc_check_workflow_uses_the_eks_environment_and_no_stored_aws_credenti
     assert "role-to-assume: ${{ vars.AWS_ROLE_ARN }}" in wf
     assert "secrets." not in wf and "AWS_ACCESS_KEY_ID" not in wf
     assert not re.search(r"(?<!\d)\d{12}(?!\d)", wf)
+
+
+@pytest.mark.criterion("ticketscope--e5-s1--AC-2")
+def test_the_hosted_zone_is_created_and_protected_and_the_certificate_uses_the_hostname() -> None:
+    main = (BOOTSTRAP / "main.tf").read_text(encoding="utf-8")
+    zone = main[main.index('resource "aws_route53_zone" "main"') :].split("\n}\n", 1)[0]
+    assert "prevent_destroy = true" in zone
+    assert 'data "aws_route53_zone"' not in main
+    assert "domain_name       = var.hostname" in main

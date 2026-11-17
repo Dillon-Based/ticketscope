@@ -6,35 +6,48 @@ below is yours because it writes to AWS. Use the admin profile (`scripts/aws-log
 `ticketscope-sso`). Region is `us-east-1`. Time each stage and keep the numbers for the plan's
 Implementation Notes.
 
-Placeholders: `<account>` is the 12-digit account id, `<host>` the fixed hostname (bootstrap's
-`hostname`), `<sha>` the git SHA of the commit you deploy. Nothing below is committed with a real
-value.
+## Before you start (every terminal)
 
-## 1. Push the images (multi-arch)
-
-Nodes are Graviton, so the arm64 image has to be there. The Postgres tag leads with the major
-(`18-<sha>`, as `kind-up.sh` does).
+Sign in once, then run this in **each** terminal you use. It exports `AWS_PROFILE`, `KUBECONFIG`,
+`REG`, `CERT`, `TICKETSCOPE_ZONE_ID`, `TICKETSCOPE_STATE_BUCKET` and `TICKETSCOPE_HOSTNAME`, puts
+Docker Desktop's credential helper on `PATH`, writes the untracked `infra/env/terraform.tfvars`,
+and `cd`s to the repo root, so no step below depends on what another terminal exported:
 
 ```sh
-REG=<account>.dkr.ecr.us-east-1.amazonaws.com
-aws ecr get-login-password --region us-east-1 --profile ticketscope-sso \
-  | docker login --username AWS --password-stdin "$REG"
-docker buildx build --platform linux/amd64,linux/arm64 -f images/app.Dockerfile \
-  -t "$REG/ticketscope-app:<sha>" --push .
-docker buildx build --platform linux/amd64,linux/arm64 -f images/postgres.Dockerfile \
-  -t "$REG/ticketscope-postgres:18-<sha>" --push .
+scripts/aws-login.sh
+eval "$(scripts/eks-env.sh <fixed hostname>)"
+SHA=$(git rev-parse HEAD)
+```
+
+`<sha>` below is `$SHA`. The agent never runs the steps below; it reads AWS and the cluster
+through `AWS_PROFILE=ticketscope-readonly` and the kubeconfig. Nothing below is committed with a
+real value.
+
+## 1. Push the images
+
+Nodes are Graviton, so the arm64 image has to be there. AD-16 wants both arches; the tracer needs
+only arm64, which a Mac builds natively (add `linux/amd64` only for the multi-arch check). The
+Postgres tag leads with the major (`18-<sha>`, as `kind-up.sh` does).
+
+```sh
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin "$REG"
+docker buildx build --platform linux/arm64 -f images/app.Dockerfile \
+  -t "$REG/ticketscope-app:$SHA" --push .
+docker buildx build --platform linux/arm64 -f images/postgres.Dockerfile \
+  -t "$REG/ticketscope-postgres:18-$SHA" --push .
 ```
 
 ## 2. Apply `infra/env`
 
-Needs an untracked `infra/env/terraform.tfvars` with `account_id` and `zone_id`
-(`terraform -chdir=infra/bootstrap output zone_id`).
+`eks-env.sh` wrote the untracked `infra/env/terraform.tfvars` (`account_id`, `zone_id`). Read the
+plan before applying: it must create no NAT gateway, KMS key or log group, and nothing outside
+`infra/env`.
 
 ```sh
-terraform -chdir=infra/env init -backend-config="bucket=ticketscope-<account>"
-time terraform -chdir=infra/env apply
-aws eks update-kubeconfig --name ticketscope-env --region us-east-1 \
-  --profile ticketscope-sso --kubeconfig /tmp/ticketscope-eks.kubeconfig
+terraform -chdir=infra/env init -backend-config="bucket=$TICKETSCOPE_STATE_BUCKET"
+terraform -chdir=infra/env plan -out=env.tfplan
+time terraform -chdir=infra/env apply env.tfplan
+aws eks update-kubeconfig --name ticketscope-env --region us-east-1 --kubeconfig "$KUBECONFIG"
 ```
 
 Record the apply time.
@@ -42,9 +55,8 @@ Record the apply time.
 ## 3. Deploy
 
 ```sh
-export CERT=$(terraform -chdir=infra/bootstrap output -raw certificate_arn)
-scripts/eks-deploy.sh --kubeconfig /tmp/ticketscope-eks.kubeconfig --tag <sha> \
-  --hostname <host> --certificate-arn "$CERT" --ecr-registry "$REG"
+time scripts/eks-deploy.sh --kubeconfig "$KUBECONFIG" --tag "$SHA" \
+  --hostname "$TICKETSCOPE_HOSTNAME" --certificate-arn "$CERT" --ecr-registry "$REG"
 ```
 
 It prints the time of each stage (crds, platform, ticketscope, api-mcp-ready, https-answers) and
@@ -112,7 +124,7 @@ until [ -z "$(aws elbv2 describe-load-balancers --region us-east-1 --profile tic
   --query "LoadBalancers[?contains(LoadBalancerName, 'k8s')].LoadBalancerArn" --output text)" ]; do sleep 10; done
 # external-dns did not delete its records in the tracer run (no TXT ownership records were
 # written), so check the zone while the controllers still run, and delete by hand if needed:
-aws route53 list-resource-record-sets --hosted-zone-id <zone> --profile ticketscope-sso \
+aws route53 list-resource-record-sets --hosted-zone-id "$TICKETSCOPE_ZONE_ID" \
   --query "ResourceRecordSets[?Type=='A'||Type=='AAAA'||Type=='TXT'].[Name,Type]" --output text
 helm uninstall platform -n platform
 # wait until tagged ENIs and volumes are gone, then (AWS_PROFILE must be exported):

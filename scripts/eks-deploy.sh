@@ -102,26 +102,8 @@ trap 'rm -rf "$WORK"; summary' EXIT
 log "eks-deploy start (tag ${TAG}, cluster ${CLUSTER_NAME})"
 
 stage "crds"
-# The Gateway API standard-channel CRDs, then the controller's own, taken from the pinned
-# chart so they match its version: its chart ships both but Helm never upgrades CRDs.
-kubectl apply --server-side -f \
-  "https://github.com/kubernetes-sigs/gateway-api/releases/download/${GATEWAY_API_VERSION}/standard-install.yaml"
-helm repo add eks https://aws.github.io/eks-charts --force-update >/dev/null
-helm repo add external-dns https://kubernetes-sigs.github.io/external-dns/ --force-update >/dev/null
-helm repo add cnpg https://cloudnative-pg.github.io/charts --force-update >/dev/null
-helm repo add seaweedfs https://seaweedfs.github.io/seaweedfs/helm --force-update >/dev/null
-helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts --force-update >/dev/null
-helm repo add grafana-community https://grafana-community.github.io/helm-charts --force-update >/dev/null
-helm dependency build "$CHARTS/platform"
-LBC_TGZ="$(ls "$CHARTS"/platform/charts/aws-load-balancer-controller-*.tgz | head -1)"
-for crd in crds.yaml gateway-crds.yaml; do
-  tar xzf "$LBC_TGZ" -O "aws-load-balancer-controller/crds/${crd}" | kubectl apply --server-side -f -
-done
-kubectl wait --for=condition=Established --timeout=2m \
-  crd/gateways.gateway.networking.k8s.io \
-  crd/httproutes.gateway.networking.k8s.io \
-  crd/loadbalancerconfigurations.gateway.k8s.aws \
-  crd/targetgroupconfigurations.gateway.k8s.aws
+# The Gateway API CRDs and the controller's own, shared with the CI check (eks-crds.sh).
+GATEWAY_API_VERSION="$GATEWAY_API_VERSION" scripts/eks-crds.sh
 
 stage "platform"
 # The TargetGroupConfigurations land in the app namespace, so it exists first.

@@ -81,3 +81,21 @@ def test_the_fixtures_carry_no_account_id_resource_id_or_uuid(name: str) -> None
     assert not re.search(r"\b(?!0{12}\b)\d{12}\b", text)
     assert not re.search(r"\b(vpc|sg|subnet|vol|i|eni|igw|rtb)-[0-9a-f]{8,17}\b", text)
     assert not re.search(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", text)
+
+
+@pytest.mark.criterion("ticketscope--e5-s2--AC-3")
+def test_the_deploy_and_the_ci_check_install_the_same_crds() -> None:
+    """One installer, so the CI dry run validates against what the deploy installs."""
+    deploy = (REPO / "scripts" / "eks-deploy.sh").read_text(encoding="utf-8")
+    check = (REPO / "scripts" / "check-eks-gateway.sh").read_text(encoding="utf-8")
+    assert "scripts/eks-crds.sh" in deploy and "scripts/eks-crds.sh" in check
+    assert "standard-install.yaml" not in deploy
+
+
+@pytest.mark.criterion("ticketscope--e5-s2--AC-5")
+def test_ci_runs_the_gateway_check_and_the_evidence_job_waits_for_it() -> None:
+    ci = (REPO / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    assert re.search(r"^  eks-gateway:\n", ci, re.MULTILINE)
+    assert "run: scripts/check-eks-gateway.sh" in ci
+    needs = re.search(r"needs: \[(checks, charts[^\]]*)\]", ci)
+    assert needs and "eks-gateway" in needs.group(1)

@@ -15,7 +15,8 @@ Similar-issue search (keyword, dense, hybrid) over Mojang bug-tracker issues fro
 ## Where things are
 
 - Wiring lives in three composition roots: `ticketscope.http.app`, `ticketscope.mcp.main`, `ticketscope.jobs.<job>.main`.
-- Decisions: `docs/decisions/`. Deferred items: `_bmad-output/deferred-work.md`.
+- Decisions: `docs/decisions/`. Deferred items: `_bmad-output/initiative-ticketscope/deferred-work.md` (the one the build workflow appends to).
+- Live EKS runs are hand-run (`docs/runbooks/eks-tracer.md`). A person runs `eval "$(scripts/eks-env.sh <hostname>)"` in each terminal; the agent only reads AWS and the cluster (`AWS_PROFILE=ticketscope-readonly`, `KUBECONFIG=/tmp/ticketscope-eks.kubeconfig`) and never writes.
 
 ## Running and verifying
 

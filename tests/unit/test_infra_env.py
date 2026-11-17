@@ -190,8 +190,10 @@ def test_deploy_script_installs_in_the_required_order_and_times_each_stage() -> 
         text.index('stage "https-answers"'),
     ]
     assert order == sorted(order)
-    assert text.index("standard-install.yaml") < text.index("helm upgrade --install platform")
-    assert text.index("gateway-crds.yaml") < text.index("helm upgrade --install platform")
+    # The CRDs are installed by the shared script, in order: Gateway API's, then the controller's.
+    crds = (SCRIPT.parent / "eks-crds.sh").read_text(encoding="utf-8")
+    assert text.index("scripts/eks-crds.sh") < text.index("helm upgrade --install platform")
+    assert crds.index("standard-install.yaml") < crds.index("gateway-crds.yaml")
     assert text.index("helm upgrade --install platform") < text.index(
         "helm upgrade --install ticketscope"
     )

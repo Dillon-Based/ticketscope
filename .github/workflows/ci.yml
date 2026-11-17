@@ -19,6 +19,8 @@ concurrency:
 env:
   HELM_VERSION: v4.3.1
   TERRAFORM_VERSION: 1.17.0
+  KIND_VERSION: v0.33.0
+  KUBECTL_VERSION: v1.36.4
 
 jobs:
   checks:
@@ -102,6 +104,28 @@ jobs:
           terraform -chdir=infra/env fmt -check
           terraform -chdir=infra/env init -backend=false
           terraform -chdir=infra/env validate
+
+  eks-gateway:
+    # The rendered EKS Gateway objects against the real CRDs on a throwaway kind cluster (no
+    # AWS): a server-side dry run evaluates the CRDs' CEL rules, which helm template cannot.
+    # The tracer found one such rule live (a Terminate listener needs certificateRefs or options).
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: azure/setup-helm@v5
+        with:
+          version: ${{ env.HELM_VERSION }}
+      - name: Install kind and kubectl
+        run: |
+          arch=$(uname -m); case "$arch" in x86_64) arch=amd64;; aarch64) arch=arm64;; esac
+          mkdir -p "$HOME/.local/bin"
+          curl -fsSLo "$HOME/.local/bin/kind" "https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-linux-${arch}"
+          curl -fsSLo "$HOME/.local/bin/kubectl" "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${arch}/kubectl"
+          chmod +x "$HOME/.local/bin/kind" "$HOME/.local/bin/kubectl"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Gateway objects against the CRDs
+        run: scripts/check-eks-gateway.sh
 
   changes:
     runs-on: ubuntu-24.04
@@ -200,7 +224,7 @@ jobs:
   evidence:
     # Trace live-verification results for this run (bmad-tea-trace input). Runs whatever
     # the other jobs did, so a failure is recorded as `fail`, never left out.
-    needs: [checks, charts, terraform, changes, images, containers, integrated-check]
+    needs: [checks, charts, terraform, eks-gateway, changes, images, containers, integrated-check]
     if: always()
     runs-on: ubuntu-24.04
     timeout-minutes: 5

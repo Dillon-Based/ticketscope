@@ -1,0 +1,43 @@
+# Story 5.1: proves the deploy role is reachable by OIDC alone. Runs in the `eks` environment,
+# assumes the bootstrap deploy role and prints the caller identity. No AWS secret exists; the
+# role ARN is the environment variable AWS_ROLE_ARN (an identifier, not a credential), set on the
+# `eks` environment in the repo settings so the account id stays out of tracked files.
+# The push trigger lets it run from a branch before it exists on the default branch, and only
+# for changes to this file. The configure step masks the account id in the logs.
+name: aws-oidc-check
+
+on:
+  workflow_dispatch:
+  push:
+    branches-ignore: [main]
+    paths:
+      - .github/workflows/aws-oidc-check.yml
+
+permissions:
+  contents: read
+
+jobs:
+  caller-identity:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    environment: eks
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Show the OIDC subject and audience this job presents
+        # Diagnostic: the claims, never the token. A trust mismatch shows up here.
+        run: |
+          token="$(curl -sS -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=sts.amazonaws.com" | jq -r .value)"
+          payload="$(printf '%s' "$token" | cut -d. -f2 | tr '_-' '/+')"
+          pad=$(( (4 - ${#payload} % 4) % 4 ))
+          payload="$payload$(printf '=%.0s' $(seq 1 $pad))"
+          printf '%s' "$payload" | base64 -d | jq '{sub, aud}'
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+          mask-aws-account-id: true
+      - name: Print the caller identity
+        run: aws sts get-caller-identity

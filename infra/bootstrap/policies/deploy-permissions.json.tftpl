@@ -1,0 +1,91 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "StateAndBackupsList",
+      "Effect": "Allow",
+      "Action": "s3:ListBucket",
+      "Resource": "arn:aws:s3:::${bucket}",
+      "Condition": {
+        "StringLike": {
+          "s3:prefix": ["env/*", "backups/*"]
+        }
+      }
+    },
+    {
+      "Sid": "StateAndBackupsObjects",
+      "Effect": "Allow",
+      "Action": ["s3:GetObject", "s3:PutObject", "s3:DeleteObject"],
+      "Resource": [
+        "arn:aws:s3:::${bucket}/env/*",
+        "arn:aws:s3:::${bucket}/backups/*"
+      ]
+    },
+    {
+      "Sid": "TicketscopeIam",
+      "Effect": "Allow",
+      "Action": [
+        "iam:CreateRole",
+        "iam:DeleteRole",
+        "iam:GetRole",
+        "iam:UpdateAssumeRolePolicy",
+        "iam:TagRole",
+        "iam:UntagRole",
+        "iam:AttachRolePolicy",
+        "iam:DetachRolePolicy",
+        "iam:PutRolePolicy",
+        "iam:DeleteRolePolicy",
+        "iam:CreatePolicy",
+        "iam:DeletePolicy",
+        "iam:CreatePolicyVersion",
+        "iam:DeletePolicyVersion",
+        "iam:PassRole"
+      ],
+      "Resource": [
+        "arn:aws:iam::${account_id}:role/ticketscope-env-*",
+        "arn:aws:iam::${account_id}:policy/ticketscope-env-*"
+      ]
+    },
+    {
+      "Sid": "TicketscopeEcr",
+      "Effect": "Allow",
+      "Action": [
+        "ecr:BatchCheckLayerAvailability",
+        "ecr:BatchGetImage",
+        "ecr:CompleteLayerUpload",
+        "ecr:GetDownloadUrlForLayer",
+        "ecr:InitiateLayerUpload",
+        "ecr:PutImage",
+        "ecr:UploadLayerPart"
+      ],
+      "Resource": "arn:aws:ecr:${region}:${account_id}:repository/ticketscope-*"
+    },
+    {
+      "Sid": "TicketscopeEks",
+      "Effect": "Allow",
+      "Action": "eks:*",
+      "Resource": [
+        "arn:aws:eks:${region}:${account_id}:cluster/ticketscope-*",
+        "arn:aws:eks:${region}:${account_id}:nodegroup/ticketscope-*/*/*",
+        "arn:aws:eks:${region}:${account_id}:addon/ticketscope-*/*/*"
+      ]
+    },
+    {
+      "Sid": "ReadOnlyDiscovery",
+      "Effect": "Allow",
+      "Action": [
+        "sts:GetCallerIdentity",
+        "ecr:GetAuthorizationToken",
+        "ec2:Describe*",
+        "eks:Describe*",
+        "eks:List*",
+        "iam:ListRoles",
+        "route53:Get*",
+        "route53:List*",
+        "acm:Describe*",
+        "acm:List*"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

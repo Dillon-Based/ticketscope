@@ -3,7 +3,7 @@ title: 'Tracer setup: the AWS account and bootstrap layer exist'
 type: 'feature'
 ticket: '1'
 created: '2026-11-12'
-status: 'built'
+status: done
 baseline_revision: '9814559b1a2d8923fbec49b031ed8459007bfa2a'
 route: 'full'
 route_source: 'auto'

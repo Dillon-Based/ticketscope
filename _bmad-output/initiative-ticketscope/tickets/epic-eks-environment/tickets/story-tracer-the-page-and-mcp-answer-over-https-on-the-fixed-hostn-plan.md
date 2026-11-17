@@ -78,7 +78,16 @@ context:
 - Deviation: `scripts/kind-up.sh` gained the two new `helm repo add` lines (kind behaviour unchanged); the existing repo-added-before-dependency-build test requires them.
 - Deviation: `hostname` is not in `values-eks.yaml` (the domain is untracked); `eks-deploy.sh` sets it with the certificate ARN, IRSA annotations and ECR repositories. Added a gp3 StorageClass template, since EKS ships only gp2.
 - Not implemented: the NetworkPolicy and CNPG instance-placement rule (AD-25 / C-4); left to a later story or the tracer's findings.
-- Human steps still open: stage times, certificate mode, target-annotation need, requests/limits and node headroom, and the `tests/fixtures/aws/*.json` captures.
+- Live run, 2026-11-17 (person-run, arm64-only images from a Mac mini; AD-16's multi-arch is story 5.3's CI):
+  - Stage times: `terraform apply` 16m28s (48 resources; EKS control plane 12m31s). `eks-deploy.sh` 162s total: crds 12s, platform 73s, ticketscope 75s (migrate and load included), api-mcp-ready 1s, https-answers 1s. About 19 minutes in all, inside R1's 30. The `platform` stage was an upgrade, not a cold install, so the cold margin is still to measure in story 5.3. `terraform destroy` 11m09s (48 destroyed).
+  - Certificate mode: explicit ARN from the bootstrap output, in the `LoadBalancerConfiguration`; the ALB's 443 listener took it. `tls.options` with no `certificateRefs` was accepted (the v1.3.0 CRD rejects a `Terminate` listener with neither).
+  - external-dns read the ALB address from the Gateway status and wrote A and AAAA alias records; the target annotation was not needed. AD-14's open question is answered. `dig` returned the two ALB addresses.
+  - Page: 200 under the bootstrap certificate, and a search returned ranked issues with outcomes. `/mcp`: initialize, `tools/list`, and `search_similar_issues` (hybrid, rrf, corpus 2026.11.1) answered at the public hostname. Not isolated: whether the Gateway is Programmed before any route exists (the routes already existed when the ALB was first created).
+  - Sizing: 2x t4g.medium fit. Node 1 requests 35% memory (limits 105%), node 2 requests 25% (limits 93%), about 3.3 GiB allocatable each. No metrics-server, so no live peak.
+  - Findings fixed in this story: (1) the IRSA trust names did not match the release-prefixed ServiceAccounts, so AssumeRoleWithWebIdentity returned 403 (chart now pins the names). (2) The controller needs Gateway API v1.6.0, not v1.3.0 (script default bumped, AWS CRDs moved to `gateway.k8s.aws/v1`). (3) The controller must restart after the CRDs change.
+  - Findings left open: external-dns wrote no TXT ownership records and so deleted neither record at teardown (deleted by hand; story 5.4 must handle it). The ALB listener uses the default `ELBSecurityPolicy-2016-08` (set a modern policy). The instance-placement rule and NetworkPolicy are not implemented.
+  - Teardown and R3: Gateway deleted first and the ALB confirmed gone with the controller running, then `platform` uninstalled, then destroy. After it, the tag-scoped list had 0 resources and by-name checks of load balancers, target groups, ENIs, volumes, security groups, IAM roles and log groups were empty. Fixtures `tests/fixtures/aws/up.json` (34 resources) and `down.json` (0) are masked by `scripts/mask_aws_list.py`.
+  - Cost: environment up about 65 minutes, roughly $0.30.
 
 ## Plan Change Log
 

@@ -110,8 +110,12 @@ kubectl -n platform delete gateway ticketscope
 # wait until the ALB is gone, while the controller still runs:
 until [ -z "$(aws elbv2 describe-load-balancers --region us-east-1 --profile ticketscope-sso \
   --query "LoadBalancers[?contains(LoadBalancerName, 'k8s')].LoadBalancerArn" --output text)" ]; do sleep 10; done
+# external-dns did not delete its records in the tracer run (no TXT ownership records were
+# written), so check the zone while the controllers still run, and delete by hand if needed:
+aws route53 list-resource-record-sets --hosted-zone-id <zone> --profile ticketscope-sso \
+  --query "ResourceRecordSets[?Type=='A'||Type=='AAAA'||Type=='TXT'].[Name,Type]" --output text
 helm uninstall platform -n platform
-# wait until tagged ENIs and volumes are gone, then:
+# wait until tagged ENIs and volumes are gone, then (AWS_PROFILE must be exported):
 terraform -chdir=infra/env destroy
 ```
 
@@ -130,10 +134,19 @@ to record:
 - IAM roles and policies named `ticketscope-env-*`
 - CloudWatch log groups named `/aws/eks/ticketscope-env/*` (logging is off, so none expected)
 
-## What the agent could not verify
+## What the tracer settled (2026-11-17)
 
-These are the points the tracer settles: the Gateway API CRD version the controller accepts
-(`GATEWAY_API_VERSION`, default v1.6.0), whether the HTTPS listener's `tls.mode: Terminate`
-without `certificateRefs` is accepted by the controller, whether the controller's IAM policy
-covers the ALB Gateway path, and whether external-dns reads the ALB address from the Gateway
-status (AD-14).
+- The controller (chart 3.6.3) needs the Gateway API v1.6.0 standard bundle; against v1.3.0 it
+  logged `Disabling ALBGatewayAPI: missing required CRDs [ReferenceGrant]`. Restart the controller
+  after the CRDs change, because it decides at startup.
+- The listener's `tls.mode: Terminate` with an `options` entry and no `certificateRefs` is
+  accepted by the API server (the v1.3.0 CRD rejects it with neither) and by the controller, which
+  took the certificate from the `LoadBalancerConfiguration`'s explicit ARN.
+- The module's controller IAM policy covers the ALB Gateway path: no `AccessDenied`.
+- external-dns read the ALB address from the Gateway status and wrote A and AAAA alias records
+  with no target annotation. It wrote no TXT ownership records and so deleted nothing at
+  teardown: delete the records by hand (step 6) until story 5.4 handles it.
+- The IRSA trust names and the chart's ServiceAccount names must agree; the chart pins them.
+
+Not settled: the Gateway being Programmed before any route exists (routes already existed when
+the ALB was first created).

@@ -181,7 +181,9 @@ resource "aws_iam_role_policy" "deploy" {
   })
 }
 
-# Read-only role for the agent, assumed from the admin identity.
+# Read-only role for the agent, assumed from the admin identity. The trust names the account and
+# matches the caller's ARN exactly, because the admin role is managed outside this stack and a
+# role named directly as principal stops matching if it is ever recreated.
 resource "aws_iam_role" "readonly" {
   name = "ticketscope-readonly"
 
@@ -189,8 +191,9 @@ resource "aws_iam_role" "readonly" {
     Version = "2012-10-17"
     Statement = [{
       Effect    = "Allow"
-      Principal = { AWS = var.admin_principal_arn }
+      Principal = { AWS = "arn:aws:iam::${var.account_id}:root" }
       Action    = "sts:AssumeRole"
+      Condition = { ArnEquals = { "aws:PrincipalArn" = var.admin_principal_arn } }
     }]
   })
 }

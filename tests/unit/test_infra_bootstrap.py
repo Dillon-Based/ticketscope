@@ -207,9 +207,9 @@ def test_ci_terraform_job_checks_bootstrap_without_a_backend_and_gates_evidence(
 
 @pytest.mark.criterion("ticketscope--e5-s1--AC-1")
 def test_admin_login_script_clears_env_checks_identity_and_hides_the_account_id() -> None:
-    script = (REPO / "scripts" / "aws-admin-login.sh").read_text(encoding="utf-8")
+    script = (REPO / "scripts" / "aws-login.sh").read_text(encoding="utf-8")
     assert "unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN AWS_PROFILE" in script
-    assert "*:user/ticketscope-admin" in script and "exit 1" in script
+    assert '*":assumed-role/$role/"*)' in script and "exit 1" in script
     assert not re.search(r"(?<!\d)\d{12}(?!\d)", script)
     assert "--query Account" not in script
 
@@ -230,3 +230,12 @@ def test_the_hosted_zone_is_created_and_protected_and_the_certificate_uses_the_h
     assert "prevent_destroy = true" in zone
     assert 'data "aws_route53_zone"' not in main
     assert "domain_name       = var.hostname" in main
+
+
+@pytest.mark.criterion("ticketscope--e5-s1--AC-1")
+def test_readonly_trust_names_the_account_and_matches_the_admin_arn_exactly() -> None:
+    main = (BOOTSTRAP / "main.tf").read_text(encoding="utf-8")
+    role = main[main.index('resource "aws_iam_role" "readonly"') :].split("\n}\n", 1)[0]
+    assert 'Principal = { AWS = "arn:aws:iam::${var.account_id}:root" }' in role
+    assert 'ArnEquals = { "aws:PrincipalArn" = var.admin_principal_arn }' in role
+    assert "ArnLike" not in role and "StringLike" not in role

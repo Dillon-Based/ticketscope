@@ -19,8 +19,9 @@ yours: it needs your account.
 1. Create the AWS account (or use a fresh one). Record the plan and credit terms here once
    known: _not yet recorded_. This does not gate the apply.
 2. Enable MFA on the root user, then stop using root.
-3. Create an admin identity (IAM Identity Center user, or an IAM user with MFA) and a CLI
-   profile for it, e.g. `ticketscope-admin`. Note its ARN: that is `admin_principal_arn`.
+3. The admin identity is your Identity Center role. Its exact ARN, path included, is
+   `admin_principal_arn`: `aws iam get-role --role-name AccountFullAccessRole --query Role.Arn`.
+   The CLI profile for it is `ticketscope-sso` (see "Signing in as the admin").
 
 ## 2. Domain
 
@@ -67,7 +68,7 @@ account details, so they stay in the untracked tfvars.
 ## 4. Apply (local state)
 
 ```sh
-export AWS_PROFILE=ticketscope-admin
+export AWS_PROFILE=ticketscope-sso
 terraform -chdir=infra/bootstrap init
 terraform -chdir=infra/bootstrap plan -out=bootstrap.tfplan
 terraform -chdir=infra/bootstrap apply bootstrap.tfplan
@@ -113,21 +114,23 @@ In `~/.aws/config` (not the repo):
 ```ini
 [profile ticketscope-readonly]
 role_arn       = <readonly_role_arn output>
-source_profile = ticketscope-admin
+source_profile = ticketscope-sso
 region         = us-east-1
 ```
 
 ## Signing in as the admin
 
-Only changes to `infra/bootstrap` need the admin. Deploys use OIDC and checks use the
-read-only profile. `aws login` reuses whatever AWS session the browser already has, so an
-Identity Center session in the browser gets handed to the CLI instead of the IAM user.
+One identity: the Identity Center role (`AccountFullAccessRole`), through the `ticketscope-sso`
+profile. Only changes to `infra/bootstrap` need it; deploys use OIDC and checks use the
+read-only profile, which assumes its role from this one. `aws login` reuses the browser's
+console session, so the console must be signed in to the ticketscope account (not another
+account the same login can reach).
 
-1. Sign in as the IAM user in a private window, or in a browser profile used only for this:
-   `https://<account id>.signin.aws.amazon.com/console`, choose IAM user, `ticketscope-admin`, MFA.
-2. Run `scripts/aws-admin-login.sh`. It clears stray `AWS_*` variables, runs
-   `aws login --remote`, and fails unless the identity is `user/ticketscope-admin`.
-3. `export AWS_PROFILE=ticketscope-admin`. The read-only profile assumes its role from this one.
+1. Sign in to the AWS console through Identity Center, in the ticketscope account.
+2. Run `scripts/aws-login.sh`. It clears stray `AWS_*` variables, runs `aws login`, and fails
+   unless the identity is `assumed-role/AccountFullAccessRole/...`.
+3. `export AWS_PROFILE=ticketscope-sso`. Sessions expire; when Terraform says the login session
+   has expired, run the script again.
 
 ## Verify
 

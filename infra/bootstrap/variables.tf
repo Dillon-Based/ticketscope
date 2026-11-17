@@ -32,7 +32,16 @@ variable "hostname" {
 
 variable "admin_principal_arn" {
   type        = string
-  description = "IAM principal of the person's admin identity; trusted to assume the read-only role."
+  description = <<-EOT
+    Exact ARN of the person's admin identity, trusted to assume the read-only role: the
+    Identity Center role (with its path, e.g. role/managed/<name>), from
+    `aws iam get-role --role-name <name> --query Role.Arn`.
+  EOT
+
+  validation {
+    condition     = can(regex("^arn:aws:iam::[0-9]{12}:(role|user)/[^*?]+$", var.admin_principal_arn))
+    error_message = "admin_principal_arn must be one exact IAM role or user ARN, with no wildcard."
+  }
 }
 
 variable "repo" {

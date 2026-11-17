@@ -27,6 +27,16 @@ dependencies:
     version: 0.8.1
     repository: https://cloudnative-pg.github.io/charts
     condition: barman-cloud.enabled
+  # EKS only (AD-13): the GatewayClass implementation and the DNS writer, off by default;
+  # values-eks.yaml enables them. Their CRDs are installed by scripts/eks-deploy.sh first.
+  - name: aws-load-balancer-controller
+    version: 3.6.3
+    repository: https://aws.github.io/eks-charts
+    condition: aws-load-balancer-controller.enabled
+  - name: external-dns
+    version: 1.23.0
+    repository: https://kubernetes-sigs.github.io/external-dns/
+    condition: external-dns.enabled
   # S3-compatible backup target, kind only (AD-13); values-kind.yaml enables it.
   - name: seaweedfs
     version: 4.52.0

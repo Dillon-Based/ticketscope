@@ -60,12 +60,21 @@ jobs:
         run: |
           # `dependency build` resolves non-OCI repos only through `helm repo add`.
           helm repo add cnpg https://cloudnative-pg.github.io/charts --force-update
+          helm repo add eks https://aws.github.io/eks-charts --force-update
+          helm repo add external-dns https://kubernetes-sigs.github.io/external-dns/ --force-update
           helm repo add seaweedfs https://seaweedfs.github.io/seaweedfs/helm --force-update
           helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts --force-update
           helm repo add grafana-community https://grafana-community.github.io/helm-charts --force-update
           helm dependency build deploy/charts/platform
           helm lint deploy/charts/platform -f deploy/charts/platform/values-kind.yaml
+          helm lint deploy/charts/platform -f deploy/charts/platform/values-eks.yaml \
+            --set-string gateway.hostname=lint.example.test \
+            --set-string gateway.aws.certificateArn=arn:aws:acm:us-east-1:000000000000:certificate/lint \
+            --set-string aws-load-balancer-controller.clusterName=lint
           helm lint deploy/charts/ticketscope -f deploy/charts/ticketscope/values-kind.yaml \
+            --set-string image.app.tag=lint --set-string image.postgres.tag=18-lint
+          helm lint deploy/charts/ticketscope -f deploy/charts/ticketscope/values-eks.yaml \
+            --set-string hostname=lint.example.test \
             --set-string image.app.tag=lint --set-string image.postgres.tag=18-lint
       # The platform-chart renders need the dependencies built above.
       - uses: astral-sh/setup-uv@v10.3.3
@@ -75,6 +84,7 @@ jobs:
           uv run pytest tests/unit/test_chart_backup.py tests/unit/test_chart_telemetry.py
           tests/unit/test_chart_eval.py tests/unit/test_chart_embeddings.py
           tests/unit/test_embedding_threads.py tests/unit/test_chart_mcp.py
+          tests/unit/test_chart_eks.py
 
   terraform:
     runs-on: ubuntu-24.04
@@ -89,6 +99,9 @@ jobs:
           terraform -chdir=infra/bootstrap fmt -check
           terraform -chdir=infra/bootstrap init -backend=false
           terraform -chdir=infra/bootstrap validate
+          terraform -chdir=infra/env fmt -check
+          terraform -chdir=infra/env init -backend=false
+          terraform -chdir=infra/env validate
 
   changes:
     runs-on: ubuntu-24.04

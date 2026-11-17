@@ -24,17 +24,26 @@ yours: it needs your account.
 
 ## 2. Domain
 
-The domain is registered at a registrar outside AWS (Route53 registration was declined for a
-new account). This stack creates the hosted zone, and you point the registrar at it:
+Route53 registration was declined for a new account, so the domain is registered at Cloudflare
+Registrar. Cloudflare Registrar keeps its own name servers on the domain (custom name servers
+need a transfer out, which ICANN blocks for 60 days after registration), so Route53 hosts only
+a delegated subdomain. `domain` and `hostname` are both that subdomain, e.g.
+`ticketscope.<your domain>`; Cloudflare keeps the apex.
 
-1. Register the domain. Turn DNSSEC off at the registrar.
+1. Check the parent has no CAA record that excludes Amazon: `dig CAA <parent domain>`.
 2. Create only the zone first, then read its name servers:
    `terraform -chdir=infra/bootstrap apply -target=aws_route53_zone.main`, then
    `terraform -chdir=infra/bootstrap output name_servers`.
-3. At the registrar, replace the domain's name servers with those four. Wait until
-   `dig NS <domain>` shows them (minutes, rarely a day).
-4. Then the full apply (step 4). The certificate waits for validation through the zone, so the
-   apply blocks until delegation is live.
+3. In Cloudflare DNS for the parent, add four `NS` records named after the subdomain label
+   (e.g. `ticketscope`), one per name server. Delegation works on every Cloudflare plan.
+   DNSSEC on the parent can stay as it is: the child is an unsigned delegation.
+4. Check: `dig NS <subdomain> @<a Cloudflare name server>` returns the four, and
+   `dig SOA <subdomain> @1.1.1.1` returns the Route53 SOA.
+5. Then the full apply (step 4). The certificate waits for validation through the zone.
+
+A zone whose name changes is replaced, and `prevent_destroy` blocks that: `terraform state rm
+aws_route53_zone.main`, delete the old zone with `aws route53 delete-hosted-zone`, and create
+the new one. Its name servers are new, so update the NS records.
 
 ## 3. tfvars
 

@@ -4,7 +4,7 @@ controller ignores listener certificateRefs and discovers a certificate by hostn
 when none is given. The ARN comes from the bootstrap output, passed at deploy.
 */ -}}
 {{- if .Values.gateway.aws.enabled }}
-apiVersion: gateway.k8s.aws/v1beta1
+apiVersion: gateway.k8s.aws/v1
 kind: LoadBalancerConfiguration
 metadata:
   name: {{ .Values.gateway.name }}

@@ -4,7 +4,7 @@ IPs. One per Service, in the Service's namespace (the ticketscope release's).
 */ -}}
 {{- if .Values.gateway.aws.enabled }}
 {{- range .Values.gateway.aws.targetGroups.services }}
-apiVersion: gateway.k8s.aws/v1beta1
+apiVersion: gateway.k8s.aws/v1
 kind: TargetGroupConfiguration
 metadata:
   name: {{ . }}

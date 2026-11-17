@@ -133,7 +133,7 @@ to record:
 ## What the agent could not verify
 
 These are the points the tracer settles: the Gateway API CRD version the controller accepts
-(`GATEWAY_API_VERSION`, default v1.3.0), whether the HTTPS listener's `tls.mode: Terminate`
+(`GATEWAY_API_VERSION`, default v1.6.0), whether the HTTPS listener's `tls.mode: Terminate`
 without `certificateRefs` is accepted by the controller, whether the controller's IAM policy
 covers the ALB Gateway path, and whether external-dns reads the ALB address from the Gateway
 status (AD-14).

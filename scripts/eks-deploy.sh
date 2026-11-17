@@ -12,7 +12,7 @@
 # infra/env, or from the file named by ENV_OUTPUTS_JSON.
 #
 # Env overrides:
-#   GATEWAY_API_VERSION  standard-channel Gateway API CRD release (default v1.3.0)
+#   GATEWAY_API_VERSION  standard-channel Gateway API CRD release (default v1.6.0, the version the controller is built for)
 #   TARGET_ANNOTATION    sets external-dns.kubernetes.io/target on the Gateway: the fallback
 #                        when external-dns does not read the ALB's address (AD-14)
 #   ENV_OUTPUTS_JSON     a file holding `terraform -chdir=infra/env output -json`
@@ -56,7 +56,7 @@ for tool in kubectl helm jq curl tar; do
 done
 
 export KUBECONFIG="$KUBECONFIG_FILE"
-GATEWAY_API_VERSION="${GATEWAY_API_VERSION:-v1.3.0}"
+GATEWAY_API_VERSION="${GATEWAY_API_VERSION:-v1.6.0}"
 READY_TIMEOUT="${READY_TIMEOUT:-900}"
 PLATFORM_NS=platform
 APP_NS=ticketscope

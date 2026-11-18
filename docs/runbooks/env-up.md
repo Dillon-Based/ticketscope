@@ -17,7 +17,9 @@ applies anything against AWS; every step below is yours.
    reads, and `ecr:DescribeImages`. Those are in
    `infra/bootstrap/policies/deploy-permissions.json.tftpl`, scoped to this account and region,
    never to a `bootstrap` state path. Apply it with the admin identity, from the checkout that
-   holds bootstrap's untracked `backend.tf` and `terraform.tfvars`, on the branch (or after the
+   holds bootstrap's untracked `backend.tf` and `terraform.tfvars` (or copy those two files into
+   the checkout you use; a checkout without `backend.tf` has an empty local state and would plan to
+   create everything again), on the branch (or after the
    merge) so the template change is in the tree. Before the merge, from that checkout:
    `git fetch && git checkout --detach origin/<this branch>`.
 

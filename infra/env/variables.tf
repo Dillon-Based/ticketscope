@@ -40,3 +40,14 @@ variable "node_count" {
   type    = number
   default = 2
 }
+
+variable "expires_at" {
+  type        = string
+  default     = ""
+  description = "UTC time (YYYY-MM-DDTHH:MM:SSZ) after which the scheduled env-down sweep may destroy this environment (R4). Empty for a hand-run environment, which then carries no expires_at tag."
+
+  validation {
+    condition     = var.expires_at == "" || can(regex("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$", var.expires_at))
+    error_message = "expires_at must be empty or a UTC time like 2026-11-18T18:00:00Z."
+  }
+}

@@ -15,7 +15,7 @@ and `cd`s to the repo root, so no step below depends on what another terminal ex
 
 ```sh
 scripts/aws-login.sh
-eval "$(scripts/eks-env.sh <fixed hostname>)"
+eval "$(scripts/eks-env.sh)"
 SHA=$(git rev-parse HEAD)
 ```
 

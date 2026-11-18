@@ -105,6 +105,22 @@ jobs:
           terraform -chdir=infra/env init -backend=false
           terraform -chdir=infra/env validate
 
+  workflows:
+    # Static checks of the workflows and the deploy script (story 5.3): actionlint also runs
+    # shellcheck over every `run:` block. No AWS access.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: actionlint
+        run: |
+          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.7/scripts/download-actionlint.bash) 1.7.7
+          # SC2016 is ignored: _kind-deploy.yml's sampler passes awk through `bash -c '...'` on
+          # purpose, and that workflow is not to change (epic 5 Boundaries).
+          ./actionlint -color -ignore 'SC2016:info'
+      - name: shellcheck the deploy script
+        run: shellcheck scripts/eks-deploy.sh
+
   eks-gateway:
     # The rendered EKS Gateway objects against the real CRDs on a throwaway kind cluster (no
     # AWS): a server-side dry run evaluates the CRDs' CEL rules, which helm template cannot.

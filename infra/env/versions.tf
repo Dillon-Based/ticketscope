@@ -25,10 +25,14 @@ provider "aws" {
   # Every env resource carries `environment`, so the tag-scoped list and the leftover check
   # (story 5.4) find it. Resources the controllers create get it from their own settings.
   default_tags {
-    tags = {
-      project     = "ticketscope"
-      stack       = "env"
-      environment = var.environment
-    }
+    # `expires_at` is the expiry the scheduled sweep reads (R4); a hand-run apply omits it.
+    tags = merge(
+      {
+        project     = "ticketscope"
+        stack       = "env"
+        environment = var.environment
+      },
+      var.expires_at == "" ? {} : { expires_at = var.expires_at },
+    )
   }
 }

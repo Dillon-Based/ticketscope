@@ -17,6 +17,22 @@ module "eks" {
   enable_irsa                              = true
   enable_cluster_creator_admin_permissions = true
 
+  # Read-only cluster access for the unattended agent: the bootstrap read-only role, with EKS's
+  # view policy (get, list and watch on most resources; no secrets, no writes). The agent runs
+  # `kubectl get` and `logs` through it and still cannot change anything. Whether the view policy
+  # reaches pod logs is unverified; the next live run settles it.
+  access_entries = {
+    readonly = {
+      principal_arn = "arn:aws:iam::${var.account_id}:role/ticketscope-readonly"
+      policy_associations = {
+        view = {
+          policy_arn   = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSViewPolicy"
+          access_scope = { type = "cluster" }
+        }
+      }
+    }
+  }
+
   create_kms_key              = false
   encryption_config           = null
   enabled_log_types           = []

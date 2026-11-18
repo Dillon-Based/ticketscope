@@ -131,7 +131,8 @@ def test_no_account_specific_value_is_committed() -> None:
         encoding="utf-8"
     )
     assert not re.search(r"\b\d{12}\b", text)
-    assert "arn:aws:iam::" not in text
+    # An ARN may name the account only through the variable, never by a value.
+    assert "arn:aws:iam::" not in text.replace("arn:aws:iam::${var.account_id}:", "")
 
 
 @pytest.mark.criterion("ticketscope--e5-s2--AC-5")

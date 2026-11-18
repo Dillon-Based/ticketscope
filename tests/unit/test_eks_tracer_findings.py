@@ -99,3 +99,18 @@ def test_ci_runs_the_gateway_check_and_the_evidence_job_waits_for_it() -> None:
     assert "run: scripts/check-eks-gateway.sh" in ci
     needs = re.search(r"needs: \[(checks, charts[^\]]*)\]", ci)
     assert needs and "eks-gateway" in needs.group(1)
+
+
+@pytest.mark.criterion("ticketscope--e5-s2--AC-3")
+def test_the_agent_gets_view_only_cluster_access_through_the_bootstrap_readonly_role() -> None:
+    """The unattended agent reads the cluster with kubectl; it must never be able to write."""
+    eks = (ENV / "eks.tf").read_text(encoding="utf-8")
+    bootstrap = (REPO / "infra" / "bootstrap" / "main.tf").read_text(encoding="utf-8")
+    role = re.search(r'resource "aws_iam_role" "readonly" \{\s+name = "([^"]+)"', bootstrap)
+    assert role, "bootstrap's readonly role not found"
+    entry = re.search(r"access_entries = \{(.*?)\n  \}\n", eks, re.DOTALL)
+    assert entry, "access_entries not found in infra/env/eks.tf"
+    block = entry.group(1)
+    assert f"role/{role.group(1)}" in block
+    assert "AmazonEKSViewPolicy" in block
+    assert "Admin" not in block and "Edit" not in block

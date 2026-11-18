@@ -117,7 +117,7 @@ jobs:
           bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/v1.7.7/scripts/download-actionlint.bash) 1.7.7
           # SC2016 is ignored: _kind-deploy.yml's sampler passes awk through `bash -c '...'` on
           # purpose, and that workflow is not to change (epic 5 Boundaries).
-          ./actionlint -color -ignore 'SC2016:info'
+          ./actionlint -ignore 'SC2016:info' -color
       - name: shellcheck the deploy script
         run: shellcheck scripts/eks-deploy.sh
 

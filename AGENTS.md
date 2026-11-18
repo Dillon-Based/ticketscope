@@ -16,12 +16,12 @@ Similar-issue search (keyword, dense, hybrid) over Mojang bug-tracker issues fro
 
 - Wiring lives in three composition roots: `ticketscope.http.app`, `ticketscope.mcp.main`, `ticketscope.jobs.<job>.main`.
 - Decisions: `docs/decisions/`. Deferred items: `_bmad-output/initiative-ticketscope/deferred-work.md` (the one the build workflow appends to).
-- Live EKS runs are hand-run (`docs/runbooks/eks-tracer.md`). A person runs `eval "$(scripts/eks-env.sh <hostname>)"` in each terminal; the agent only reads, and never writes: AWS through `--profile ticketscope-readonly`, and the cluster through `kubectl` on a kubeconfig made with that profile (`aws eks update-kubeconfig --name ticketscope-env --kubeconfig /tmp/ticketscope-eks.kubeconfig --profile ticketscope-readonly`; the `env` stack grants the role EKS view access). Read before asking the person to paste.
+- Live EKS runs are hand-run (`docs/runbooks/eks-tracer.md`). A person runs `eval "$(scripts/eks-env.sh)"` in each terminal; the agent only reads, and never writes: AWS through `--profile ticketscope-readonly`, and the cluster through `kubectl` on a kubeconfig made with that profile (`aws eks update-kubeconfig --name ticketscope-env --kubeconfig /tmp/ticketscope-eks.kubeconfig --profile ticketscope-readonly`; the `env` stack grants the role EKS view access). A failed `env-up` or `env-down` run: read it with `gh run view <run id> --log-failed` (masked ids show as `***`). Read before asking the person to paste.
 
 ## Running and verifying
 
 - Python 3.14 only (`requires-python`); use `uv run`, never bare `pytest`/`ruff`.
-- CI also runs `uv run lint-imports` and `python3 scripts/render_readme_table.py --check`; `pytest` alone covers neither.
+- Run `scripts/check.sh` before a PR: it runs the static CI jobs (ruff, pyright, `lint-imports`, pytest, the README table, terraform, `actionlint`, `shellcheck`) on the whole repo; `pytest` alone covers none of the rest. The `charts`, `containers` and `kind` jobs need helm, docker or a cluster and are not in it.
 - `tests/postgres` and `tests/image` skip silently without `TICKETSCOPE_TEST_PG_IMAGE` (built from `images/postgres.Dockerfile`); set `TICKETSCOPE_REQUIRE_CONTAINER_TESTS=1` to make a skip fail.
 - `-m kind` tests (`tests/integrated`, `tests/smoke`) need a cluster from `scripts/kind-up.sh`; default runs exclude them.
 - Tag tests with `@pytest.mark.criterion("<story key>--AC-<n>")`; `scripts/live_results.py` reads it.

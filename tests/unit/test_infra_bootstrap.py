@@ -241,3 +241,16 @@ def test_readonly_trust_names_the_account_and_matches_the_admin_arn_exactly() ->
     assert 'Principal = { AWS = "arn:aws:iam::${var.account_id}:root" }' in role
     assert 'ArnEquals = { "aws:PrincipalArn" = var.admin_principal_arn }' in role
     assert "ArnLike" not in role and "StringLike" not in role
+
+
+@pytest.mark.criterion("ticketscope--e5-s1--AC-1")
+def test_bootstrap_state_backend_is_committed_without_a_bucket() -> None:
+    """A checkout that was never configured must fail at `init`, not plan from an empty local
+    state: the S3 backend is committed, and only the bucket (it carries the account id) is not."""
+    versions = (BOOTSTRAP / "versions.tf").read_text(encoding="utf-8")
+    block = re.search(r'backend "s3" \{(.*?)\n  \}', versions, re.DOTALL)
+    assert block, "infra/bootstrap/versions.tf has no backend s3 block"
+    assert 'key          = "bootstrap/terraform.tfstate"' in block.group(1)
+    assert "bucket" not in block.group(1)
+    readme = (BOOTSTRAP / "README.md").read_text(encoding="utf-8")
+    assert 'init -migrate-state -backend-config="bucket=' in readme

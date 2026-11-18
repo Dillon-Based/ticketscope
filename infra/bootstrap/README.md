@@ -69,7 +69,7 @@ account details, so they stay in the untracked tfvars.
 
 ```sh
 export AWS_PROFILE=ticketscope-sso
-terraform -chdir=infra/bootstrap init
+terraform -chdir=infra/bootstrap init -backend=false   # local state, before the bucket exists
 terraform -chdir=infra/bootstrap plan -out=bootstrap.tfplan
 terraform -chdir=infra/bootstrap apply bootstrap.tfplan
 ```
@@ -79,23 +79,19 @@ subscription email AWS sends. Commit `infra/bootstrap/.terraform.lock.hcl` if it
 
 ## 5. Migrate state into the bucket
 
-State starts local. Once the bucket exists, move it under `bootstrap/`. Create
-`infra/bootstrap/backend.tf` (untracked, ignored; it names the bucket and so the account id):
-
-```hcl
-terraform {
-  backend "s3" {
-    bucket       = "ticketscope-<account id>"
-    key          = "bootstrap/terraform.tfstate"
-    region       = "us-east-1"
-    use_lockfile = true
-  }
-}
-```
+State starts local (step 4 runs `init -backend=false`). Once the bucket exists, move it under
+`bootstrap/`. The S3 backend block is committed in `versions.tf` without its bucket, which names
+the account id and so comes at init. An old untracked `backend.tf` from an earlier version of
+these steps must be deleted: two backend blocks fail the init.
 
 ```sh
-terraform -chdir=infra/bootstrap init -migrate-state
+terraform -chdir=infra/bootstrap init -migrate-state -backend-config="bucket=ticketscope-<account id>"
 ```
+
+Every later `init` passes the same flag (`eval "$(scripts/eks-env.sh)"` exports the bucket as
+`$TICKETSCOPE_STATE_BUCKET`):
+`terraform -chdir=infra/bootstrap init -reconfigure -backend-config="bucket=$TICKETSCOPE_STATE_BUCKET"`.
+A checkout that skips it fails at `init`, so a plan can never start from an empty local state.
 
 Answer yes, then delete the local `terraform.tfstate*` files.
 

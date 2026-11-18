@@ -87,7 +87,8 @@ context:
 - A run at or over 1800 s stays green and is flagged in the summary; it is the person's Decision to record.
 - Tooling added to CI: an `actionlint` and `shellcheck` job (`workflows`).
 
-## Plan Change Log
+\n- Live run, 2026-11-18, dispatch from `main` at 12b0150, run 44368083253, through OIDC with no stored key. Succeeded: page, `/mcp` and the issue-count check passed over the public hostname. This run continued a partly applied environment (the VPC, IAM and EKS control plane came from the previous failed run), so it is not the cold R1 measurement. Stage times (s): terraform_apply 176, kubeconfig 1, deploy.crds 19, deploy.platform 142, deploy.ticketscope 71, deploy.api-mcp-ready 2, deploy.dns_visible 2, deploy.dns_public 0, deploy.https-answers 0, smoke 6; total from apply start to smoke pass 420. The cold run (control plane about 12.5 minutes in the tracer) is still to record after a hand teardown and a fresh dispatch.
+\n## Plan Change Log
 
 ## Review Triage Log
 

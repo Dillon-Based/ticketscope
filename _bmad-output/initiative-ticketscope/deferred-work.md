@@ -96,3 +96,7 @@ carried_to: epic-eks-environment (5), where corpus reloads first run under live 
 - source_plan: `_bmad-output/initiative-ticketscope/tickets/epic-eks-environment/tickets/story-tracer-the-page-and-mcp-answer-over-https-on-the-fixed-hostn-plan.md`
   summary: The ALB's HTTPS listener uses the default `ELBSecurityPolicy-2016-08`, which allows TLS 1.0 and 1.1.
   evidence: Seen in the controller's built model during the tracer run; set a modern sslPolicy in the LoadBalancerConfiguration.
+
+- source_plan: `_bmad-output/initiative-ticketscope/tickets/epic-eks-environment/tickets/story-env-down-tears-down-in-order-finds-nothing-left-and-expires-plan.md`
+  summary: Confirm that the ALB's and the CNI's ENIs carry the `environment` or `elbv2.k8s.aws/cluster` tag, so the ENI wait and the ENI leg of the leftover check are not vacuous (unverified, medium if true).
+  evidence: `scripts/leftover-check.sh` and `scripts/eks-teardown.sh` list ENIs by those tags only; no recorded listing shows ENI tags. The live `--list` run in story 5.4's manual checks should print the ENIs of the Gateway's ALB; if none appear, filter by VPC id instead. `terraform destroy` fails on a leftover ENI, so a leak is loud rather than silent.

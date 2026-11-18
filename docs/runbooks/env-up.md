@@ -70,6 +70,9 @@ the same environment.
 
 ## Tear down by hand, in AD-24 order
 
+The `env-down` workflow does this (and the expiry sweep); see `docs/runbooks/env-down.md`. Use the
+steps below only when it cannot run.
+
 Use the admin profile and a kubeconfig for the cluster:
 
 ```sh

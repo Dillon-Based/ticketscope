@@ -1,0 +1,194 @@
+# Story 5.4 (AD-24, R3, R4, R6): tears the EKS environment down in order, proves the account is
+# clean, and destroys environments whose expiry has passed. It runs from `main` (the `eks`
+# environment's branch rule) on dispatch and on an hourly schedule; there is no push or
+# pull-request trigger. It assumes the deploy role through OIDC, like env-up.
+#
+#   find      the sweep decision. A dispatch always tears down. The schedule reads `expires_at`
+#             from the environment VPC's tag: an unexpired or untagged environment is skipped with
+#             a summary line, an expired one is torn down, and no environment at all means the
+#             leftover check runs on its own (a tagged leftover with no environment fails the run).
+#   teardown  scripts/eks-teardown.sh (AD-24 order), then scripts/leftover-check.sh, then the
+#             stage times in the job summary.
+#
+# Only the `env` stack is destroyed: nothing here reads or names a bootstrap resource. A stuck
+# Gateway fails the job with `platform` still installed (scripts/eks-teardown.sh prints why).
+name: env-down
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 * * * *"
+
+permissions:
+  contents: read
+
+# One environment operation at a time, shared with env-up; a second run waits instead of
+# cancelling a running apply or destroy.
+concurrency:
+  group: eks-environment
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-1
+  TERRAFORM_VERSION: 1.17.0
+  HELM_VERSION: v4.3.1
+  CLUSTER_NAME: ticketscope-env
+
+jobs:
+  find:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: eks
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      teardown: ${{ steps.decide.outputs.teardown }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          mask-aws-account-id: true
+      - name: Decide whether to tear down (the expiry sweep)
+        id: decide
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [[ "$EVENT" != "schedule" ]]; then
+            echo "teardown=true" >> "$GITHUB_OUTPUT"
+            echo "Dispatched: the environment is torn down now." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          vpcs="$(aws ec2 describe-vpcs \
+            --filters "Name=tag:environment,Values=eks" "Name=tag:stack,Values=env" --output json)"
+          count="$(jq '.Vpcs | length' <<<"$vpcs")"
+          if ((count == 0)); then
+            echo "teardown=false" >> "$GITHUB_OUTPUT"
+            echo "Sweep: no environment exists; checking that nothing tagged is left." >> "$GITHUB_STEP_SUMMARY"
+            # A tagged leftover with no environment fails the run.
+            # The listing (ARNs) stays in the job log, masked; the summary holds only the verdict.
+            if scripts/leftover-check.sh; then
+              echo "Sweep: nothing tagged is left." >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            echo "Sweep: tagged leftovers with no environment; see the job log." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          if ((count > 1)); then
+            echo "::error::sweep found $count environment VPCs; expected at most one"
+            exit 1
+          fi
+          expires="$(jq -r '.Vpcs[0].Tags[]? | select(.Key == "expires_at") | .Value' <<<"$vpcs")"
+          if [[ ! "$expires" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]]; then
+            echo "teardown=false" >> "$GITHUB_OUTPUT"
+            echo "Sweep: the environment has no valid expires_at tag (a hand-run one); skipped." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if (($(date -u -d "$expires" +%s) > $(date -u +%s))); then
+            echo "teardown=false" >> "$GITHUB_OUTPUT"
+            echo "Sweep: the environment expires at $expires, which has not passed; skipped." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo "teardown=true" >> "$GITHUB_OUTPUT"
+          echo "Sweep: the environment expired at $expires; tearing it down." >> "$GITHUB_STEP_SUMMARY"
+
+  teardown:
+    needs: find
+    if: needs.find.outputs.teardown == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    environment: eks
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      TF_IN_AUTOMATION: "1"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+      - uses: azure/setup-helm@v5
+        with:
+          version: ${{ env.HELM_VERSION }}
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          mask-aws-account-id: true
+      - name: Read the bootstrap facts and set up Terraform
+        run: |
+          account="$(aws sts get-caller-identity --query Account --output text)"
+          echo "::add-mask::$account"
+          hostname="$(aws route53 list-hosted-zones \
+            --query "HostedZones[?starts_with(Name, 'ticketscope.')].Name" --output text)"
+          hostname="${hostname%.}"
+          [[ -n "$hostname" && "$hostname" != *[[:space:]]* ]] || { echo "::error::expected exactly one ticketscope.* hosted zone"; exit 1; }
+          zone_id="$(aws route53 list-hosted-zones-by-name --dns-name "$hostname" \
+            --query "HostedZones[?Name=='${hostname}.'].Id | [0]" --output text)"
+          zone_id="${zone_id##*/}"
+          {
+            echo "TF_VAR_account_id=$account"
+            echo "TF_VAR_zone_id=$zone_id"
+            echo "KUBECONFIG=$RUNNER_TEMP/eks.kubeconfig"
+          } >> "$GITHUB_ENV"
+          terraform -chdir=infra/env init -input=false -backend-config="bucket=ticketscope-$account"
+      - name: Does the cluster exist
+        id: cluster
+        run: |
+          if out="$(aws eks describe-cluster --name "$CLUSTER_NAME" 2>&1)"; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          elif [[ "$out" == *ResourceNotFoundException* ]]; then
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "No cluster $CLUSTER_NAME exists; only the Terraform destroy runs." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::error::could not tell whether the cluster exists"
+            exit 1
+          fi
+      - name: Write the kubeconfig
+        if: steps.cluster.outputs.present == 'true'
+        run: aws eks update-kubeconfig --name "$CLUSTER_NAME" --kubeconfig "$KUBECONFIG"
+      - name: Tear down in AD-24 order (scripts/eks-teardown.sh)
+        env:
+          CLUSTER_PRESENT: ${{ steps.cluster.outputs.present }}
+        run: |
+          set -o pipefail
+          if [[ "$CLUSTER_PRESENT" == "true" ]]; then
+            scripts/eks-teardown.sh --kubeconfig "$KUBECONFIG" 2>&1 | tee "$RUNNER_TEMP/teardown.log"
+          else
+            scripts/eks-teardown.sh --skip-cluster 2>&1 | tee "$RUNNER_TEMP/teardown.log"
+          fi
+      - name: Leftover check (read-only, fails on any tagged resource)
+        run: |
+          set -o pipefail
+          scripts/leftover-check.sh 2>&1 | tee "$RUNNER_TEMP/leftover.log"
+      - name: Stage times
+        if: always()
+        run: |
+          {
+            echo "## env-down stage times"
+            echo
+            echo "| stage | seconds |"
+            echo "| --- | ---: |"
+            if [[ -f "$RUNNER_TEMP/teardown.log" ]]; then
+              awk '/^--- eks-teardown stage times ---/{f=1;next} f && NF == 2 {sub(/s$/, "", $2); printf "| %s | %s |\n", $1, $2}' \
+                "$RUNNER_TEMP/teardown.log"
+            fi
+            echo
+            if [[ -f "$RUNNER_TEMP/leftover.log" ]]; then tail -n 1 "$RUNNER_TEMP/leftover.log"; fi
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Denied actions (what to add to the deploy role)
+        if: always()
+        run: |
+          denied="$(scripts/denied-actions.sh "$RUNNER_TEMP/teardown.log" "$RUNNER_TEMP/leftover.log")"
+          if [[ -n "$denied" ]]; then
+            {
+              echo
+              echo "### Denied actions"
+              echo
+              printf '%s\n' "$denied" | sed 's/^/- /'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi

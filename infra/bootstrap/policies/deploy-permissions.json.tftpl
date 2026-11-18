@@ -57,6 +57,12 @@
       ]
     },
     {
+      "Sid": "DeployRoleSelfRead",
+      "Effect": "Allow",
+      "Action": "iam:GetRole",
+      "Resource": "arn:aws:iam::${account_id}:role/ticketscope-deploy"
+    },
+    {
       "Sid": "TicketscopeOidcProvider",
       "Effect": "Allow",
       "Action": [

@@ -12,7 +12,7 @@
 #           smoke check has passed; every stage's time goes to the job summary and an artifact.
 #
 # A failed smoke check fails the run and leaves the environment up: the expiry tag on it is what
-# the sweep (story 5.4) destroys. Teardown by hand is in docs/runbooks/env-up.md.
+# the sweep (env-down, story 5.4) destroys. env-down's runbook is docs/runbooks/env-down.md.
 name: env-up
 
 on:
@@ -27,6 +27,13 @@ on:
         required: false
         default: "4"
         type: string
+      expiry_minutes:
+        description: >-
+          Minutes until the environment's expiry tag (5 to 240); overrides expiry_hours when set.
+          A short expiry lets the scheduled env-down sweep be watched.
+        required: false
+        default: ""
+        type: string
       plan_only:
         description: >-
           Only run `terraform plan` for env as the deploy role: no images, no apply, no clock,
@@ -38,9 +45,10 @@ on:
 permissions:
   contents: read
 
-# One environment at a time; a second dispatch waits instead of cancelling a running apply.
+# One environment operation at a time, shared with env-down; a second run waits instead of
+# cancelling a running apply or destroy.
 concurrency:
-  group: env-up
+  group: eks-environment
   cancel-in-progress: false
 
 env:
@@ -64,6 +72,7 @@ jobs:
         env:
           INPUT_SHA: ${{ inputs.sha }}
           INPUT_HOURS: ${{ inputs.expiry_hours }}
+          INPUT_MINUTES: ${{ inputs.expiry_minutes }}
         run: |
           if [[ ! "$INPUT_SHA" =~ ^[0-9a-f]{40}$ ]]; then
             echo "::error::input sha must be 40 lowercase hex characters"
@@ -71,6 +80,10 @@ jobs:
           fi
           if [[ ! "$INPUT_HOURS" =~ ^[0-9]+$ ]] || ((10#$INPUT_HOURS < 1 || 10#$INPUT_HOURS > 24)); then
             echo "::error::input expiry_hours must be a whole number from 1 to 24"
+            exit 1
+          fi
+          if [[ -n "$INPUT_MINUTES" ]] && { [[ ! "$INPUT_MINUTES" =~ ^[0-9]+$ ]] || ((10#$INPUT_MINUTES < 5 || 10#$INPUT_MINUTES > 240)); }; then
+            echo "::error::input expiry_minutes must be empty or a whole number from 5 to 240"
             exit 1
           fi
       - uses: aws-actions/configure-aws-credentials@v4
@@ -227,6 +240,7 @@ jobs:
         id: facts
         env:
           EXPIRY_HOURS: ${{ inputs.expiry_hours }}
+          EXPIRY_MINUTES: ${{ inputs.expiry_minutes }}
         run: |
           mkdir -p env-up-stages
           touch "$STAGES"
@@ -245,7 +259,11 @@ jobs:
             --query "CertificateSummaryList[?DomainName=='${hostname}' && Status=='ISSUED'].CertificateArn | [0]" --output text)"
           [[ -n "$certificate_arn" && "$certificate_arn" != None ]] || { echo "::error::no issued certificate for the fixed hostname"; exit 1; }
           echo "::add-mask::$certificate_arn"
-          expires_at="$(date -u -d "+$((10#$EXPIRY_HOURS)) hours" +%Y-%m-%dT%H:%M:%SZ)"
+          if [[ -n "$EXPIRY_MINUTES" ]]; then
+            expires_at="$(date -u -d "+$((10#$EXPIRY_MINUTES)) minutes" +%Y-%m-%dT%H:%M:%SZ)"
+          else
+            expires_at="$(date -u -d "+$((10#$EXPIRY_HOURS)) hours" +%Y-%m-%dT%H:%M:%SZ)"
+          fi
           {
             echo "TF_VAR_account_id=$account"
             echo "TF_VAR_zone_id=$zone_id"

@@ -56,10 +56,13 @@ def test_no_aws_credential_is_stored_and_every_aws_job_assumes_the_role_through_
 def test_it_is_dispatch_only_and_takes_a_sha_and_expiry_hours_defaulting_to_four() -> None:
     assert set(TRIGGERS) == {"workflow_dispatch"}
     inputs = TRIGGERS["workflow_dispatch"]["inputs"]
-    assert set(inputs) == {"sha", "expiry_hours", "plan_only"}
+    assert set(inputs) == {"sha", "expiry_hours", "expiry_minutes", "plan_only"}
     assert inputs["sha"]["required"] is True
     assert inputs["expiry_hours"]["default"] == "4"
-    assert DOC["concurrency"]["cancel-in-progress"] is False
+    minutes = inputs["expiry_minutes"]
+    assert minutes["required"] is False and minutes["default"] == ""
+    # One group with env-down, so a destroy and an apply never overlap.
+    assert DOC["concurrency"] == {"group": "eks-environment", "cancel-in-progress": False}
 
 
 @pytest.mark.criterion("ticketscope--e5-s3--AC-1")
@@ -74,6 +77,7 @@ def test_bad_input_fails_in_a_job_that_has_made_no_aws_call() -> None:
     assert validate < first_aws
     run = steps[validate]["run"]
     assert "^[0-9a-f]{40}$" in run and "10#$INPUT_HOURS < 1" in run and "> 24" in run
+    assert "10#$INPUT_MINUTES < 5" in run and "> 240" in run and "input expiry_minutes" in run
     # The messages name the input.
     assert "input sha" in run and "input expiry_hours" in run
     # Inputs reach the shell through env, never interpolated into the script.
@@ -138,7 +142,8 @@ def test_the_clock_starts_at_terraform_apply_and_stops_after_the_smoke_check() -
 
 @pytest.mark.criterion("ticketscope--e5-s3--AC-5")
 def test_a_failed_deploy_or_smoke_leaves_the_environment_up() -> None:
-    assert "terraform destroy" not in TEXT and "env-down" not in TEXT.replace("story 5.4", "")
+    assert "terraform destroy" not in TEXT and "env-down.yml" not in TEXT
+    assert "gh workflow run" not in TEXT
     assert "helm uninstall" not in TEXT
     summary = _step("env", "Job summary")
     assert summary["if"] == "${{ always() && !inputs.plan_only }}"
@@ -201,6 +206,8 @@ def test_the_input_hours_become_the_expiry_tag_on_every_environment_resource() -
     assert facts["env"]["EXPIRY_HOURS"] == "${{ inputs.expiry_hours }}"
     assert "TF_VAR_expires_at=$expires_at" in facts["run"]
     assert "+$((10#$EXPIRY_HOURS)) hours" in facts["run"]
+    assert facts["env"]["EXPIRY_MINUTES"] == "${{ inputs.expiry_minutes }}"
+    assert "+$((10#$EXPIRY_MINUTES)) minutes" in facts["run"]
     versions = (REPO / "infra" / "env" / "versions.tf").read_text(encoding="utf-8")
     assert "expires_at = var.expires_at" in versions and "default_tags" in versions
     variables = (REPO / "infra" / "env" / "variables.tf").read_text(encoding="utf-8")

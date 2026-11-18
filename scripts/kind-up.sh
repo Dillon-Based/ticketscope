@@ -104,6 +104,9 @@ kind load docker-image --name "$CLUSTER_NAME" "$APP_IMAGE" "$PG_IMAGE"
 log "installing platform"
 # `dependency build` resolves non-OCI repos only through `helm repo add`.
 helm repo add cnpg https://cloudnative-pg.github.io/charts --force-update >/dev/null
+# The EKS-only dependencies (disabled on kind) still have to resolve for `dependency build`.
+helm repo add eks https://aws.github.io/eks-charts --force-update >/dev/null
+helm repo add external-dns https://kubernetes-sigs.github.io/external-dns/ --force-update >/dev/null
 helm repo add seaweedfs https://seaweedfs.github.io/seaweedfs/helm --force-update >/dev/null
 helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts --force-update >/dev/null
 helm repo add grafana-community https://grafana-community.github.io/helm-charts --force-update >/dev/null

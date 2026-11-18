@@ -1,0 +1,51 @@
+# EKS: environment facts only (AD-25): gateway class, storage class, the controllers that
+# implement the class and write DNS, replica counts and tags. Product defaults stay in
+# values.yaml (tests/unit/test_chart_eks.py fails the render on an override).
+#
+# Set at deploy by scripts/eks-deploy.sh, never committed (they carry account, zone and
+# resource ids, or the hostname): gateway.hostname, gateway.aws.certificateArn, the IRSA role
+# annotation on each controller's service account, aws-load-balancer-controller.clusterName
+# and .vpcId, external-dns.domainFilters and .txtOwnerId.
+gateway:
+  className: alb
+  controllerName: gateway.k8s.aws/alb
+  tls:
+    enabled: true
+  aws:
+    enabled: true
+
+envoy-gateway:
+  enabled: false
+
+storageClass:
+  create: true
+
+aws-load-balancer-controller:
+  enabled: true
+  replicaCount: 1
+  region: us-east-1
+  # The name infra/env/irsa.tf trusts; the release prefix would otherwise change it.
+  serviceAccount:
+    name: aws-load-balancer-controller
+  # Resources the controller creates carry the environment tag, for the leftover check.
+  defaultTags:
+    environment: eks
+  controllerConfig:
+    featureGates:
+      ALBGatewayAPI: true
+
+external-dns:
+  enabled: true
+  # The name infra/env/irsa.tf trusts; the release prefix would otherwise change it.
+  serviceAccount:
+    name: external-dns
+  provider:
+    name: aws
+  sources:
+    - gateway-httproute
+  # sync removes the record at teardown. Dry-run it first (runbook).
+  policy: sync
+  registry: txt
+  env:
+    - name: AWS_DEFAULT_REGION
+      value: us-east-1

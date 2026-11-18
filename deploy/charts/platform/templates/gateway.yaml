@@ -18,8 +18,19 @@ metadata:
   labels:
     app.kubernetes.io/part-of: ticketscope
     app.kubernetes.io/managed-by: {{ .Release.Service }}
+  {{- with .Values.gateway.externalDnsTarget }}
+  annotations:
+    external-dns.kubernetes.io/target: {{ . | quote }}
+  {{- end }}
 spec:
   gatewayClassName: {{ .Values.gateway.className }}
+  {{- if .Values.gateway.aws.enabled }}
+  infrastructure:
+    parametersRef:
+      group: gateway.k8s.aws
+      kind: LoadBalancerConfiguration
+      name: {{ .Values.gateway.name }}
+  {{- end }}
   listeners:
     - name: http
       protocol: HTTP
@@ -30,6 +41,25 @@ spec:
       allowedRoutes:
         namespaces:
           from: All
+    {{- if .Values.gateway.tls.enabled }}
+    # TLS ends at the ALB; its certificate comes from the LoadBalancerConfiguration.
+    - name: https
+      protocol: HTTPS
+      port: {{ .Values.gateway.tls.port }}
+      {{- with .Values.gateway.hostname }}
+      hostname: {{ . | quote }}
+      {{- end }}
+      # The Gateway API CRD requires certificate refs or options with Terminate. The ARN is in
+      # the LoadBalancerConfiguration, so no certificate refs are set and this placeholder option
+      # satisfies the CRD. Whether the controller tolerates it is unverified; the tracer settles it.
+      tls:
+        mode: Terminate
+        options:
+          ticketscope.example/certificate: "explicit-arn-in-LoadBalancerConfiguration"
+      allowedRoutes:
+        namespaces:
+          from: All
+    {{- end }}
     {{- with .Values.gateway.tunnelHostname }}
     # The tunnel's public hostname: only routes naming it attach here (the /mcp route).
     - name: tunnel

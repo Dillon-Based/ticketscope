@@ -1,0 +1,22 @@
+{{- /*
+EKS only (AD-14): the ALB's scheme and its ACM certificate by explicit ARN, because the
+controller ignores listener certificateRefs and discovers a certificate by hostname only
+when none is given. The ARN comes from the bootstrap output, passed at deploy.
+*/ -}}
+{{- if .Values.gateway.aws.enabled }}
+apiVersion: gateway.k8s.aws/v1
+kind: LoadBalancerConfiguration
+metadata:
+  name: {{ .Values.gateway.name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/part-of: ticketscope
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  scheme: {{ .Values.gateway.aws.scheme }}
+  {{- if .Values.gateway.tls.enabled }}
+  listenerConfigurations:
+    - protocolPort: {{ printf "HTTPS:%v" .Values.gateway.tls.port | quote }}
+      defaultCertificate: {{ required "gateway.aws.certificateArn is required with gateway.tls.enabled" .Values.gateway.aws.certificateArn | quote }}
+  {{- end }}
+{{- end }}

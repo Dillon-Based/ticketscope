@@ -82,3 +82,17 @@ carried_to: epic-eks-environment (5), where corpus reloads first run under live 
 - source_plan: none
   summary: A demo consumer outside the service: a small LangGraph agent that triages a new bug report by calling `search_similar_issues` and `get_issue` over MCP and drafts a "likely duplicate of" note.
   evidence: The initiative rules out server-side LLM use (no server-side LLM generation; the MCP client's model writes the answer) and the spine keeps tool-call-behaviour evals out of scope, so a framework agent does not belong in the service. As a separate example or small repo it would show the MCP server works with a client other than Claude Desktop and could illustrate epic 8's README; the langchain-mcp-adapters API was not checked and needs verifying before any promise.
+
+- source_plan: `_bmad-output/initiative-ticketscope/tickets/epic-eks-environment/tickets/story-tracer-the-page-and-mcp-answer-over-https-on-the-fixed-hostn-plan.md`
+  summary: eks-deploy.sh waits for the Gateway to be Programmed before any HTTPRoute exists (unverified, medium if true).
+  evidence: If the ALB is only provisioned once a route attaches, the 10m wait fails before the app installs. The live tracer run settles it; if so, move the wait after the ticketscope release.
+- source_plan: `_bmad-output/initiative-ticketscope/tickets/epic-eks-environment/tickets/story-tracer-the-page-and-mcp-answer-over-https-on-the-fixed-hostn-plan.md`
+  summary: The EKS module's load balancer controller IAM policy may not cover the ALB Gateway API path (unverified, high if true).
+  evidence: Only the attribute is tested. The live tracer run settles it: the Gateway provisions an ALB or the controller logs AccessDenied.
+
+- source_plan: `_bmad-output/initiative-ticketscope/tickets/epic-eks-environment/tickets/story-tracer-the-page-and-mcp-answer-over-https-on-the-fixed-hostn-plan.md`
+  summary: external-dns wrote no TXT ownership records and so deleted neither DNS record at teardown (story 5.4 teardown must handle it).
+  evidence: Tracer run 2026-11-17: after Gateway delete the A and AAAA alias records stayed in the bootstrap zone and no TXT records existed; deleted by hand. Settle why (registry txt for alias records, v0.23) or have env-down delete the records explicitly.
+- source_plan: `_bmad-output/initiative-ticketscope/tickets/epic-eks-environment/tickets/story-tracer-the-page-and-mcp-answer-over-https-on-the-fixed-hostn-plan.md`
+  summary: The ALB's HTTPS listener uses the default `ELBSecurityPolicy-2016-08`, which allows TLS 1.0 and 1.1.
+  evidence: Seen in the controller's built model during the tracer run; set a modern sslPolicy in the LoadBalancerConfiguration.

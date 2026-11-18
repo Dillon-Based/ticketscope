@@ -12,9 +12,41 @@ gateway:
   createClass: true
   controllerName: gateway.envoyproxy.io/gatewayclass-controller
   port: 80
+  # EKS: an HTTPS listener (TLS terminated at the ALB) beside the HTTP one. Off on kind.
+  tls:
+    enabled: false
+    port: 443
+  # The AWS Load Balancer Controller's ALB for the Gateway (AD-14), off on kind. The
+  # certificate is an explicit ARN in a LoadBalancerConfiguration because listener
+  # certificateRefs are unsupported; the ARN is passed at deploy, never committed.
+  aws:
+    enabled: false
+    certificateArn: ""
+    scheme: internet-facing
+    targetType: ip
+    # Services in `namespace` that get a TargetGroupConfiguration (target type ip).
+    targetGroups:
+      namespace: ticketscope
+      services: [ticketscope-api, ticketscope-mcp]
+  # Set as the external-dns.kubernetes.io/target annotation when the ALB address is not
+  # read from the Gateway status (AD-14 fallback). Empty adds no annotation.
+  externalDnsTarget: ""
 
 envoy-gateway:
   enabled: true
+
+# EKS only: the gp3 StorageClass the database volumes use (reclaimPolicy Delete, so teardown
+# leaves no volume). Off on kind.
+storageClass:
+  create: false
+  name: gp3
+
+# EKS only (AD-13), enabled in values-eks.yaml.
+aws-load-balancer-controller:
+  enabled: false
+
+external-dns:
+  enabled: false
 
 cnpg:
   enabled: true

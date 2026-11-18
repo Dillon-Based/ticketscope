@@ -1,0 +1,17 @@
+# EKS: environment facts only (AD-25): storage class, replica counts and the backup switch.
+# The hostname and the ECR image repositories carry the domain or the account id, so
+# scripts/eks-deploy.sh sets them (hostname, image.app.repository, image.postgres.repository).
+# Auth is off: no auth key exists until epic 6.
+api:
+  replicas: 1
+
+mcp:
+  replicas: 1
+
+database:
+  storage:
+    storageClass: gp3
+
+# Off until story 5.6 gives backups a bucket path and an IRSA role.
+backup:
+  enabled: false

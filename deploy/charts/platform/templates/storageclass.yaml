@@ -1,0 +1,19 @@
+{{- /*
+EKS only: a gp3 StorageClass on the EBS CSI driver, which the ticketscope release names in
+database.storage.storageClass. EKS ships only gp2. Off on kind, which has its own default.
+*/ -}}
+{{- if .Values.storageClass.create }}
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: {{ .Values.storageClass.name }}
+  labels:
+    app.kubernetes.io/part-of: ticketscope
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+provisioner: ebs.csi.aws.com
+parameters:
+  type: gp3
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Delete
+allowVolumeExpansion: true
+{{- end }}

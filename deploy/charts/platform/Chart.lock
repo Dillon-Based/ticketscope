@@ -8,6 +8,12 @@ dependencies:
 - name: plugin-barman-cloud
   repository: https://cloudnative-pg.github.io/charts
   version: 0.8.1
+- name: aws-load-balancer-controller
+  repository: https://aws.github.io/eks-charts
+  version: 3.6.3
+- name: external-dns
+  repository: https://kubernetes-sigs.github.io/external-dns/
+  version: 1.23.0
 - name: seaweedfs
   repository: https://seaweedfs.github.io/seaweedfs/helm
   version: 4.52.0
@@ -20,5 +26,5 @@ dependencies:
 - name: grafana
   repository: https://grafana-community.github.io/helm-charts
   version: 14.4.0
-digest: sha256:93839b3d55b280341b4aad0c23d8f50d8e41ed65234c61432e834911c576443b
-generated: "2026-11-07T07:56:07.483012-05:00"
+digest: sha256:da6eb906b14c02c45d55c916053a8705284463b5c9f37d8f33b89146df75b6bf
+generated: "2026-11-17T16:01:31.105456-05:00"

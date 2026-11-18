@@ -1,0 +1,22 @@
+{{- /*
+EKS only (AD-14): target type ip for each Service the routes reach, so the ALB sends to pod
+IPs. One per Service, in the Service's namespace (the ticketscope release's).
+*/ -}}
+{{- if .Values.gateway.aws.enabled }}
+{{- range .Values.gateway.aws.targetGroups.services }}
+apiVersion: gateway.k8s.aws/v1
+kind: TargetGroupConfiguration
+metadata:
+  name: {{ . }}
+  namespace: {{ $.Values.gateway.aws.targetGroups.namespace }}
+  labels:
+    app.kubernetes.io/part-of: ticketscope
+    app.kubernetes.io/managed-by: {{ $.Release.Service }}
+spec:
+  targetReference:
+    name: {{ . }}
+  defaultConfiguration:
+    targetType: {{ $.Values.gateway.aws.targetType }}
+---
+{{- end }}
+{{- end }}

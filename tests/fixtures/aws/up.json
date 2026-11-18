@@ -1,0 +1,742 @@
+{
+  "ResourceTagMappingList": [
+    {
+      "ResourceARN": "arn:aws:ec2:us-east-1:000000000000:internet-gateway/internet-gateway-040",
+      "Tags": [
+        {
+          "Key": "Name",
+          "Value": "ticketscope-env"
+        },
+        {
+          "Key": "environment",
+          "Value": "eks"
+        },
+        {
+          "Key": "project",
+          "Value": "ticketscope"
+        },
+        {
+          "Key": "stack",
+          "Value": "env"
+        }
+      ]
+    },
+    {
+      "ResourceARN": "arn:aws:ec2:us-east-1:000000000000:launch-template/launch-template-045",
+      "Tags": [
+        {
+          "Key": "environment",
+          "Value": "eks"
+        },
+        {
+          "Key": "project",
+          "Value": "ticketscope"
+        },
+        {
+          "Key": "stack",
+          "Value": "env"
+        }
+      ]
+    },
+    {
+      "ResourceARN": "arn:aws:ec2:us-east-1:000000000000:route-table/route-table-041",
+      "Tags": [
+        {
+          "Key": "Name",
+          "Value": "ticketscope-env-public"
+        },
+        {
+          "Key": "environment",
+          "Value": "eks"
+        },
+        {
+          "Key": "project",
+          "Value": "ticketscope"
+        },
+        {
+          "Key": "stack",
+          "Value": "env"
+        }
+      ]
+    },
+    {
+      "ResourceARN": "arn:aws:ec2:us-east-1:000000000000:security-group/security-group-027",
+      "Tags": [
+        {
+          "Key": "elbv2.k8s.aws/cluster",
+          "Value": "ticketscope-env"
+        },
+        {
+          "Key": "elbv2.k8s.aws/resource",
+          "Value": "value-026"
+        },
+        {
+          "Key": "environment",
+          "Value": "eks"
+        }
+      ]
+    },
+    {
+      "ResourceARN": "arn:aws:ec2:us-east-1:000000000000:security-group/security-group-036",
+      "Tags": [
+        {
+          "Key": "Name",
+          "Value": "ticketscope-env-cluster"
+        },
+        {
+          "Key": "environment",
+          "Value": "eks"
+        },
+        {
+          "Key": "project",
+          "Value": "ticketscope"
+        },
+        {
+          "Key": "stack",
+          "Value": "env"
+        }
+      ]
+    },
+    {
+      "ResourceARN": "arn:aws:ec2:us-east-1:000000000000:security-group/security-group-037",
+      "Tags": [
+        {
+          "Key": "Name",
+          "Value": "ticketscope-env-node"
+        },
+        {
+          "Key": "environment",
+          "Value": "eks"
+        },
+        {
+          "Key": "kubernetes.io/cluster/ticketscope-env",
+          "Value": "owned"
+        },
+        {
+          "Key": "project",
+          "Value": "ticketscope"
+        },
+        {
+          "Key": "stack",
+          "Value": "env"
+        }
+      ]
+    },
+    {
+      "ResourceARN": "arn:aws:ec2:us-east-1:000000000000:security-group/security-group-054",
+      "Tags": [
+        {
+          "Key": "elbv2.k8s.aws/cluster",
+          "Value": "ticketscope-env"
+        },
+        {
+          "Key": "environment",
+          "Value": "eks"
+        },
+        {
+          "Key": "gateway.k8s.aws.alb/resource",
+          "Value": "value-053"
+        },
+        {
+          "Key": "gateway.k8s.aws.alb/stack",
+          "Value": "value-007"
+        }
+      ]
+    },
+    {
+      "ResourceARN": "arn:aws:ec2:us-east-1:000000000000:subnet/subnet-022",
+      "Tags": [
+        {
+          "Key": "Name",
+          "Value": "ticketscope-env-public-us-east-1b"
+        },
+        {
+          "Key": "environment",
+          "Value": "eks"
+        },
+        {
+          "Key": "kubernetes.io/cluster/ticketscope-env",
+          "Value": "shared"
+        },
+        {
+          "Key": "kubernetes.io/role/elb",
+          "Value": "1"
+        },
+        {
+          "Key": "project",
+          "Value": "ticketscope"
+        },
+        {
+          "Key": "stack",
+          "Value": "env"
+        }
+      ]
+    },
+    {
+      "ResourceARN": "arn:aws:ec2:us-east-1:000000000000:subnet/subnet-052",
+      "Tags": [
+        {
+          "Key": "Name",
+          "Value": "ticketscope-env-public-us-east-1a"
+        },
+        {
+          "Key": "environment",
+          "Value": "eks"
+        },
+        {
+          "Key": "kubernetes.io/cluster/ticketscope-env",
+          "Value": "shared"
+        },
+        {
+          "Key": "kubernetes.io/role/elb",
+          "Value": "1"
+        },
+        {
+          "Key": "project",
+          "Value": "ticketscope"
+        },
+        {
+          "Key": "stack",
+          "Value": "env"
+        }
+      ]
+    },
+    {
+      "ResourceARN": "arn:aws:ec2:us-east-1:000000000000:volume/volume-005",
+      "Tags": [
+        {
+          "Key": "CSIVolumeName",
+          "Value": "value-001"
+        },
+        {
+          "Key": "KubernetesCluster",
+          "Value": "ticketscope-env"
+        },
+        {
+          "Key": "Name",
+          "Value": "ticketscope-env-dynamic-pvc-uuid-004"
+        },
+        {
+          "Key": "ebs.csi.aws.com/cluster",
+          "Value": "true"
+        },
+        {
+          "Key": "ebs.csi.aws.com/cluster-name",
+          "Value": "ticketscope-env"
+        },
+        {
+          "Key": "environment",
+          "Value": "eks"
+        },
+        {
+          "Key": "kubernetes.io/cluster/ticketscope-env",
+          "Value": "owned"
+        },
+        {
+          "Key": "kubernetes.io/created-for/pv/name",
+          "Value": "value-001"
+        },
+        {
+          "Key": "kubernetes.io/created-for/pvc/name",
+          "Value": "value-002"
+        },
+        {
+          "Key": "kubernetes.io/created-for/pvc/namespace",
+          "Value": "value-003"
+        }
+      ]
+    },
+    {
+      "ResourceARN": "arn:aws:ec2:us-east-1:000000000000:volume/volume-012",
+      "Tags": [
+        {
+          "Key": "CSIVolumeName",
+          "Value": "value-009"
+        },
+        {
+          "Key": "KubernetesCluster",
+          "Value": "ticketscope-env"
+        },
+        {
+          "Key": "Name",
+          "Value": "ticketscope-env-dynamic-pvc-uuid-011"
+        },
+        {
+          "Key": "ebs.csi.aws.com/cluster",
+          "Value": "true"
+        },
+        {
+          "Key": "ebs.csi.aws.com/cluster-name",
+          "Value": "ticketscope-env"
+        },
+        {
+          "Key": "environment",
+          "Value": "eks"
+        },
+        {
+          "Key": "kubernetes.io/cluster/ticketscope-env",
+          "Value": "owned"
+        },
+        {
+          "Key": "kubernetes.io/created-for/pv/name",
+          "Value": "value-009"
+        },
+        {
+          "Key": "kubernetes.io/created-for/pvc/name",
+          "Value": "value-010"
+        },
+        {
+          "Key": "kubernetes.io/created-for/pvc/namespace",
+          "Value": "value-003"
+        }
+      ]
+    },
+    {
+      "ResourceARN": "arn:aws:ec2:us-east-1:000000000000:vpc/vpc-038",
+      "Tags": [
+        {
+          "Key": "Name",
+          "Value": "ticketscope-env"
+        },
+        {
+          "Key": "environment",
+          "Value": "eks"
+        },
+        {
+          "Key": "project",
+          "Value": "ticketscope"
+        },
+        {
+          "Key": "stack",
+          "Value": "env"
+        }
+      ]
+    },
+    {
+      "ResourceARN": "arn:aws:eks:us-east-1:000000000000:access-entry/access-entry-049",
+      "Tags": [
+        {
+          "Key": "environment",
+          "Value": "eks"
+        },
+        {
+          "Key": "project",
+          "Value": "ticketscope"
+        },
+        {
+          "Key": "stack",
+          "Value": "env"
+        }
+      ]
+    },
+    {
+      "ResourceARN": "arn:aws:eks:us-east-1:000000000000:addon/addon-013",
+      "Tags": [
+        {
+          "Key": "environment",
+          "Value": "eks"
+        },
+        {
+          "Key": "project",
+          "Value": "ticketscope"
+        },
+        {
+          "Key": "stack",
+          "Value": "env"
+        }
+      ]
+    },
+    {
+      "ResourceARN": "arn:aws:eks:us-east-1:000000000000:addon/addon-028",
+      "Tags": [
+        {
+          "Key": "environment",
+          "Value": "eks"
+        },
+        {
+          "Key": "project",
+          "Value": "ticketscope"
+        },
+        {
+          "Key": "stack",
+          "Value": "env"
+        }
+      ]
+    },
+    {
+      "ResourceARN": "arn:aws:eks:us-east-1:000000000000:addon/addon-046",
+      "Tags": [
+        {
+          "Key": "environment",
+          "Value": "eks"
+        },
+        {
+          "Key": "project",
+          "Value": "ticketscope"
+        },
+        {
+          "Key": "stack",
+          "Value": "env"
+        }
+      ]
+    },
+    {
+      "ResourceARN": "arn:aws:eks:us-east-1:000000000000:addon/addon-055",
+      "Tags": [
+        {
+          "Key": "environment",
+          "Value": "eks"
+        },
+        {
+          "Key": "project",
+          "Value": "ticketscope"
+        },
+        {
+          "Key": "stack",
+          "Value": "env"
+        }
+      ]
+    },
+    {
+      "ResourceARN": "arn:aws:eks:us-east-1:000000000000:cluster/cluster-023",
+      "Tags": [
+        {
+          "Key": "environment",
+          "Value": "eks"
+        },
+        {
+          "Key": "project",
+          "Value": "ticketscope"
+        },
+        {
+          "Key": "stack",
+          "Value": "env"
+        }
+      ]
+    },
+    {
+      "ResourceARN": "arn:aws:eks:us-east-1:000000000000:nodegroup/nodegroup-024",
+      "Tags": [
+        {
+          "Key": "Name",
+          "Value": "main"
+        },
+        {
+          "Key": "environment",
+          "Value": "eks"
+        },
+        {
+          "Key": "project",
+          "Value": "ticketscope"
+        },
+        {
+          "Key": "stack",
+          "Value": "env"
+        }
+      ]
+    },
+    {
+      "ResourceARN": "arn:aws:elasticloadbalancing:us-east-1:000000000000:listener-rule/listener-rule-019",
+      "Tags": [
+        {
+          "Key": "elbv2.k8s.aws/cluster",
+          "Value": "ticketscope-env"
+        },
+        {
+          "Key": "environment",
+          "Value": "eks"
+        },
+        {
+          "Key": "gateway.k8s.aws.alb/resource",
+          "Value": "value-018"
+        },
+        {
+          "Key": "gateway.k8s.aws.alb/stack",
+          "Value": "value-007"
+        }
+      ]
+    },
+    {
+      "ResourceARN": "arn:aws:elasticloadbalancing:us-east-1:000000000000:listener-rule/listener-rule-021",
+      "Tags": [
+        {
+          "Key": "elbv2.k8s.aws/cluster",
+          "Value": "ticketscope-env"
+        },
+        {
+          "Key": "environment",
+          "Value": "eks"
+        },
+        {
+          "Key": "gateway.k8s.aws.alb/resource",
+          "Value": "value-020"
+        },
+        {
+          "Key": "gateway.k8s.aws.alb/stack",
+          "Value": "value-007"
+        }
+      ]
+    },
+    {
+      "ResourceARN": "arn:aws:elasticloadbalancing:us-east-1:000000000000:listener-rule/listener-rule-030",
+      "Tags": [
+        {
+          "Key": "elbv2.k8s.aws/cluster",
+          "Value": "ticketscope-env"
+        },
+        {
+          "Key": "environment",
+          "Value": "eks"
+        },
+        {
+          "Key": "gateway.k8s.aws.alb/resource",
+          "Value": "value-029"
+        },
+        {
+          "Key": "gateway.k8s.aws.alb/stack",
+          "Value": "value-007"
+        }
+      ]
+    },
+    {
+      "ResourceARN": "arn:aws:elasticloadbalancing:us-east-1:000000000000:listener-rule/listener-rule-034",
+      "Tags": [
+        {
+          "Key": "elbv2.k8s.aws/cluster",
+          "Value": "ticketscope-env"
+        },
+        {
+          "Key": "environment",
+          "Value": "eks"
+        },
+        {
+          "Key": "gateway.k8s.aws.alb/resource",
+          "Value": "value-033"
+        },
+        {
+          "Key": "gateway.k8s.aws.alb/stack",
+          "Value": "value-007"
+        }
+      ]
+    },
+    {
+      "ResourceARN": "arn:aws:elasticloadbalancing:us-east-1:000000000000:listener-rule/listener-rule-043",
+      "Tags": [
+        {
+          "Key": "elbv2.k8s.aws/cluster",
+          "Value": "ticketscope-env"
+        },
+        {
+          "Key": "environment",
+          "Value": "eks"
+        },
+        {
+          "Key": "gateway.k8s.aws.alb/resource",
+          "Value": "value-042"
+        },
+        {
+          "Key": "gateway.k8s.aws.alb/stack",
+          "Value": "value-007"
+        }
+      ]
+    },
+    {
+      "ResourceARN": "arn:aws:elasticloadbalancing:us-east-1:000000000000:listener-rule/listener-rule-048",
+      "Tags": [
+        {
+          "Key": "elbv2.k8s.aws/cluster",
+          "Value": "ticketscope-env"
+        },
+        {
+          "Key": "environment",
+          "Value": "eks"
+        },
+        {
+          "Key": "gateway.k8s.aws.alb/resource",
+          "Value": "value-047"
+        },
+        {
+          "Key": "gateway.k8s.aws.alb/stack",
+          "Value": "value-007"
+        }
+      ]
+    },
+    {
+      "ResourceARN": "arn:aws:elasticloadbalancing:us-east-1:000000000000:listener/listener-015",
+      "Tags": [
+        {
+          "Key": "elbv2.k8s.aws/cluster",
+          "Value": "ticketscope-env"
+        },
+        {
+          "Key": "environment",
+          "Value": "eks"
+        },
+        {
+          "Key": "gateway.k8s.aws.alb/resource",
+          "Value": "value-014"
+        },
+        {
+          "Key": "gateway.k8s.aws.alb/stack",
+          "Value": "value-007"
+        }
+      ]
+    },
+    {
+      "ResourceARN": "arn:aws:elasticloadbalancing:us-east-1:000000000000:listener/listener-017",
+      "Tags": [
+        {
+          "Key": "elbv2.k8s.aws/cluster",
+          "Value": "ticketscope-env"
+        },
+        {
+          "Key": "environment",
+          "Value": "eks"
+        },
+        {
+          "Key": "gateway.k8s.aws.alb/resource",
+          "Value": "value-016"
+        },
+        {
+          "Key": "gateway.k8s.aws.alb/stack",
+          "Value": "value-007"
+        }
+      ]
+    },
+    {
+      "ResourceARN": "arn:aws:elasticloadbalancing:us-east-1:000000000000:loadbalancer/loadbalancer-051",
+      "Tags": [
+        {
+          "Key": "elbv2.k8s.aws/cluster",
+          "Value": "ticketscope-env"
+        },
+        {
+          "Key": "environment",
+          "Value": "eks"
+        },
+        {
+          "Key": "gateway.k8s.aws.alb/resource",
+          "Value": "value-050"
+        },
+        {
+          "Key": "gateway.k8s.aws.alb/stack",
+          "Value": "value-007"
+        }
+      ]
+    },
+    {
+      "ResourceARN": "arn:aws:elasticloadbalancing:us-east-1:000000000000:targetgroup/targetgroup-008",
+      "Tags": [
+        {
+          "Key": "elbv2.k8s.aws/cluster",
+          "Value": "ticketscope-env"
+        },
+        {
+          "Key": "environment",
+          "Value": "eks"
+        },
+        {
+          "Key": "gateway.k8s.aws.alb/resource",
+          "Value": "value-006"
+        },
+        {
+          "Key": "gateway.k8s.aws.alb/stack",
+          "Value": "value-007"
+        }
+      ]
+    },
+    {
+      "ResourceARN": "arn:aws:elasticloadbalancing:us-east-1:000000000000:targetgroup/targetgroup-032",
+      "Tags": [
+        {
+          "Key": "elbv2.k8s.aws/cluster",
+          "Value": "ticketscope-env"
+        },
+        {
+          "Key": "environment",
+          "Value": "eks"
+        },
+        {
+          "Key": "gateway.k8s.aws.alb/resource",
+          "Value": "value-031"
+        },
+        {
+          "Key": "gateway.k8s.aws.alb/stack",
+          "Value": "value-007"
+        }
+      ]
+    },
+    {
+      "ResourceARN": "arn:aws:iam::000000000000:oidc-provider/oidc-provider-035",
+      "Tags": [
+        {
+          "Key": "Name",
+          "Value": "ticketscope-env-eks-irsa"
+        },
+        {
+          "Key": "environment",
+          "Value": "eks"
+        },
+        {
+          "Key": "project",
+          "Value": "ticketscope"
+        },
+        {
+          "Key": "stack",
+          "Value": "env"
+        }
+      ]
+    },
+    {
+      "ResourceARN": "arn:aws:iam::000000000000:policy/policy-025",
+      "Tags": [
+        {
+          "Key": "environment",
+          "Value": "eks"
+        },
+        {
+          "Key": "project",
+          "Value": "ticketscope"
+        },
+        {
+          "Key": "stack",
+          "Value": "env"
+        }
+      ]
+    },
+    {
+      "ResourceARN": "arn:aws:iam::000000000000:policy/policy-039",
+      "Tags": [
+        {
+          "Key": "environment",
+          "Value": "eks"
+        },
+        {
+          "Key": "project",
+          "Value": "ticketscope"
+        },
+        {
+          "Key": "stack",
+          "Value": "env"
+        }
+      ]
+    },
+    {
+      "ResourceARN": "arn:aws:iam::000000000000:policy/policy-044",
+      "Tags": [
+        {
+          "Key": "environment",
+          "Value": "eks"
+        },
+        {
+          "Key": "project",
+          "Value": "ticketscope"
+        },
+        {
+          "Key": "stack",
+          "Value": "env"
+        }
+      ]
+    }
+  ]
+}

@@ -36,6 +36,17 @@ variable "node_instance_type" {
   description = "Graviton, so the arm64 images run. t4g.large is the fallback if the pods do not fit."
 }
 
+variable "admin_role_name" {
+  type        = string
+  default     = "AccountFullAccessRole"
+  description = "The admin identity's IAM role (Identity Center). It gets cluster-admin access, so the hand teardown needs no manual access entry."
+}
+
+variable "admin_role_path" {
+  type    = string
+  default = "/managed/"
+}
+
 variable "node_count" {
   type    = number
   default = 2

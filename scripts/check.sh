@@ -53,5 +53,7 @@ run terraform -chdir=infra/env init -backend=false
 run terraform -chdir=infra/env validate
 run actionlint -ignore 'SC2016:info'
 run shellcheck scripts/eks-deploy.sh
+run shellcheck scripts/denied-actions.sh
+run shellcheck scripts/check.sh
 
 echo "check: all passed" >&2

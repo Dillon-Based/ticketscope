@@ -56,7 +56,7 @@ def test_no_aws_credential_is_stored_and_every_aws_job_assumes_the_role_through_
 def test_it_is_dispatch_only_and_takes_a_sha_and_expiry_hours_defaulting_to_four() -> None:
     assert set(TRIGGERS) == {"workflow_dispatch"}
     inputs = TRIGGERS["workflow_dispatch"]["inputs"]
-    assert set(inputs) == {"sha", "expiry_hours"}
+    assert set(inputs) == {"sha", "expiry_hours", "plan_only"}
     assert inputs["sha"]["required"] is True
     assert inputs["expiry_hours"]["default"] == "4"
     assert DOC["concurrency"]["cancel-in-progress"] is False
@@ -89,7 +89,9 @@ def test_the_build_is_skipped_when_both_images_exist_and_is_multi_arch() -> None
     assert '"18-$SHA"' in present and "describe-images" in present
     assert JOBS["plan"]["outputs"]["images_present"]
     for name in ("build", "images"):
-        assert JOBS[name]["if"] == "needs.plan.outputs.images_present != 'true'"
+        assert (
+            JOBS[name]["if"] == "needs.plan.outputs.images_present != 'true' && !inputs.plan_only"
+        )
     matrix = JOBS["build"]["strategy"]["matrix"]["include"]
     assert {(m["runner"], m["arch"]) for m in matrix} == {
         ("ubuntu-24.04", "amd64"),
@@ -139,7 +141,7 @@ def test_a_failed_deploy_or_smoke_leaves_the_environment_up() -> None:
     assert "terraform destroy" not in TEXT and "env-down" not in TEXT.replace("story 5.4", "")
     assert "helm uninstall" not in TEXT
     summary = _step("env", "Job summary")
-    assert summary["if"] == "always()"
+    assert summary["if"] == "${{ always() && !inputs.plan_only }}"
     upload = _steps("env")[-1]
     assert upload["uses"].startswith("actions/upload-artifact@") and upload["if"] == "always()"
     assert "environment was left up" in summary["run"]
@@ -154,7 +156,7 @@ def test_a_failed_deploy_or_smoke_leaves_the_environment_up() -> None:
     assert smoke["env"]["GITHUB_TOKEN"] == "${{ github.token }}"
     # The deploy.* rows are written after the deploy step and before the smoke step.
     rows = _step("env", "Record the deploy stage times")
-    assert rows["if"] == "always()" and "deploy.%s" in rows["run"]
+    assert rows["if"] == "${{ always() && !inputs.plan_only }}" and "deploy.%s" in rows["run"]
     deploy, record, check = (
         _index("env", "Deploy the releases"),
         _index("env", "Record the deploy"),
@@ -230,3 +232,38 @@ def test_deploy_script_keeps_its_usage_error_with_the_dns_stages_added() -> None
 
 def test_ci_runs_a_static_workflow_check() -> None:
     assert "actionlint" in CI and "shellcheck scripts/eks-deploy.sh" in CI
+
+
+@pytest.mark.criterion("ticketscope--e5-s3--AC-8")
+def test_plan_only_runs_the_plan_without_images_apply_clock_or_deploy() -> None:
+    plan_only = TRIGGERS["workflow_dispatch"]["inputs"]["plan_only"]
+    assert plan_only["type"] == "boolean" and plan_only["default"] is False
+    for job in ("build", "images"):
+        assert "!inputs.plan_only" in JOBS[job]["if"]
+    plan = _step("env", "terraform plan")
+    assert plan["if"] == "${{ inputs.plan_only }}"
+    assert "terraform -chdir=infra/env plan -input=false" in plan["run"]
+    assert "apply" not in plan["run"]
+    for fragment in (
+        "terraform apply",
+        "Write the kubeconfig",
+        "Deploy the releases",
+        "Smoke check",
+    ):
+        assert _step("env", fragment)["if"] == "${{ !inputs.plan_only }}"
+    assert "inputs.plan_only" in _step("env", "Job summary and stage-time")["if"]
+
+
+@pytest.mark.criterion("ticketscope--e5-s3--AC-8")
+def test_the_terraform_log_is_kept_and_denied_actions_are_listed_in_the_summary() -> None:
+    assert 'tee "$RUNNER_TEMP/terraform.log"' in _step("env", "terraform apply")["run"]
+    assert 'tee "$RUNNER_TEMP/terraform.log"' in _step("env", "terraform plan")["run"]
+    denied = _step("env", "Denied actions")
+    assert denied["if"] == "always()"
+    assert "scripts/denied-actions.sh" in denied["run"]
+    assert "$RUNNER_TEMP/terraform.log" in denied["run"] and "deploy.log" in denied["run"]
+    assert "GITHUB_STEP_SUMMARY" in denied["run"]
+    upload = _steps("env")[-1]
+    assert "env-up-stages/denied-actions.txt" in upload["with"]["path"]
+    # The summary is public on a public repo: the full logs never leave the runner.
+    assert "upload-artifact" in upload["uses"] and "terraform.log" not in upload["with"]["path"]

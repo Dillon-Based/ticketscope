@@ -76,13 +76,24 @@ Use the admin profile and a kubeconfig for the cluster:
 scripts/aws-login.sh
 eval "$(scripts/eks-env.sh)"
 aws eks update-kubeconfig --name ticketscope-env --region us-east-1 --kubeconfig "$KUBECONFIG"
-# env-up's deploy role created the cluster, so it is the only admin on it. Give your admin role
-# access once per environment (the cluster's deletion removes the entry):
+```
+
+The `env` stack gives your admin role cluster-admin through an access entry, so `kubectl` and
+`helm` work as soon as the kubeconfig exists. A cluster applied before that change, or by another
+identity, has no entry for you and `helm` says "provide credentials"; add one by hand (the
+cluster's deletion removes it):
+
+```sh
 ADMIN_ARN="$(aws iam get-role --role-name AccountFullAccessRole --query Role.Arn --output text)"
 aws eks create-access-entry --cluster-name ticketscope-env --principal-arn "$ADMIN_ARN"
 aws eks associate-access-policy --cluster-name ticketscope-env --principal-arn "$ADMIN_ARN" \
   --policy-arn arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy \
   --access-scope type=cluster
+```
+
+Then the teardown:
+
+```sh
 helm uninstall ticketscope -n ticketscope
 kubectl -n ticketscope delete pvc --all
 kubectl -n platform delete gateway ticketscope

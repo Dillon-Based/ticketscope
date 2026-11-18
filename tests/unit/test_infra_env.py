@@ -200,3 +200,16 @@ def test_deploy_script_installs_in_the_required_order_and_times_each_stage() -> 
     )
     assert "stage times" in text
     assert "terraform apply" not in text and "helm_release" not in text
+
+
+@pytest.mark.criterion("ticketscope--e5-s3--AC-10")
+def test_the_admin_role_gets_cluster_admin_unless_it_applied_the_stack_itself() -> None:
+    eks = (ENV / "eks.tf").read_text(encoding="utf-8")
+    assert 'data "aws_iam_roles" "admin"' in eks
+    assert "AmazonEKSClusterAdminPolicy" in eks
+    assert "merge({" in eks and "local.admin_access_entry" in eks
+    # Two entries for one principal fail, and the creator-admin entry names the applier.
+    assert ":assumed-role/${var.admin_role_name}/" in eks and "!local.admin_applies" in eks
+    variables = (ENV / "variables.tf").read_text(encoding="utf-8")
+    assert 'default     = "AccountFullAccessRole"' in variables
+    assert not re.search(r"(?<!\d)\d{12}(?!\d)", eks + variables)

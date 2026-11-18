@@ -119,7 +119,10 @@ jobs:
           # purpose, and that workflow is not to change (epic 5 Boundaries).
           ./actionlint -ignore 'SC2016:info' -color
       - name: shellcheck the deploy script
-        run: shellcheck scripts/eks-deploy.sh
+        run: |
+          shellcheck scripts/eks-deploy.sh
+          shellcheck scripts/denied-actions.sh
+          shellcheck scripts/check.sh
 
   eks-gateway:
     # The rendered EKS Gateway objects against the real CRDs on a throwaway kind cluster (no

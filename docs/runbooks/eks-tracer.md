@@ -88,8 +88,8 @@ which of the two worked. If neither does, stop and replan.
 ## 4. Smoke
 
 ```sh
-curl -sS https://<host>/ | head          # the search page
-dig <host> +short                          # the ALB, through external-dns's record
+curl -sS "https://$TICKETSCOPE_HOSTNAME/" | head   # the search page
+dig "$TICKETSCOPE_HOSTNAME" +short                  # the ALB, through external-dns's record
 ```
 
 Then search from the page, and call `/mcp` with an MCP client: list the tools, then call

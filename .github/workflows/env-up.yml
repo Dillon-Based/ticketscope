@@ -7,6 +7,7 @@
 #   plan    validates the inputs before any AWS call, and checks ECR for the SHA's two images.
 #   build   (skipped when both images exist) one native runner per architecture, pushed by digest.
 #   images  (skipped with build) joins the two digests into one multi-arch tag per image.
+#           With plan_only, only `terraform plan` runs: no build, no apply, nothing billed.
 #   env     the timed job. The clock starts at the start of `terraform apply` and stops when the
 #           smoke check has passed; every stage's time goes to the job summary and an artifact.
 #
@@ -26,6 +27,13 @@ on:
         required: false
         default: "4"
         type: string
+      plan_only:
+        description: >-
+          Only run `terraform plan` for env as the deploy role: no images, no apply, no clock,
+          nothing billed. It finds the denials the plan step hits before anything is built.
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -89,7 +97,7 @@ jobs:
   build:
     # Outside the clock (R1): the images are built beforehand. Native runners, no QEMU (AD-16).
     needs: plan
-    if: needs.plan.outputs.images_present != 'true'
+    if: needs.plan.outputs.images_present != 'true' && !inputs.plan_only
     strategy:
       fail-fast: true
       matrix:
@@ -141,7 +149,7 @@ jobs:
 
   images:
     needs: [plan, build]
-    if: needs.plan.outputs.images_present != 'true'
+    if: needs.plan.outputs.images_present != 'true' && !inputs.plan_only
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     environment: eks
@@ -252,18 +260,25 @@ jobs:
       - name: terraform init
         run: terraform -chdir=infra/env init -backend-config="bucket=$TICKETSCOPE_STATE_BUCKET"
 
+      - name: terraform plan (plan only, no apply, no clock)
+        if: ${{ inputs.plan_only }}
+        run: terraform -chdir=infra/env plan -input=false 2>&1 | tee "$RUNNER_TEMP/terraform.log"
+
       - name: terraform apply (the clock starts here)
+        if: ${{ !inputs.plan_only }}
         run: |
           date +%s > "$RUNNER_TEMP/clock-start"
           t0=$(date +%s)
-          terraform -chdir=infra/env apply -auto-approve
+          terraform -chdir=infra/env apply -auto-approve 2>&1 | tee "$RUNNER_TEMP/terraform.log"
           printf 'terraform_apply\t%s\n' "$(($(date +%s) - t0))" >> "$STAGES"
       - name: Write the kubeconfig
+        if: ${{ !inputs.plan_only }}
         run: |
           t0=$(date +%s)
           aws eks update-kubeconfig --name "$CLUSTER_NAME" --region "$AWS_REGION" --kubeconfig "$KUBECONFIG"
           printf 'kubeconfig\t%s\n' "$(($(date +%s) - t0))" >> "$STAGES"
       - name: Deploy the releases (scripts/eks-deploy.sh)
+        if: ${{ !inputs.plan_only }}
         env:
           IMAGE_TAG: ${{ inputs.sha }}
         run: |
@@ -273,7 +288,7 @@ jobs:
             --hostname "$TICKETSCOPE_HOSTNAME" --certificate-arn "$CERTIFICATE_ARN" \
             --ecr-registry "$ECR_REGISTRY" 2>&1 | tee "$RUNNER_TEMP/deploy.log"
       - name: Record the deploy stage times
-        if: always()
+        if: ${{ always() && !inputs.plan_only }}
         run: |
           # eks-deploy.sh prints its per-stage times between a header and `total`, even on failure.
           if [[ -f "$RUNNER_TEMP/deploy.log" ]]; then
@@ -281,6 +296,7 @@ jobs:
               "$RUNNER_TEMP/deploy.log" >> "$STAGES"
           fi
       - name: Smoke check (the clock stops when it passes)
+        if: ${{ !inputs.plan_only }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: |
@@ -292,7 +308,7 @@ jobs:
           if ((rc == 0)); then date +%s > "$RUNNER_TEMP/clock-end"; fi
           exit "$rc"
       - name: Job summary and stage-time artifact
-        if: always()
+        if: ${{ always() && !inputs.plan_only }}
         env:
           RESULT: ${{ job.status }}
         run: |
@@ -325,6 +341,33 @@ jobs:
           if [[ "$total" != "not finished" ]] && ((total >= 1800)); then
             echo "::warning::total ${total}s is not under the 30-minute target; record a Decision in the epic Notes"
           fi
+      - name: Plan-only summary
+        if: ${{ always() && inputs.plan_only }}
+        env:
+          RESULT: ${{ job.status }}
+        run: |
+          mkdir -p env-up-stages
+          {
+            echo "## env-up plan only"
+            echo
+            echo "Run: $RESULT. No images, no apply, no clock; nothing was created."
+          } | tee env-up-stages/stages.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Denied actions (what to add to the deploy role)
+        if: always()
+        run: |
+          mkdir -p env-up-stages
+          denied="$(scripts/denied-actions.sh "$RUNNER_TEMP/terraform.log" "$RUNNER_TEMP/deploy.log")"
+          if [[ -n "$denied" ]]; then
+            printf '%s\n' "$denied" > env-up-stages/denied-actions.txt
+            {
+              echo
+              echo "### Denied actions"
+              echo
+              echo "Add these to \`infra/bootstrap/policies/deploy-permissions.json.tftpl\`, re-apply bootstrap, and dispatch again."
+              echo
+              printf '%s\n' "$denied" | sed 's/^/- /'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -332,4 +375,5 @@ jobs:
           path: |
             env-up-stages/stages.json
             env-up-stages/stages.md
+            env-up-stages/denied-actions.txt
           if-no-files-found: ignore

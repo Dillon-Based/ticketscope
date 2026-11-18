@@ -5,8 +5,9 @@
 #   scripts/eks-deploy.sh --kubeconfig <file> --tag <image tag> --hostname <fixed host> \
 #       --certificate-arn <bootstrap ACM arn> --ecr-registry <account>.dkr.ecr.<region>.amazonaws.com
 #
-# Order: Gateway API CRDs, the controller's CRDs, `platform`, `ticketscope`. Prints the time
-# of each stage and a summary at the end. Idempotent: re-running upgrades in place.
+# Order: Gateway API CRDs, the controller's CRDs, `platform`, `ticketscope`, then the DNS
+# stages (`dns_visible` on the zone's own name servers, `dns_public` on a public resolver) and
+# the HTTPS poll. Prints the time of each stage and a summary at the end. Idempotent: re-running upgrades in place.
 #
 # Cluster facts (cluster name, VPC id, IRSA role ARNs) come from `terraform output -json` of
 # infra/env, or from the file named by ENV_OUTPUTS_JSON.
@@ -17,6 +18,9 @@
 #                        when external-dns does not read the ALB's address (AD-14)
 #   ENV_OUTPUTS_JSON     a file holding `terraform -chdir=infra/env output -json`
 #   READY_TIMEOUT        seconds to wait for https://<hostname>/ (default 900)
+#   DNS_TIMEOUT          seconds each DNS stage waits for the record (default 900)
+#   PUBLIC_RESOLVER      resolver the dns_public stage asks (default 1.1.1.1)
+#   ZONE_NAME_SERVERS    space-separated name servers of the zone; read from Route53 when unset
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -51,13 +55,15 @@ done
 [[ -n "$KUBECONFIG_FILE" && -n "$TAG" && -n "$HOSTNAME_VALUE" && -n "$CERTIFICATE_ARN" && -n "$ECR_REGISTRY" ]] || usage
 [[ -f "$KUBECONFIG_FILE" ]] || { echo "eks-deploy: kubeconfig $KUBECONFIG_FILE not found" >&2; usage; }
 
-for tool in kubectl helm jq curl tar; do
+for tool in kubectl helm jq curl tar dig aws; do
   command -v "$tool" >/dev/null || { echo "eks-deploy: $tool is required" >&2; exit 1; }
 done
 
 export KUBECONFIG="$KUBECONFIG_FILE"
 GATEWAY_API_VERSION="${GATEWAY_API_VERSION:-v1.6.0}"
 READY_TIMEOUT="${READY_TIMEOUT:-900}"
+DNS_TIMEOUT="${DNS_TIMEOUT:-900}"
+PUBLIC_RESOLVER="${PUBLIC_RESOLVER:-1.1.1.1}"
 PLATFORM_NS=platform
 APP_NS=ticketscope
 PG_TAG="18-${TAG}"
@@ -149,6 +155,43 @@ helm upgrade --install ticketscope "$CHARTS/ticketscope" \
 stage "api-mcp-ready"
 kubectl -n "$APP_NS" rollout status deploy/ticketscope-api --timeout=10m
 kubectl -n "$APP_NS" rollout status deploy/ticketscope-mcp --timeout=5m
+
+# A resolver that is asked before the record exists caches the miss (the zone's negative TTL is
+# 15 minutes), so the zone's own name servers are polled first and the public one only after.
+# resolves <server> <name>: succeeds when the server answers an A record for the name.
+resolves() { [[ -n "$(dig +short +time=3 +tries=1 A "@$1" "$2" 2>/dev/null)" ]]; }
+# wait_dns <server> <label>: polls until <server> answers for the hostname or DNS_TIMEOUT passes.
+wait_dns() {
+  local until_epoch=$(($(date +%s) + DNS_TIMEOUT))
+  until resolves "$1" "$HOSTNAME_VALUE"; do
+    if (($(date +%s) > until_epoch)); then
+      echo "eks-deploy: $2 did not answer for ${HOSTNAME_VALUE} within ${DNS_TIMEOUT}s" >&2
+      return 1
+    fi
+    sleep 5
+  done
+}
+
+stage "dns_visible"
+NAME_SERVERS="${ZONE_NAME_SERVERS:-}"
+if [[ -z "$NAME_SERVERS" ]]; then
+  # The hosted zone is the fixed hostname itself (bootstrap); its delegation set is the truth.
+  ZONE_ID="$(aws route53 list-hosted-zones-by-name --dns-name "$HOSTNAME_VALUE" \
+    --query "HostedZones[?Name=='${HOSTNAME_VALUE}.'].Id | [0]" --output text)"
+  ZONE_ID="${ZONE_ID##*/}"
+  [[ -n "$ZONE_ID" && "$ZONE_ID" != None ]] || { echo "eks-deploy: no hosted zone named ${HOSTNAME_VALUE}" >&2; exit 1; }
+  NAME_SERVERS="$(aws route53 get-hosted-zone --id "$ZONE_ID" \
+    --query 'DelegationSet.NameServers' --output text)"
+fi
+[[ -n "$NAME_SERVERS" ]] || { echo "eks-deploy: no name servers found for ${HOSTNAME_VALUE}" >&2; exit 1; }
+for ns in $NAME_SERVERS; do
+  wait_dns "$ns" "name server $ns"
+done
+log "every name server of the zone answers for ${HOSTNAME_VALUE}"
+
+stage "dns_public"
+wait_dns "$PUBLIC_RESOLVER" "public resolver $PUBLIC_RESOLVER"
+log "public resolver ${PUBLIC_RESOLVER} answers"
 
 stage "https-answers"
 # The record and the ALB may lag the pods: poll the public hostname until the page answers.

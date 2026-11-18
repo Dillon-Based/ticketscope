@@ -120,7 +120,9 @@ def test_deploy_permissions_scope_s3_to_env_and_backups_and_iam_to_ticketscope()
             assert resources, stmt
             for r in resources:
                 pattern = r"arn:aws:iam::\d+:(role|policy|instance-profile)/ticketscope-env-\*"
-                assert re.fullmatch(pattern, r), r
+                # The cluster's own OIDC provider is named by id, so it cannot be prefixed.
+                oidc = r"arn:aws:iam::\d+:oidc-provider/oidc\.eks\.us-east-1\.amazonaws\.com/id/\*"
+                assert re.fullmatch(pattern, r) or re.fullmatch(oidc, r), r
                 for bootstrap_name in ("ticketscope-deploy", "ticketscope-readonly"):
                     arn = f"arn:aws:iam::{VARS['account_id']}:role/{bootstrap_name}"
                     assert not fnmatch.fnmatchcase(arn, r), (arn, r)

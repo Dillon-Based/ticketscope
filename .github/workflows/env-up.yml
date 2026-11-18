@@ -1,0 +1,335 @@
+# Story 5.3 (AD-15, AD-16, R1, R4, R6): brings the EKS environment up from the bootstrap layer
+# and records how long each stage took. Dispatched from `main` (the `eks` environment's branch
+# rule); there is no push trigger. It assumes the deploy role through OIDC; no AWS credential
+# is stored in the repo, and the only AWS-related value is the role ARN (vars.AWS_ROLE_ARN on
+# the `eks` environment, an identifier and not a credential).
+#
+#   plan    validates the inputs before any AWS call, and checks ECR for the SHA's two images.
+#   build   (skipped when both images exist) one native runner per architecture, pushed by digest.
+#   images  (skipped with build) joins the two digests into one multi-arch tag per image.
+#   env     the timed job. The clock starts at the start of `terraform apply` and stops when the
+#           smoke check has passed; every stage's time goes to the job summary and an artifact.
+#
+# A failed smoke check fails the run and leaves the environment up: the expiry tag on it is what
+# the sweep (story 5.4) destroys. Teardown by hand is in docs/runbooks/env-up.md.
+name: env-up
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Git SHA (40 hex characters) whose images and scripts are deployed
+        required: true
+        type: string
+      expiry_hours:
+        description: Hours until the environment's expiry tag (1 to 24)
+        required: false
+        default: "4"
+        type: string
+
+permissions:
+  contents: read
+
+# One environment at a time; a second dispatch waits instead of cancelling a running apply.
+concurrency:
+  group: env-up
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-1
+  TERRAFORM_VERSION: 1.17.0
+  HELM_VERSION: v4.3.1
+  CLUSTER_NAME: ticketscope-env
+
+jobs:
+  plan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: eks
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      images_present: ${{ steps.present.outputs.images_present }}
+    steps:
+      - name: Validate the inputs (no AWS call has happened yet)
+        env:
+          INPUT_SHA: ${{ inputs.sha }}
+          INPUT_HOURS: ${{ inputs.expiry_hours }}
+        run: |
+          if [[ ! "$INPUT_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::input sha must be 40 lowercase hex characters"
+            exit 1
+          fi
+          if [[ ! "$INPUT_HOURS" =~ ^[0-9]+$ ]] || ((10#$INPUT_HOURS < 1 || 10#$INPUT_HOURS > 24)); then
+            echo "::error::input expiry_hours must be a whole number from 1 to 24"
+            exit 1
+          fi
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          mask-aws-account-id: true
+      - name: Are both images already in ECR for this SHA
+        id: present
+        env:
+          SHA: ${{ inputs.sha }}
+        run: |
+          has_tag() {
+            aws ecr describe-images --repository-name "$1" --query 'imageDetails[].imageTags[]' --output json |
+              jq -e --arg tag "$2" 'index($tag) != null' >/dev/null
+          }
+          if has_tag ticketscope-app "$SHA" && has_tag ticketscope-postgres "18-$SHA"; then
+            echo "images_present=true" >> "$GITHUB_OUTPUT"
+            echo "Both images exist for this SHA; the build jobs are skipped." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "images_present=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    # Outside the clock (R1): the images are built beforehand. Native runners, no QEMU (AD-16).
+    needs: plan
+    if: needs.plan.outputs.images_present != 'true'
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: amd64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    environment: eks
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.sha }}
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          mask-aws-account-id: true
+      - uses: aws-actions/amazon-ecr-login@v2
+        id: ecr
+        with:
+          mask-password: "true"
+      - uses: docker/setup-buildx-action@v3
+      - name: Build and push both images by digest (${{ matrix.arch }})
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          mkdir -p digests
+          build() {
+            # <repository> <dockerfile>; pushed without a tag, the digest is joined in `images`.
+            docker buildx build --platform "linux/$ARCH" --provenance=false -f "$2" \
+              --output "type=image,name=$REGISTRY/$1,push-by-digest=true,name-canonical=true,push=true" \
+              --metadata-file "meta-$1.json" .
+            jq -er '."containerimage.digest"' "meta-$1.json" > "digests/$1-$ARCH"
+          }
+          build ticketscope-app images/app.Dockerfile
+          build ticketscope-postgres images/postgres.Dockerfile
+      - uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ matrix.arch }}
+          path: digests/
+          if-no-files-found: error
+
+  images:
+    needs: [plan, build]
+    if: needs.plan.outputs.images_present != 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: eks
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: digests-*
+          path: digests
+          merge-multiple: true
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          mask-aws-account-id: true
+      - uses: aws-actions/amazon-ecr-login@v2
+        id: ecr
+        with:
+          mask-password: "true"
+      - uses: docker/setup-buildx-action@v3
+      - name: Join the per-architecture images into one tag each
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          SHA: ${{ inputs.sha }}
+        run: |
+          join() {
+            # <repository> <tag>
+            docker buildx imagetools create -t "$REGISTRY/$1:$2" \
+              "$REGISTRY/$1@$(cat "digests/$1-amd64")" "$REGISTRY/$1@$(cat "digests/$1-arm64")"
+          }
+          join ticketscope-app "$SHA"
+          join ticketscope-postgres "18-$SHA"
+
+  env:
+    # The build jobs are skipped when the images exist, and a skipped need would skip this job
+    # too; so it runs when they succeeded or were skipped, never when one failed.
+    needs: [plan, build, images]
+    if: >-
+      ${{ !cancelled() && needs.plan.result == 'success'
+      && contains(fromJSON('["success","skipped"]'), needs.build.result)
+      && contains(fromJSON('["success","skipped"]'), needs.images.result) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    environment: eks
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      TF_IN_AUTOMATION: "1"
+      STAGES: ${{ github.workspace }}/env-up-stages/stages.tsv
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.sha }}
+      # Everything from here to the clock is preparation and is not timed.
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+          terraform_wrapper: false
+      - uses: azure/setup-helm@v5
+        with:
+          version: ${{ env.HELM_VERSION }}
+      - uses: astral-sh/setup-uv@v10.3.3
+      - run: uv sync --locked
+      - name: Install dig (the DNS stages query name servers directly)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq dnsutils
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          mask-aws-account-id: true
+      - name: Read the bootstrap facts from AWS and set up Terraform
+        id: facts
+        env:
+          EXPIRY_HOURS: ${{ inputs.expiry_hours }}
+        run: |
+          mkdir -p env-up-stages
+          touch "$STAGES"
+          account="$(aws sts get-caller-identity --query Account --output text)"
+          echo "::add-mask::$account"
+          # The bootstrap zone is the fixed hostname itself; the deploy role may list zones and
+          # certificates but never reads bootstrap's state.
+          hostname="$(aws route53 list-hosted-zones \
+            --query "HostedZones[?starts_with(Name, 'ticketscope.')].Name" --output text)"
+          hostname="${hostname%.}"
+          [[ -n "$hostname" && "$hostname" != *[[:space:]]* ]] || { echo "::error::expected exactly one ticketscope.* hosted zone"; exit 1; }
+          zone_id="$(aws route53 list-hosted-zones-by-name --dns-name "$hostname" \
+            --query "HostedZones[?Name=='${hostname}.'].Id | [0]" --output text)"
+          zone_id="${zone_id##*/}"
+          certificate_arn="$(aws acm list-certificates \
+            --query "CertificateSummaryList[?DomainName=='${hostname}' && Status=='ISSUED'].CertificateArn | [0]" --output text)"
+          [[ -n "$certificate_arn" && "$certificate_arn" != None ]] || { echo "::error::no issued certificate for the fixed hostname"; exit 1; }
+          echo "::add-mask::$certificate_arn"
+          expires_at="$(date -u -d "+$((10#$EXPIRY_HOURS)) hours" +%Y-%m-%dT%H:%M:%SZ)"
+          {
+            echo "TF_VAR_account_id=$account"
+            echo "TF_VAR_zone_id=$zone_id"
+            echo "TF_VAR_expires_at=$expires_at"
+            echo "TICKETSCOPE_STATE_BUCKET=ticketscope-$account"
+            echo "TICKETSCOPE_HOSTNAME=$hostname"
+            echo "CERTIFICATE_ARN=$certificate_arn"
+            echo "ECR_REGISTRY=$account.dkr.ecr.$AWS_REGION.amazonaws.com"
+            echo "KUBECONFIG=$RUNNER_TEMP/eks.kubeconfig"
+            echo "EXPIRES_AT=$expires_at"
+          } >> "$GITHUB_ENV"
+      - name: terraform init
+        run: terraform -chdir=infra/env init -backend-config="bucket=$TICKETSCOPE_STATE_BUCKET"
+
+      - name: terraform apply (the clock starts here)
+        run: |
+          date +%s > "$RUNNER_TEMP/clock-start"
+          t0=$(date +%s)
+          terraform -chdir=infra/env apply -auto-approve
+          printf 'terraform_apply\t%s\n' "$(($(date +%s) - t0))" >> "$STAGES"
+      - name: Write the kubeconfig
+        run: |
+          t0=$(date +%s)
+          aws eks update-kubeconfig --name "$CLUSTER_NAME" --region "$AWS_REGION" --kubeconfig "$KUBECONFIG"
+          printf 'kubeconfig\t%s\n' "$(($(date +%s) - t0))" >> "$STAGES"
+      - name: Deploy the releases (scripts/eks-deploy.sh)
+        env:
+          IMAGE_TAG: ${{ inputs.sha }}
+        run: |
+          set -o pipefail
+          # The log stays on the runner: only the stage times leave it, as the summary and artifact.
+          scripts/eks-deploy.sh --kubeconfig "$KUBECONFIG" --tag "$IMAGE_TAG" \
+            --hostname "$TICKETSCOPE_HOSTNAME" --certificate-arn "$CERTIFICATE_ARN" \
+            --ecr-registry "$ECR_REGISTRY" 2>&1 | tee "$RUNNER_TEMP/deploy.log"
+      - name: Record the deploy stage times
+        if: always()
+        run: |
+          # eks-deploy.sh prints its per-stage times between a header and `total`, even on failure.
+          if [[ -f "$RUNNER_TEMP/deploy.log" ]]; then
+            awk '/^--- eks-deploy stage times ---/{f=1;next} f && $1 != "total" && NF == 2 {sub(/s$/, "", $2); printf "deploy.%s\t%s\n", $1, $2}' \
+              "$RUNNER_TEMP/deploy.log" >> "$STAGES"
+          fi
+      - name: Smoke check (the clock stops when it passes)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          export TICKETSCOPE_PUBLIC_URL="https://$TICKETSCOPE_HOSTNAME"
+          t0=$(date +%s)
+          rc=0
+          uv run pytest -m eks tests/eks -p no:cacheprovider || rc=$?
+          printf 'smoke\t%s\n' "$(($(date +%s) - t0))" >> "$STAGES"
+          if ((rc == 0)); then date +%s > "$RUNNER_TEMP/clock-end"; fi
+          exit "$rc"
+      - name: Job summary and stage-time artifact
+        if: always()
+        env:
+          RESULT: ${{ job.status }}
+        run: |
+          mkdir -p env-up-stages
+          touch "$STAGES"
+          total="not finished"
+          if [[ -f "$RUNNER_TEMP/clock-end" ]]; then
+            total=$(($(<"$RUNNER_TEMP/clock-end") - $(<"$RUNNER_TEMP/clock-start")))
+          fi
+          verdict="$RESULT"
+          target="n/a"
+          if [[ "$total" != "not finished" ]]; then
+            if ((total < 1800)); then target="under 30 minutes"; else target="OVER 30 minutes"; fi
+          fi
+          {
+            echo "## env-up stage times"
+            echo
+            echo "| stage | seconds |"
+            echo "| --- | ---: |"
+            while IFS=$'\t' read -r name seconds; do echo "| $name | $seconds |"; done < "$STAGES"
+            echo "| **total, apply start to smoke pass** | **$total** |"
+            echo
+            echo "Run: $verdict. 30-minute target (R1): $target. Expiry tag: $EXPIRES_AT."
+            if [[ "$verdict" != "success" ]]; then echo "The environment was left up for the expiry sweep."; fi
+          } | tee env-up-stages/stages.md >> "$GITHUB_STEP_SUMMARY"
+          jq -Rn --arg verdict "$verdict" --arg total "$total" --arg expires "$EXPIRES_AT" \
+            '{verdict: $verdict, total_seconds: $total, expires_at: $expires,
+              stages: [inputs | split("\t") | {stage: .[0], seconds: (.[1] | tonumber)}]}' \
+            < "$STAGES" > env-up-stages/stages.json
+          if [[ "$total" != "not finished" ]] && ((total >= 1800)); then
+            echo "::warning::total ${total}s is not under the 30-minute target; record a Decision in the epic Notes"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: env-up-stages
+          path: |
+            env-up-stages/stages.json
+            env-up-stages/stages.md
+          if-no-files-found: ignore

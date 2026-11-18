@@ -63,8 +63,9 @@ venv = ".venv"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-m 'not kind'"
+addopts = "-m 'not kind and not eks'"
 markers = [
   "kind: needs the kind cluster and its Gateway; run with -m kind",
+  "eks: needs the live EKS environment's public URL (TICKETSCOPE_PUBLIC_URL) and its kubeconfig; run with -m eks",
   "criterion(id, ...): qualified acceptance-criterion ids this test establishes; written to JUnit as properties for scripts/live_results.py",
 ]

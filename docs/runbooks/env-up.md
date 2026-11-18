@@ -16,11 +16,15 @@ applies anything against AWS; every step below is yours.
    gateway, security groups, launch templates, tags), the cluster's OIDC provider, IAM policy
    reads, and `ecr:DescribeImages`. Those are in
    `infra/bootstrap/policies/deploy-permissions.json.tftpl`, scoped to this account and region,
-   never to a `bootstrap` state path. Apply it with the admin identity:
+   never to a `bootstrap` state path. Apply it with the admin identity, from the checkout that
+   holds bootstrap's untracked `backend.tf` and `terraform.tfvars`, on the branch (or after the
+   merge) so the template change is in the tree. Before the merge, from that checkout:
+   `git fetch && git checkout --detach origin/<this branch>`.
 
    ```sh
    scripts/aws-login.sh
    eval "$(scripts/eks-env.sh)"
+   terraform -chdir=infra/bootstrap init                          # a fresh clone or a provider bump needs it
    terraform -chdir=infra/bootstrap plan -out=bootstrap.tfplan   # only the deploy role policy changes
    terraform -chdir=infra/bootstrap apply bootstrap.tfplan
    ```

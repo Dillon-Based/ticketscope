@@ -15,6 +15,13 @@ aws login --profile "$profile"
 arn="$(aws sts get-caller-identity --profile "$profile" --query Arn --output text)"
 case "$arn" in
   *":assumed-role/$role/"*)
+    # The role name is the same in every account; the bootstrap bucket tells this one apart.
+    bucket="$(aws s3api list-buckets --profile "$profile" \
+      --query "Buckets[?starts_with(Name, 'ticketscope-')].Name | [0]" --output text 2>/dev/null || true)"
+    if [[ -z "$bucket" || "$bucket" == None ]]; then
+      echo "wrong account: it has no ticketscope bootstrap bucket; sign in to the console in the ticketscope account and retry." >&2
+      exit 1
+    fi
     echo "ok: signed in as $role"
     echo "next: export AWS_PROFILE=$profile"
     ;;

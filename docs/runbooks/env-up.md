@@ -20,7 +20,7 @@ applies anything against AWS; every step below is yours.
 
    ```sh
    scripts/aws-login.sh
-   eval "$(scripts/eks-env.sh <fixed hostname>)"
+   eval "$(scripts/eks-env.sh)"
    terraform -chdir=infra/bootstrap plan -out=bootstrap.tfplan   # only the deploy role policy changes
    terraform -chdir=infra/bootstrap apply bootstrap.tfplan
    ```
@@ -69,7 +69,7 @@ Use the admin profile and a kubeconfig for the cluster:
 
 ```sh
 scripts/aws-login.sh
-eval "$(scripts/eks-env.sh <fixed hostname>)"
+eval "$(scripts/eks-env.sh)"
 aws eks update-kubeconfig --name ticketscope-env --region us-east-1 --kubeconfig "$KUBECONFIG"
 helm uninstall ticketscope -n ticketscope
 kubectl -n ticketscope delete pvc --all

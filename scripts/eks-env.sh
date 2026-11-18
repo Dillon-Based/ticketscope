@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # Prints the shell setup the hand-run EKS steps need, to be eval'd in each terminal (bash or zsh):
 #
-#   eval "$(scripts/eks-env.sh <fixed hostname>)"
+#   eval "$(scripts/eks-env.sh)"
+#
+# The hostname is the account's one hosted zone named ticketscope.*; pass it as the first argument
+# (or TICKETSCOPE_HOSTNAME) only to pick between several.
 #
 # It reads the account, certificate and zone from AWS (after scripts/aws-login.sh), so nothing
 # is copied by hand and no id is committed. It prints, on stdout only, exports for AWS_PROFILE,
@@ -19,12 +22,19 @@ KUBECONFIG_PATH="${TICKETSCOPE_KUBECONFIG:-/tmp/ticketscope-eks.kubeconfig}"
 DOCKER_BIN=/Applications/Docker.app/Contents/Resources/bin
 
 fail() { echo "eks-env: $*" >&2; exit 1; }
-[[ -n "$HOST" ]] || fail "usage: eval \"\$(scripts/eks-env.sh <fixed hostname>)\""
 
 aws_() { aws --profile "$PROFILE" --region "$REGION" "$@"; }
 
 ACCOUNT="$(aws_ sts get-caller-identity --query Account --output text 2>/dev/null)" ||
   fail "not signed in as profile $PROFILE: run scripts/aws-login.sh"
+
+if [[ -z "$HOST" ]]; then
+  ZONES="$(aws_ route53 list-hosted-zones \
+    --query "HostedZones[?starts_with(Name, 'ticketscope.')].Name" --output text)"
+  HOST="${ZONES%.}"
+  [[ -n "$HOST" && "$HOST" != *[[:space:]]* ]] ||
+    fail "expected exactly one ticketscope.* hosted zone; pass the hostname as the first argument"
+fi
 
 CERT="$(aws_ acm list-certificates \
   --query "CertificateSummaryList[?DomainName=='${HOST}' && Status=='ISSUED'].CertificateArn | [0]" \

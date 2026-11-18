@@ -22,12 +22,15 @@ case "$*" in
   *"sts get-caller-identity"*) [ -n "$SIGNED_OUT" ] && exit 255; echo 000000000000 ;;
   *"acm list-certificates"*) echo "arn:aws:acm:us-east-1:000000000000:certificate/abc" ;;
   *"route53 list-hosted-zones-by-name"*) echo "/hostedzone/ZTESTZONE" ;;
+  *"route53 list-hosted-zones"*) echo "$ZONES" ;;
   *) exit 1 ;;
 esac
 """
 
 
-def _run(tmp_path: Path, **env: str) -> subprocess.CompletedProcess[str]:
+def _run(
+    tmp_path: Path, *, host: str | None = HOST, **env: str
+) -> subprocess.CompletedProcess[str]:
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir(exist_ok=True)
     aws = bin_dir / "aws"
@@ -36,12 +39,17 @@ def _run(tmp_path: Path, **env: str) -> subprocess.CompletedProcess[str]:
     full_env = {
         "PATH": f"{bin_dir}:{os.environ['PATH']}",
         "SIGNED_OUT": "",
+        "ZONES": f"{HOST}.",
         # Never the repo's own tfvars: the fake values must not land beside real ones.
         "TICKETSCOPE_TFVARS": str(tmp_path / "terraform.tfvars"),
         **env,
     }
     return subprocess.run(
-        ["bash", str(SCRIPT), HOST], capture_output=True, text=True, env=full_env, check=False
+        ["bash", str(SCRIPT), *([host] if host else [])],
+        capture_output=True,
+        text=True,
+        env=full_env,
+        check=False,
     )
 
 
@@ -70,8 +78,15 @@ def test_it_prints_nothing_on_stdout_when_not_signed_in(tmp_path: Path) -> None:
 
 
 @pytest.mark.criterion("ticketscope--e5-s2--AC-1")
-def test_it_needs_a_hostname() -> None:
-    result = subprocess.run(
-        ["bash", str(SCRIPT)], capture_output=True, text=True, env={"PATH": os.environ["PATH"]}
-    )
+def test_it_finds_the_hostname_from_the_one_ticketscope_zone(tmp_path: Path) -> None:
+    result = _run(tmp_path, host=None)
+    assert result.returncode == 0, result.stderr
+    assert f"export TICKETSCOPE_HOSTNAME={HOST}" in result.stdout.splitlines()
+
+
+@pytest.mark.criterion("ticketscope--e5-s2--AC-1")
+@pytest.mark.parametrize("zones", ["", f"{HOST}.\tticketscope.other.test."])
+def test_it_needs_exactly_one_zone_when_given_no_hostname(tmp_path: Path, zones: str) -> None:
+    result = _run(tmp_path, host=None, ZONES=zones)
     assert result.returncode != 0 and result.stdout == ""
+    assert "exactly one" in result.stderr

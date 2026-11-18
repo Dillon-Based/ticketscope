@@ -1,0 +1,24 @@
+{
+  "schema_version": "0.1.0",
+  "evaluated_at": "2026-11-12T18:00:00+00:00",
+  "repo": "ticketscope",
+  "target": {
+    "type": "epic",
+    "id": "ticketscope--e4",
+    "label": "Epic 4: Claude Desktop calls search_similar_issues on a remote MCP server"
+  },
+  "collection_status": "COLLECTED",
+  "gate_basis": "priority_thresholds",
+  "gate_status": "FAIL",
+  "rationale": "P0 coverage is 0% (required: 100%). 4 critical requirement(s) below FULL coverage. R1 to R4 are PARTIAL and R5 is PARTIAL. 18 of 27 criteria are FULL; the 9 others are PARTIAL or NONE because their clauses rest on CI-run or person-run observations that no test or live verification record carries (story 1 AC-4 and AC-5, story 2 AC-4 and AC-5, story 4 AC-5, story 5 AC-6, story 6 AC-1 and AC-2, story 7 verify). No live verification results exist for epic 4.",
+  "p0_status": "NOT_MET",
+  "p1_status": "NOT_MET",
+  "overall_status": "NOT_MET",
+  "critical_open": 4,
+  "links": {
+    "trace_report_path": "_bmad-output/test-artifacts/trace/traceability-matrix-epic-ticketscope--e4.md",
+    "trace_report_url": "",
+    "artifact_url": "",
+    "journey_evidence_url": ""
+  }
+}

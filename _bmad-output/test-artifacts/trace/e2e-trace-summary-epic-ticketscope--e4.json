@@ -1,0 +1,522 @@
+{
+  "schema_version": "0.3.0",
+  "snapshot_at": "2026-11-12T18:00:00+00:00",
+  "repo": "ticketscope",
+  "collection_mode": "contract_static",
+  "collection_status": "COLLECTED",
+  "inventory_basis": "acceptance_criteria",
+  "gate_basis": "priority_thresholds",
+  "source_sha": "4dccc85d66f3e85682c6b43e3e673a93f61cbe51",
+  "target": {
+    "type": "epic",
+    "id": "ticketscope--e4",
+    "label": "Epic 4: Claude Desktop calls search_similar_issues on a remote MCP server"
+  },
+  "decision_mode": "deterministic",
+  "evaluator": "Claude Code / Master Test Architect",
+  "confidence": "high",
+  "oracle": {
+    "resolution_mode": "formal_requirements",
+    "confidence": "high",
+    "sources": [
+      "_bmad-output/initiative-ticketscope/tickets/epic-mcp-server/epic-mcp-server.md",
+      "_bmad-output/initiative-ticketscope/tickets/epic-mcp-server/tickets/tickets.toml",
+      "_bmad-output/initiative-ticketscope/tickets/epic-mcp-server/tickets/story-tracer-an-mcp-client-calls-search-similar-issues-through-the-plan.md",
+      "_bmad-output/initiative-ticketscope/tickets/epic-mcp-server/tickets/story-claude-desktop-answers-from-ticketscope-through-a-tunnel-plan.md",
+      "_bmad-output/initiative-ticketscope/tickets/epic-mcp-server/tickets/story-tool-errors-carry-the-api-s-problem-detail-plan.md",
+      "_bmad-output/initiative-ticketscope/tickets/epic-mcp-server/tickets/story-get-issue-takes-the-issue-key-plan.md",
+      "_bmad-output/initiative-ticketscope/tickets/epic-mcp-server/tickets/story-one-mcp-tool-call-yields-one-trace-in-tempo-plan.md",
+      "_bmad-output/initiative-ticketscope/tickets/epic-mcp-server/tickets/story-refactor-sweep-plan.md",
+      "_bmad-output/initiative-ticketscope/tickets/epic-mcp-server/tickets/story-integrated-check-on-kind-plan.md",
+      "_bmad-output/test-artifacts/test-design/test-design-epic-4.md"
+    ],
+    "external_pointer_status": "not_used",
+    "synthetic": false,
+    "granularity": "requirements",
+    "rows": [
+      {
+        "id": "ticketscope--e4--R1",
+        "kind": "requirement",
+        "priority": "P0",
+        "priority_basis": "contributors",
+        "coverage": "PARTIAL",
+        "parent": "parent R4",
+        "missing_behaviors": [],
+        "contributors": [
+          {
+            "id": "ticketscope--e4-s1--AC-1",
+            "story": "ticketscope--e4-s1",
+            "coverage": "FULL"
+          },
+          {
+            "id": "ticketscope--e4-s1--AC-2",
+            "story": "ticketscope--e4-s1",
+            "coverage": "FULL"
+          },
+          {
+            "id": "ticketscope--e4-s1--AC-3",
+            "story": "ticketscope--e4-s1",
+            "coverage": "FULL"
+          },
+          {
+            "id": "ticketscope--e4-s1--AC-4",
+            "story": "ticketscope--e4-s1",
+            "coverage": "PARTIAL"
+          },
+          {
+            "id": "ticketscope--e4-s1--AC-5",
+            "story": "ticketscope--e4-s1",
+            "coverage": "PARTIAL"
+          },
+          {
+            "id": "ticketscope--e4-s3--AC-3",
+            "story": "ticketscope--e4-s3",
+            "coverage": "FULL"
+          },
+          {
+            "id": "ticketscope--e4-s5--AC-6",
+            "story": "ticketscope--e4-s5",
+            "coverage": "PARTIAL"
+          },
+          {
+            "id": "ticketscope--e4-s6--AC-1",
+            "story": "ticketscope--e4-s6",
+            "coverage": "PARTIAL"
+          },
+          {
+            "id": "ticketscope--e4-s6--AC-2",
+            "story": "ticketscope--e4-s6",
+            "coverage": "PARTIAL"
+          },
+          {
+            "id": "ticketscope--e4-s7--verify",
+            "story": "ticketscope--e4-s7",
+            "coverage": "PARTIAL"
+          }
+        ]
+      },
+      {
+        "id": "ticketscope--e4--R2",
+        "kind": "requirement",
+        "priority": "P0",
+        "priority_basis": "contributors",
+        "coverage": "PARTIAL",
+        "parent": "parent R4",
+        "missing_behaviors": [],
+        "contributors": [
+          {
+            "id": "ticketscope--e4-s4--AC-1",
+            "story": "ticketscope--e4-s4",
+            "coverage": "FULL"
+          },
+          {
+            "id": "ticketscope--e4-s4--AC-3",
+            "story": "ticketscope--e4-s4",
+            "coverage": "FULL"
+          },
+          {
+            "id": "ticketscope--e4-s4--AC-4",
+            "story": "ticketscope--e4-s4",
+            "coverage": "FULL"
+          },
+          {
+            "id": "ticketscope--e4-s4--AC-5",
+            "story": "ticketscope--e4-s4",
+            "coverage": "PARTIAL"
+          },
+          {
+            "id": "ticketscope--e4-s6--AC-1",
+            "story": "ticketscope--e4-s6",
+            "coverage": "PARTIAL"
+          },
+          {
+            "id": "ticketscope--e4-s6--AC-2",
+            "story": "ticketscope--e4-s6",
+            "coverage": "PARTIAL"
+          },
+          {
+            "id": "ticketscope--e4-s7--verify",
+            "story": "ticketscope--e4-s7",
+            "coverage": "PARTIAL"
+          }
+        ]
+      },
+      {
+        "id": "ticketscope--e4--R3",
+        "kind": "requirement",
+        "priority": "P0",
+        "priority_basis": "contributors",
+        "coverage": "PARTIAL",
+        "parent": "parent R4",
+        "missing_behaviors": [],
+        "contributors": [
+          {
+            "id": "ticketscope--e4-s3--AC-1",
+            "story": "ticketscope--e4-s3",
+            "coverage": "FULL"
+          },
+          {
+            "id": "ticketscope--e4-s3--AC-2",
+            "story": "ticketscope--e4-s3",
+            "coverage": "FULL"
+          },
+          {
+            "id": "ticketscope--e4-s3--AC-3",
+            "story": "ticketscope--e4-s3",
+            "coverage": "FULL"
+          },
+          {
+            "id": "ticketscope--e4-s4--AC-2",
+            "story": "ticketscope--e4-s4",
+            "coverage": "FULL"
+          },
+          {
+            "id": "ticketscope--e4-s4--AC-3",
+            "story": "ticketscope--e4-s4",
+            "coverage": "FULL"
+          },
+          {
+            "id": "ticketscope--e4-s6--AC-1",
+            "story": "ticketscope--e4-s6",
+            "coverage": "PARTIAL"
+          },
+          {
+            "id": "ticketscope--e4-s6--AC-2",
+            "story": "ticketscope--e4-s6",
+            "coverage": "PARTIAL"
+          },
+          {
+            "id": "ticketscope--e4-s7--verify",
+            "story": "ticketscope--e4-s7",
+            "coverage": "PARTIAL"
+          }
+        ]
+      },
+      {
+        "id": "ticketscope--e4--R4",
+        "kind": "requirement",
+        "priority": "P0",
+        "priority_basis": "contributors",
+        "coverage": "PARTIAL",
+        "parent": "parent R4",
+        "missing_behaviors": [],
+        "contributors": [
+          {
+            "id": "ticketscope--e4-s2--AC-1",
+            "story": "ticketscope--e4-s2",
+            "coverage": "FULL"
+          },
+          {
+            "id": "ticketscope--e4-s2--AC-2",
+            "story": "ticketscope--e4-s2",
+            "coverage": "FULL"
+          },
+          {
+            "id": "ticketscope--e4-s2--AC-3",
+            "story": "ticketscope--e4-s2",
+            "coverage": "FULL"
+          },
+          {
+            "id": "ticketscope--e4-s2--AC-4",
+            "story": "ticketscope--e4-s2",
+            "coverage": "PARTIAL"
+          },
+          {
+            "id": "ticketscope--e4-s2--AC-5",
+            "story": "ticketscope--e4-s2",
+            "coverage": "NONE"
+          },
+          {
+            "id": "ticketscope--e4-s7--verify",
+            "story": "ticketscope--e4-s7",
+            "coverage": "PARTIAL"
+          }
+        ]
+      },
+      {
+        "id": "ticketscope--e4--R5",
+        "kind": "requirement",
+        "priority": "P1",
+        "priority_basis": "contributors",
+        "coverage": "PARTIAL",
+        "parent": "parent R8",
+        "missing_behaviors": [],
+        "contributors": [
+          {
+            "id": "ticketscope--e4-s5--AC-1",
+            "story": "ticketscope--e4-s5",
+            "coverage": "FULL"
+          },
+          {
+            "id": "ticketscope--e4-s5--AC-2",
+            "story": "ticketscope--e4-s5",
+            "coverage": "FULL"
+          },
+          {
+            "id": "ticketscope--e4-s5--AC-3",
+            "story": "ticketscope--e4-s5",
+            "coverage": "FULL"
+          },
+          {
+            "id": "ticketscope--e4-s5--AC-4",
+            "story": "ticketscope--e4-s5",
+            "coverage": "FULL"
+          },
+          {
+            "id": "ticketscope--e4-s5--AC-5",
+            "story": "ticketscope--e4-s5",
+            "coverage": "FULL"
+          },
+          {
+            "id": "ticketscope--e4-s5--AC-6",
+            "story": "ticketscope--e4-s5",
+            "coverage": "PARTIAL"
+          },
+          {
+            "id": "ticketscope--e4-s6--AC-1",
+            "story": "ticketscope--e4-s6",
+            "coverage": "PARTIAL"
+          },
+          {
+            "id": "ticketscope--e4-s6--AC-2",
+            "story": "ticketscope--e4-s6",
+            "coverage": "PARTIAL"
+          },
+          {
+            "id": "ticketscope--e4-s7--verify",
+            "story": "ticketscope--e4-s7",
+            "coverage": "PARTIAL"
+          }
+        ]
+      }
+    ]
+  },
+  "coverage": {
+    "inventory": {
+      "covered": 0,
+      "total": 5,
+      "pct": 0
+    },
+    "priority_breakdown": {
+      "P0": {
+        "total": 4,
+        "covered": 0,
+        "pct": 0
+      },
+      "P1": {
+        "total": 1,
+        "covered": 0,
+        "pct": 0
+      },
+      "P2": {
+        "total": 0,
+        "covered": 0,
+        "pct": 100
+      },
+      "P3": {
+        "total": 0,
+        "covered": 0,
+        "pct": 100
+      }
+    },
+    "criteria": {
+      "total": 27,
+      "full": 18,
+      "pct": 67
+    },
+    "by_level": {
+      "e2e": {
+        "tests": 20,
+        "criteria_covered": 13
+      },
+      "api": {
+        "tests": 35,
+        "criteria_covered": 12
+      },
+      "component": {
+        "tests": 0,
+        "criteria_covered": 0
+      },
+      "unit": {
+        "tests": 25,
+        "criteria_covered": 11
+      },
+      "live": {
+        "tests": 0,
+        "criteria_covered": 0
+      },
+      "other": {
+        "tests": 9,
+        "criteria_covered": 10
+      }
+    }
+  },
+  "tests": {
+    "files": 20,
+    "cases": 89,
+    "skipped_cases": 0,
+    "fixme_cases": 0,
+    "pending_cases": 0
+  },
+  "risk_summary": {
+    "critical_open": 4,
+    "high_open": 0,
+    "medium_open": 0,
+    "low_open": 0
+  },
+  "heuristics": {
+    "endpoint_gaps": 0,
+    "auth_negative_path_status": "present",
+    "error_path_status": "present",
+    "ui_journey_status": "not_applicable",
+    "ui_state_status": "not_applicable"
+  },
+  "live_evidence": {
+    "present": true,
+    "results_file": "_bmad-output/test-artifacts/live-verification-results.json",
+    "freshness": "stale",
+    "recorded_source_sha": "6400e5ac8e3bb4cadeea8061a5581c33b2b45036",
+    "current_source_sha": "4dccc85d66f3e85682c6b43e3e673a93f61cbe51",
+    "producer": "",
+    "counted": 0,
+    "stale": 0,
+    "unverifiable": 0,
+    "failed": 0,
+    "contradicted": 0,
+    "blocked": 0,
+    "skipped": 0,
+    "unmatched": 30,
+    "invalid": 0,
+    "requirements_live_only": 0
+  },
+  "blockers": [
+    {
+      "id": "ticketscope--e4--R1",
+      "severity": "critical",
+      "reason": "P0 requirement PARTIAL: s1 AC-4 (PARTIAL), s1 AC-5 (PARTIAL), s5 AC-6 (PARTIAL), s6 AC-1 (PARTIAL), s6 AC-2 (PARTIAL), s7 verify (PARTIAL) have no test or live record for the stated clause",
+      "test_file": "",
+      "test_title": "ticketscope--e4--R1"
+    },
+    {
+      "id": "ticketscope--e4--R2",
+      "severity": "critical",
+      "reason": "P0 requirement PARTIAL: s4 AC-5 (PARTIAL), s6 AC-1 (PARTIAL), s6 AC-2 (PARTIAL), s7 verify (PARTIAL) have no test or live record for the stated clause",
+      "test_file": "",
+      "test_title": "ticketscope--e4--R2"
+    },
+    {
+      "id": "ticketscope--e4--R3",
+      "severity": "critical",
+      "reason": "P0 requirement PARTIAL: s6 AC-1 (PARTIAL), s6 AC-2 (PARTIAL), s7 verify (PARTIAL) have no test or live record for the stated clause",
+      "test_file": "",
+      "test_title": "ticketscope--e4--R3"
+    },
+    {
+      "id": "ticketscope--e4--R4",
+      "severity": "critical",
+      "reason": "P0 requirement PARTIAL: s2 AC-4 (PARTIAL), s2 AC-5 (NONE), s7 verify (PARTIAL) have no test or live record for the stated clause",
+      "test_file": "",
+      "test_title": "ticketscope--e4--R4"
+    },
+    {
+      "id": "ticketscope--e4-s2--AC-5",
+      "severity": "critical",
+      "reason": "P0 criterion NONE: Claude Desktop answers from ticketscope. The session is recorded only in the plan's prose; the screenshot was waived",
+      "test_file": "",
+      "test_title": "ticketscope--e4-s2--AC-5"
+    },
+    {
+      "id": "live-records-other-epics",
+      "severity": "medium",
+      "reason": "30 live records in live-verification-results.json name epic 1, 2 or 3 criteria, which are not in this oracle; reported as unmatched, none counted",
+      "test_file": "_bmad-output/test-artifacts/live-verification-results.json",
+      "test_title": "Live verification results file"
+    }
+  ],
+  "rejected_evidence": [],
+  "recommendations": [
+    {
+      "priority": "URGENT",
+      "action": "Record live verification for story 2 AC-5 (Claude Desktop session) and the other process clauses at the commit under trace, citing CI run URLs; live-only coverage caps the run at CONCERNS",
+      "requirements": [
+        "ticketscope--e4--R1",
+        "ticketscope--e4--R2",
+        "ticketscope--e4--R3",
+        "ticketscope--e4--R4"
+      ]
+    },
+    {
+      "priority": "HIGH",
+      "action": "Add re-runnable tests: a before/after helm render comparison (story 6 AC-1), a stubbed kind-up run for mcp (story 1 AC-4), and a check that eval/baseline.json is untouched (story 4 AC-5)",
+      "requirements": [
+        "ticketscope--e4--R1",
+        "ticketscope--e4--R2",
+        "ticketscope--e4--R3",
+        "ticketscope--e4--R5"
+      ]
+    },
+    {
+      "priority": "MEDIUM",
+      "action": "Complete coverage for the five PARTIAL requirements",
+      "requirements": [
+        "ticketscope--e4--R1",
+        "ticketscope--e4--R2",
+        "ticketscope--e4--R3",
+        "ticketscope--e4--R4",
+        "ticketscope--e4--R5"
+      ]
+    },
+    {
+      "priority": "MEDIUM",
+      "action": "Add the s2 session link and the mcp-e2e run URL to the epic Notes (C-7); rename the marker in tests/mcp/test_unreachable_api.py to ticketscope--e4-s7--verify",
+      "requirements": [
+        "ticketscope--e4--R1",
+        "ticketscope--e4--R2",
+        "ticketscope--e4--R3",
+        "ticketscope--e4--R4",
+        "ticketscope--e4--R5"
+      ]
+    },
+    {
+      "priority": "LOW",
+      "action": "Run /bmad-tea-nfr and /bmad-tea-test-review for epic 4",
+      "requirements": []
+    }
+  ],
+  "waivers": {
+    "register": "_bmad-output/test-artifacts/gate-waivers.md",
+    "read_error": "",
+    "filed": 1,
+    "valid": 1,
+    "invalid": 0,
+    "entries": [
+      {
+        "id": "W-001",
+        "title": "Retired GitHub-era criteria of stories 1.3, 1.4 and 1.14",
+        "covers": "ticketscope--e1-s3--AC-1, ticketscope--e1-s3--AC-2, ticketscope--e1-s3--AC-3, ticketscope--e1-s4--AC-1, ticketscope--e1-s4--AC-2, ticketscope--e1-s14--AC-2",
+        "priority": "P0",
+        "valid": true,
+        "failed_checks": []
+      }
+    ]
+  },
+  "links": {
+    "trace_report_path": "_bmad-output/test-artifacts/trace/traceability-matrix-epic-ticketscope--e4.md",
+    "trace_report_url": "",
+    "artifact_url": "",
+    "journey_evidence_url": ""
+  },
+  "gate_status": "FAIL",
+  "gate_criteria": {
+    "p0_coverage_required": "100%",
+    "p0_coverage_actual": "0%",
+    "p0_status": "NOT_MET",
+    "p1_coverage_target": "90%",
+    "p1_coverage_minimum": "80%",
+    "p1_coverage_actual": "0%",
+    "p1_status": "NOT_MET",
+    "overall_coverage_minimum": "80%",
+    "overall_coverage_actual": "0%",
+    "overall_status": "NOT_MET"
+  }
+}

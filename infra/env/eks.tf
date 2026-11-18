@@ -1,6 +1,32 @@
 # EKS 1.36 on standard support, a managed node group of Graviton nodes, no Auto Mode, no
 # Fargate (AD-16). The API endpoint is public and IAM-authenticated. No customer-managed KMS
 # key and no control-plane logging (AD-23).
+data "aws_caller_identity" "current" {}
+
+# The role the person signs in with. env-up's deploy role creates the cluster and so is its only
+# admin; without this entry the hand teardown is refused until an entry is made by hand. Skipped
+# when the admin applies the stack itself, because the creator-admin entry then already names it
+# (two entries for one principal fail), and when the role does not exist.
+data "aws_iam_roles" "admin" {
+  name_regex  = "^${var.admin_role_name}$"
+  path_prefix = var.admin_role_path
+}
+
+locals {
+  admin_applies = strcontains(data.aws_caller_identity.current.arn, ":assumed-role/${var.admin_role_name}/")
+  admin_access_entry = (length(data.aws_iam_roles.admin.arns) == 1 && !local.admin_applies) ? {
+    admin = {
+      principal_arn = one(data.aws_iam_roles.admin.arns)
+      policy_associations = {
+        admin = {
+          policy_arn   = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+          access_scope = { type = "cluster" }
+        }
+      }
+    }
+  } : {}
+}
+
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "~> 21.0"
@@ -21,7 +47,7 @@ module "eks" {
   # view policy (get, list and watch on most resources; no secrets, no writes). The agent runs
   # `kubectl get` and `logs` through it and still cannot change anything. Whether the view policy
   # reaches pod logs is unverified; the next live run settles it.
-  access_entries = {
+  access_entries = merge({
     readonly = {
       principal_arn = "arn:aws:iam::${var.account_id}:role/ticketscope-readonly"
       policy_associations = {
@@ -31,7 +57,7 @@ module "eks" {
         }
       }
     }
-  }
+  }, local.admin_access_entry)
 
   create_kms_key              = false
   encryption_config           = null

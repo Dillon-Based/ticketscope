@@ -16,17 +16,16 @@ applies anything against AWS; every step below is yours.
    gateway, security groups, launch templates, tags), the cluster's OIDC provider, IAM policy
    reads, and `ecr:DescribeImages`. Those are in
    `infra/bootstrap/policies/deploy-permissions.json.tftpl`, scoped to this account and region,
-   never to a `bootstrap` state path. Apply it with the admin identity, from the checkout that
-   holds bootstrap's untracked `backend.tf` and `terraform.tfvars` (or copy those two files into
-   the checkout you use; a checkout without `backend.tf` has an empty local state and would plan to
-   create everything again), on the branch (or after the
-   merge) so the template change is in the tree. Before the merge, from that checkout:
-   `git fetch && git checkout --detach origin/<this branch>`.
+   never to a `bootstrap` state path. Apply it with the admin identity, from a checkout that has
+   the template change (the branch, or `main` after the merge) and bootstrap's untracked
+   `terraform.tfvars` (copy it in from the checkout where bootstrap was first applied). The state
+   backend is committed, so `init` needs the bucket and a checkout without it fails there instead
+   of planning from an empty state.
 
    ```sh
    scripts/aws-login.sh
    eval "$(scripts/eks-env.sh)"
-   terraform -chdir=infra/bootstrap init                          # a fresh clone or a provider bump needs it
+   terraform -chdir=infra/bootstrap init -reconfigure -backend-config="bucket=$TICKETSCOPE_STATE_BUCKET"
    terraform -chdir=infra/bootstrap plan -out=bootstrap.tfplan   # only the deploy role policy changes
    terraform -chdir=infra/bootstrap apply bootstrap.tfplan
    ```
@@ -77,6 +76,24 @@ Use the admin profile and a kubeconfig for the cluster:
 scripts/aws-login.sh
 eval "$(scripts/eks-env.sh)"
 aws eks update-kubeconfig --name ticketscope-env --region us-east-1 --kubeconfig "$KUBECONFIG"
+```
+
+The `env` stack gives your admin role cluster-admin through an access entry, so `kubectl` and
+`helm` work as soon as the kubeconfig exists. A cluster applied before that change, or by another
+identity, has no entry for you and `helm` says "provide credentials"; add one by hand (the
+cluster's deletion removes it):
+
+```sh
+ADMIN_ARN="$(aws iam get-role --role-name AccountFullAccessRole --query Role.Arn --output text)"
+aws eks create-access-entry --cluster-name ticketscope-env --principal-arn "$ADMIN_ARN"
+aws eks associate-access-policy --cluster-name ticketscope-env --principal-arn "$ADMIN_ARN" \
+  --policy-arn arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy \
+  --access-scope type=cluster
+```
+
+Then the teardown:
+
+```sh
 helm uninstall ticketscope -n ticketscope
 kubectl -n ticketscope delete pvc --all
 kubectl -n platform delete gateway ticketscope

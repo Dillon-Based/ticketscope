@@ -57,6 +57,22 @@
       ]
     },
     {
+      "Sid": "DeployRoleSelfRead",
+      "Effect": "Allow",
+      "Action": "iam:GetRole",
+      "Resource": "arn:aws:iam::${account_id}:role/ticketscope-deploy"
+    },
+    {
+      "Sid": "ServiceLinkedRoleRead",
+      "Effect": "Allow",
+      "Action": "iam:GetRole",
+      "Resource": [
+        "arn:aws:iam::${account_id}:role/aws-service-role/eks.amazonaws.com/AWSServiceRoleForAmazonEKS",
+        "arn:aws:iam::${account_id}:role/aws-service-role/eks-nodegroup.amazonaws.com/AWSServiceRoleForAmazonEKSNodegroup",
+        "arn:aws:iam::${account_id}:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling"
+      ]
+    },
+    {
       "Sid": "TicketscopeOidcProvider",
       "Effect": "Allow",
       "Action": [
@@ -135,8 +151,15 @@
       "Resource": [
         "arn:aws:eks:${region}:${account_id}:cluster/ticketscope-*",
         "arn:aws:eks:${region}:${account_id}:nodegroup/ticketscope-*/*/*",
-        "arn:aws:eks:${region}:${account_id}:addon/ticketscope-*/*/*"
+        "arn:aws:eks:${region}:${account_id}:addon/ticketscope-*/*/*",
+        "arn:aws:eks:${region}:${account_id}:access-entry/ticketscope-*/*/*/*/*"
       ]
+    },
+    {
+      "Sid": "EksPublicParameters",
+      "Effect": "Allow",
+      "Action": "ssm:GetParameter",
+      "Resource": "arn:aws:ssm:${region}::parameter/aws/service/eks/*"
     },
     {
       "Sid": "ReadOnlyDiscovery",

@@ -108,7 +108,10 @@ def test_the_agent_gets_view_only_cluster_access_through_the_bootstrap_readonly_
     bootstrap = (REPO / "infra" / "bootstrap" / "main.tf").read_text(encoding="utf-8")
     role = re.search(r'resource "aws_iam_role" "readonly" \{\s+name = "([^"]+)"', bootstrap)
     assert role, "bootstrap's readonly role not found"
-    entry = re.search(r"access_entries = \{(.*?)\n  \}\n", eks, re.DOTALL)
+    # The readonly role's entry sits in the literal map; the admin's is built apart, in locals.
+    entry = re.search(
+        r"access_entries = merge\(\{(.*?)\n  \}, local\.admin_access_entry\)", eks, re.DOTALL
+    )
     assert entry, "access_entries not found in infra/env/eks.tf"
     block = entry.group(1)
     assert f"role/{role.group(1)}" in block

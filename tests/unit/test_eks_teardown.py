@@ -3,9 +3,11 @@ the calls arrive in AD-24 order, a Gateway or controller configuration object th
 stops the run before the controller (`platform`) is uninstalled, and stale DNS records fail the
 run after the destroy. No cluster, no AWS."""
 
+import json
 import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -33,12 +35,50 @@ case "$*" in
   *describe-network-interfaces*)
     [[ -n "${ENI_STUCK:-}" ]] && echo "eni-0abc"
     ;;
-  *list-resource-record-sets*)
-    [[ -n "${DNS_ERROR:-}" ]] && { echo "AccessDenied" >&2; exit 254; }
-    [[ -n "${DNS_STALE:-}" ]] && printf '%s.\\tA\\n%s.\\tAAAA\\n' "$DNS_STALE" "$DNS_STALE"
+  *route53*)
+    exec "$(dirname "$0")/route53.py" "$@"
     ;;
 esac
 exit 0
+"""
+# A stand-in for the zone: it evaluates the Name and Type terms of the JMESPath filter the script
+# sends (no jmespath here) against the records in $ZONE_FILE, and applies a change batch to it.
+ROUTE53 = """#!{python}
+import json, os, re, sys
+
+args = sys.argv[1:]
+zone_file = os.environ["ZONE_FILE"]
+records = json.load(open(zone_file))
+if "list-resource-record-sets" in args:
+    if os.environ.get("DNS_ERROR") or (
+        os.environ.get("DNS_LIST_FAILS_AFTER_DELETE") and os.path.exists(zone_file + ".changed")
+    ):
+        print("AccessDenied", file=sys.stderr)
+        sys.exit(254)
+    query = args[args.index("--query") + 1]
+    names = re.findall(r"Name=='([^']*)'", query)
+    types = re.findall(r"Type=='(\\w+)'", query)
+    chosen = [r for r in records if r["Name"] in names and r["Type"] in types]
+    if query.startswith("{{Changes"):
+        batch = [{{"Action": "DELETE", "ResourceRecordSet": r}} for r in chosen]
+        print(json.dumps({{"Changes": batch}}))
+    else:
+        for r in chosen:
+            print(r["Name"] + "\\t" + r["Type"])
+elif "change-resource-record-sets" in args:
+    if os.environ.get("DNS_DELETE_FAILS"):
+        print("AccessDenied", file=sys.stderr)
+        sys.exit(254)
+    batch = json.load(open(args[args.index("--change-batch") + 1].removeprefix("file://")))
+    open(os.environ["BATCH_LOG"], "a").write(json.dumps(batch) + "\\n")
+    open(zone_file + ".changed", "w").write("")
+    if not os.environ.get("DNS_DELETE_NOOP"):
+        gone = {{
+            (c["ResourceRecordSet"]["Name"], c["ResourceRecordSet"]["Type"])
+            for c in batch["Changes"]
+        }}
+        records = [r for r in records if (r["Name"], r["Type"]) not in gone]
+        json.dump(records, open(zone_file, "w"))
 """
 KUBECTL_BODY = """\
 args="$*"
@@ -66,15 +106,23 @@ def _setup(tmp_path: Path) -> tuple[Path, Path, Path]:
         stub = bin_dir / name
         stub.write_text(STUB.format(name=name, body=body))
         stub.chmod(0o755)
+    route53 = bin_dir / "route53.py"
+    route53.write_text(ROUTE53.format(python=sys.executable))
+    route53.chmod(0o755)
     kubeconfig = tmp_path / "kubeconfig"
     kubeconfig.write_text("")
     return bin_dir, log, kubeconfig
 
 
+def _zone(*records: tuple[str, str]) -> list[dict[str, object]]:
+    return [{"Name": name, "Type": kind, "TTL": 60} for name, kind in records]
+
+
 def _run(
-    tmp_path: Path, *args: str, **env: str
+    tmp_path: Path, *args: str, zone: list[dict[str, object]] | None = None, **env: str
 ) -> tuple[subprocess.CompletedProcess[str], list[str]]:
     bin_dir, log, kubeconfig = _setup(tmp_path)
+    (tmp_path / "zone.json").write_text(json.dumps(zone or []))
     full_args = args or ("--kubeconfig", str(kubeconfig), "--hostname", HOSTNAME)
     result = subprocess.run(
         [str(SCRIPT), *full_args],
@@ -86,6 +134,8 @@ def _run(
             "STUB_LOG": str(log),
             "POLL_SECONDS": "1",
             "TICKETSCOPE_ZONE_ID": ZONE_ID,
+            "ZONE_FILE": str(tmp_path / "zone.json"),
+            "BATCH_LOG": str(tmp_path / "batches.log"),
             **env,
         },
     )
@@ -275,30 +325,104 @@ def test_every_finalizer_carrying_kind_in_platform_is_deleted_before_platform_is
     assert not missing, f"the teardown does not delete {missing} before `helm uninstall platform`"
 
 
-@pytest.mark.criterion("ticketscope--e5-s4--AC-3")
-def test_stale_dns_records_fail_the_run_after_the_destroy_with_the_remedy(tmp_path: Path) -> None:
-    result, calls = _run(tmp_path, DNS_STALE=HOSTNAME)
-    assert result.returncode == 3
+STALE = _zone((f"{HOSTNAME}.", "A"), (f"{HOSTNAME}.", "AAAA"))
+# Records that must never be selected: the zone's own NS and SOA, a certificate validation
+# CNAME, another name's A record, and a TXT and an NS record at the hostname itself.
+OTHERS = _zone(
+    ("example.test.", "NS"),
+    ("example.test.", "SOA"),
+    (f"_abc.{HOSTNAME}.", "CNAME"),
+    (f"other.{HOSTNAME}.", "A"),
+    (f"{HOSTNAME}.", "TXT"),
+    (f"{HOSTNAME}.", "NS"),
+)
+
+
+def _changes(tmp_path: Path) -> list[dict[str, dict[str, object]]]:
+    path = tmp_path / "batches.log"
+    if not path.exists():
+        return []
+    return [c for line in path.read_text().splitlines() for c in json.loads(line)["Changes"]]
+
+
+def _remaining(tmp_path: Path) -> list[dict[str, object]]:
+    return json.loads((tmp_path / "zone.json").read_text())
+
+
+@pytest.mark.criterion("ticketscope--e5-s12--AC-1")
+def test_stale_records_are_deleted_after_the_destroy_and_the_run_is_clean(tmp_path: Path) -> None:
+    result, calls = _run(tmp_path, zone=STALE + OTHERS)
+    assert result.returncode == 0, result.stderr
     destroy = _index(calls, "terraform -chdir=infra/env destroy")
-    check = _index(calls, "list-resource-record-sets")
-    assert destroy < check  # the environment is destroyed anyway, so billing stops
-    assert f"{HOSTNAME}.\tA" in result.stderr and f"{HOSTNAME}.\tAAAA" in result.stderr
-    assert "change-resource-record-sets" in result.stderr
-    assert f"--hosted-zone-id {ZONE_ID}" in result.stderr
-    assert f"Name=='{HOSTNAME}.'" in result.stderr and '"DELETE"' in result.stderr
-    # The check is read-only: the remedy is printed, never run.
+    change = _index(calls, "change-resource-record-sets")
+    assert destroy < change  # the environment is destroyed first, so billing stops anyway
+    assert f"--hosted-zone-id {ZONE_ID}" in calls[change]
+    deleted = {
+        (c["Action"], c["ResourceRecordSet"]["Name"], c["ResourceRecordSet"]["Type"])
+        for c in _changes(tmp_path)
+    }
+    assert deleted == {
+        ("DELETE", f"{HOSTNAME}.", "A"),
+        ("DELETE", f"{HOSTNAME}.", "AAAA"),
+    }
+    # Listed again after the delete, and nothing else in the zone changed.
+    assert max(i for i, c in enumerate(calls) if "list-resource-record-sets" in c) > change
+    assert _remaining(tmp_path) == OTHERS
+    assert "--- eks-teardown stage times ---" in result.stdout and "dns-records" in result.stdout
+
+
+@pytest.mark.criterion("ticketscope--e5-s12--AC-3")
+def test_the_zone_ns_soa_certificate_and_other_records_are_never_selected(tmp_path: Path) -> None:
+    result, calls = _run(tmp_path, zone=OTHERS)
+    assert result.returncode == 0, result.stderr
+    assert _changes(tmp_path) == []
     assert not any("change-resource-record-sets" in c for c in calls)
+    assert _remaining(tmp_path) == OTHERS
+    # Every query names the hostname and only the A and AAAA types.
+    queries = [c for c in calls if "list-resource-record-sets" in c]
+    assert queries
+    for query in queries:
+        assert f"Name=='{HOSTNAME}.'" in query
+        assert re.findall(r"Type=='(\w+)'", query) == ["A", "AAAA"]
+
+
+def test_a_clean_zone_makes_no_change_call(tmp_path: Path) -> None:
+    result, calls = _run(tmp_path)
+    assert result.returncode == 0, result.stderr
+    assert not any("change-resource-record-sets" in c for c in calls)
+
+
+@pytest.mark.criterion("ticketscope--e5-s12--AC-1")
+def test_a_failed_delete_exits_3_with_the_manual_remedy(tmp_path: Path) -> None:
+    result, calls = _run(tmp_path, zone=STALE, DNS_DELETE_FAILS="1")
+    assert result.returncode == 3
+    assert any("terraform -chdir=infra/env destroy" in c for c in calls)
+    assert f"{HOSTNAME}.\tA" in result.stderr and "change-resource-record-sets" in result.stderr
     assert "--- eks-teardown stage times ---" in result.stdout
 
 
-def test_an_aws_error_in_the_dns_check_is_never_read_as_clean(tmp_path: Path) -> None:
-    result, calls = _run(tmp_path, DNS_ERROR="1")
+def test_records_still_present_after_the_delete_exit_3(tmp_path: Path) -> None:
+    result, _ = _run(tmp_path, zone=STALE, DNS_DELETE_NOOP="1")
     assert result.returncode == 3
-    assert any("terraform -chdir=infra/env destroy" in c for c in calls)
+    assert "still holds records" in result.stderr
+
+
+def test_an_unreadable_zone_after_the_delete_is_never_read_as_clean(tmp_path: Path) -> None:
+    result, _ = _run(tmp_path, zone=STALE, DNS_LIST_FAILS_AFTER_DELETE="1")
+    assert result.returncode == 3
     assert "not clean" in result.stderr
 
 
-def test_the_dns_check_asks_only_for_the_hostnames_a_and_aaaa_records(tmp_path: Path) -> None:
+@pytest.mark.criterion("ticketscope--e5-s12--AC-4")
+def test_an_unreadable_zone_exits_3_and_deletes_nothing(tmp_path: Path) -> None:
+    result, calls = _run(tmp_path, zone=STALE, DNS_ERROR="1")
+    assert result.returncode == 3
+    assert any("terraform -chdir=infra/env destroy" in c for c in calls)
+    assert "not clean" in result.stderr
+    assert not any("change-resource-record-sets" in c for c in calls)
+
+
+def test_the_dns_step_asks_only_for_the_hostnames_a_and_aaaa_records(tmp_path: Path) -> None:
     result, calls = _run(tmp_path, "--skip-cluster", "--hostname", f"{HOSTNAME}.")
     assert result.returncode == 0, result.stderr
     (query,) = [c for c in calls if "list-resource-record-sets" in c]

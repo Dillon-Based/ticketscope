@@ -13,13 +13,14 @@
 #             dispatch from an old env-up run never destroys a newer environment), an expired one
 #             is torn down, and no environment at all means the leftover check runs on its own (a
 #             tagged leftover with no environment fails the run).
-#   teardown  scripts/eks-teardown.sh (AD-24 order, then a read-only DNS check), then
+#   teardown  scripts/eks-teardown.sh (AD-24 order, then deletes the hostname's A and AAAA records), then
 #             scripts/leftover-check.sh, then the stage times in the job summary.
 #
 # Only the `env` stack is destroyed: nothing here reads or names a bootstrap resource. A stuck
 # Gateway or controller configuration object fails the job with `platform` still installed
-# (scripts/eks-teardown.sh prints why). Stale A/AAAA records for the hostname fail the job after
-# the destroy, with the commands that delete them in the log; the leftover check still runs.
+# (scripts/eks-teardown.sh prints why). After the destroy the script deletes the hostname's A and
+# AAAA records itself; an unreadable zone, a failed delete or a record still there fails the job
+# with the commands that delete them by hand in the log; the leftover check still runs.
 name: env-down
 
 on:
@@ -195,7 +196,7 @@ jobs:
           fi
           if ((rc == 0 || rc == 3)); then echo "destroyed=true" >> "$GITHUB_OUTPUT"; fi
           if ((rc == 3)); then
-            echo "The environment is destroyed, but the zone still holds records for the hostname (or could not be read); the remedy is in the job log." >> "$GITHUB_STEP_SUMMARY"
+            echo "The environment is destroyed, but the zone could not be read, the hostname's records could not be deleted, or some remain; the remedy is in the job log." >> "$GITHUB_STEP_SUMMARY"
           fi
           exit "$rc"
       - name: Leftover check (read-only, fails on any tagged resource)

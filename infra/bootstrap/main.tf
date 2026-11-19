@@ -178,6 +178,8 @@ resource "aws_iam_role_policy" "deploy" {
     account_id = var.account_id
     region     = local.region
     bucket     = aws_s3_bucket.state.bucket
+    zone_id    = aws_route53_zone.main.zone_id
+    hostname   = lower(var.hostname)
   })
 }
 

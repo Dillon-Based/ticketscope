@@ -162,6 +162,19 @@
       "Resource": "arn:aws:ssm:${region}::parameter/aws/service/eks/*"
     },
     {
+      "Sid": "DeleteHostnameAddressRecords",
+      "Effect": "Allow",
+      "Action": "route53:ChangeResourceRecordSets",
+      "Resource": "arn:aws:route53:::hostedzone/${zone_id}",
+      "Condition": {
+        "ForAllValues:StringEquals": {
+          "route53:ChangeResourceRecordSetsNormalizedRecordNames": ["${hostname}"],
+          "route53:ChangeResourceRecordSetsRecordTypes": ["A", "AAAA"],
+          "route53:ChangeResourceRecordSetsActions": ["DELETE"]
+        }
+      }
+    },
+    {
       "Sid": "ReadOnlyDiscovery",
       "Effect": "Allow",
       "Action": [

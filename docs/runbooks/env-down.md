@@ -48,7 +48,8 @@ under the read-only profile.
 5. `helm uninstall platform`
 6. wait until tagged ENIs and volumes are gone (10 min, `ENI_VOLUME_WAIT_SECONDS`)
 7. `terraform destroy` of `infra/env`
-8. the DNS check (read-only): no A or AAAA record for the hostname is left in the zone
+8. the DNS step: delete the hostname's A and AAAA records from the zone, then list again; none may
+   be left
 9. `scripts/leftover-check.sh`
 
 The job summary lists the time of each stage.
@@ -77,13 +78,22 @@ TargetGroupBinding) fails `tests/unit/test_eks_teardown.py` until the script del
 external-dns (policy `sync`, registry `txt`) has never written its TXT ownership records here, so
 it never deletes the hostname's A and AAAA records. Left behind, they point at a load balancer
 that no longer exists and break the next `env-up`'s DNS stage. The cause is open (see
-`deferred-work.md`).
+`deferred-work.md`), so the script deletes them itself.
 
 After `terraform destroy`, so the environment is gone and billing stops either way, the script
-lists the zone's A and AAAA records for the hostname. When any exist, or the zone cannot be read,
-it prints them and exits 3: the leftover check still runs and the job fails. The job log has the
-exact commands, with the zone id and hostname filled in. Run them with an identity that may change
-the zone (the admin profile; the deploy role and the read-only role may only read it):
+lists the zone's A and AAAA records named exactly the hostname, deletes them with one
+`change-resource-record-sets` batch (DELETE only), and lists again. The zone, its NS and SOA
+records, the certificate validation records and every other name are never selected. The deploy
+role's statement `DeleteHostnameAddressRecords` allows exactly that: this zone, the DELETE action,
+types A and AAAA, the hostname. It needs a person to re-apply bootstrap after the template changes
+(run `scripts/bootstrap-drift.sh` first). Until that re-apply, the delete is denied and every
+`env-down` exits 3 with the manual remedy below, so re-apply bootstrap before the first
+`env-down` after merging the change.
+
+When the zone cannot be read, the delete fails or records remain, the script exits 3: the leftover
+check still runs and the job fails. The job log then has the exact commands, with the zone id and
+hostname filled in. Run them with an identity that may change the zone (the admin profile; the
+read-only role may only read it):
 
 ```sh
 aws route53 list-resource-record-sets --hosted-zone-id "$TICKETSCOPE_ZONE_ID" \
@@ -124,7 +134,8 @@ listing and drops nothing; `--dry-run` and `--from-file` make no call.
 
 The deploy role gained read actions for the check: `tag:GetResources`,
 `elasticloadbalancing:Describe*`, `logs:DescribeLogGroups`, `kms:ListKeys`, `kms:DescribeKey`,
-`kms:ListResourceTags`. The DNS check needs only the Route 53 `Get*`/`List*` it already has. A
+`kms:ListResourceTags`. The DNS step uses the Route 53 `Get*`/`List*` it already has, plus the one
+scoped `route53:ChangeResourceRecordSets` described above. A
 destroy that hits another denial lists it in the job summary under "Denied actions"; add it to
 `infra/bootstrap/policies/deploy-permissions.json.tftpl`, re-apply bootstrap by hand, and dispatch
 again. Confirm with `aws iam simulate-principal-policy` that the deploy role is denied on bootstrap

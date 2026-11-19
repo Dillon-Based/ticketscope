@@ -16,7 +16,13 @@ from tests.target import REPO
 
 TEMPLATE = REPO / "infra" / "bootstrap" / "policies" / "deploy-permissions.json.tftpl"
 SCRIPT = REPO / "scripts" / "bootstrap_drift.py"
-VALUES = {"account_id": "000000000000", "region": "us-east-1", "bucket": "ticketscope-000000000000"}
+VALUES = {
+    "account_id": "000000000000",
+    "region": "us-east-1",
+    "bucket": "ticketscope-000000000000",
+    "zone_id": "ZEXAMPLE123",
+    "hostname": "ticketscope.example.test",
+}
 
 
 def _expected() -> dict[str, Any]:
@@ -32,7 +38,9 @@ def _run(tmp_path: Path, live: dict[str, Any]) -> subprocess.CompletedProcess[st
     live_file = tmp_path / "live.json"
     live_file.write_text(json.dumps(live), encoding="utf-8")
     args = ["--template", str(TEMPLATE), "--account-id", VALUES["account_id"]]
-    args += ["--region", VALUES["region"], "--bucket", VALUES["bucket"], "--live", str(live_file)]
+    args += ["--region", VALUES["region"], "--bucket", VALUES["bucket"]]
+    args += ["--zone-id", VALUES["zone_id"], "--hostname", VALUES["hostname"]]
+    args += ["--live", str(live_file)]
     return subprocess.run(
         [sys.executable, str(SCRIPT), *args], capture_output=True, text=True, check=False
     )
@@ -98,7 +106,8 @@ def test_unreadable_input_is_an_error_not_a_match(tmp_path: Path) -> None:
     bad = tmp_path / "live.json"
     bad.write_text("not json", encoding="utf-8")
     args = ["--template", str(TEMPLATE), "--account-id", "0" * 12, "--region", "us-east-1"]
-    args += ["--bucket", "b", "--live", str(bad)]
+    args += ["--bucket", "b", "--zone-id", "Z1", "--hostname", "h.example.test"]
+    args += ["--live", str(bad)]
     result = subprocess.run(
         [sys.executable, str(SCRIPT), *args], capture_output=True, text=True, check=False
     )

@@ -3,7 +3,8 @@
 
     python3 scripts/bootstrap_drift.py \
         --template infra/bootstrap/policies/deploy-permissions.json.tftpl \
-        --account-id <id> --region us-east-1 --bucket ticketscope-<id> --live live.json
+        --account-id <id> --region us-east-1 --bucket ticketscope-<id> \
+        --zone-id <zone id> --hostname <hostname> --live live.json
 
 `scripts/bootstrap-drift.sh` fetches `live.json` (the `PolicyDocument` of `aws iam
 get-role-policy`) and calls this. Statements are matched by `Sid`; actions and resources compare
@@ -84,6 +85,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--account-id", required=True)
     parser.add_argument("--region", required=True)
     parser.add_argument("--bucket", required=True)
+    parser.add_argument("--zone-id", required=True)
+    parser.add_argument("--hostname", required=True)
     parser.add_argument(
         "--live", type=Path, required=True, help="the role's PolicyDocument as JSON"
     )
@@ -91,7 +94,13 @@ def main(argv: list[str] | None = None) -> int:
     try:
         expected = render(
             args.template.read_text(encoding="utf-8"),
-            {"account_id": args.account_id, "region": args.region, "bucket": args.bucket},
+            {
+                "account_id": args.account_id,
+                "region": args.region,
+                "bucket": args.bucket,
+                "zone_id": args.zone_id,
+                "hostname": args.hostname.rstrip(".").lower(),
+            },
         )
         live = json.loads(args.live.read_text(encoding="utf-8"))
         lines = compare(expected, live)

@@ -27,6 +27,8 @@ VARS = {
         "arn:aws:iam::000000000000:oidc-provider/token.actions.githubusercontent.com"
     ),
     "admin_principal_arn": "arn:aws:iam::000000000000:user/example-admin",
+    "zone_id": "ZEXAMPLE123",
+    "hostname": "ticketscope.example.test",
 }
 
 READ_PREFIXES = ("Get", "List", "Describe", "Head", "Simulate", "View")
@@ -127,6 +129,32 @@ def test_deploy_permissions_scope_s3_to_env_and_backups_and_iam_to_ticketscope()
                     arn = f"arn:aws:iam::{VARS['account_id']}:role/{bootstrap_name}"
                     assert not fnmatch.fnmatchcase(arn, r), (arn, r)
     assert s3_objects == {f"{bucket_arn}/env/*", f"{bucket_arn}/backups/*"}
+
+
+@pytest.mark.criterion("ticketscope--e5-s12--AC-3")
+def test_deploy_role_may_only_delete_the_hostnames_a_and_aaaa_records_in_the_zone() -> None:
+    policy = render("deploy-permissions.json.tftpl")
+    changing = [
+        s
+        for s in statements(policy)
+        if any(a.startswith("route53:") and is_write(a) for a in as_list(s["Action"]))
+    ]
+    (stmt,) = changing
+    assert stmt["Effect"] == "Allow"
+    assert as_list(stmt["Action"]) == ["route53:ChangeResourceRecordSets"]
+    assert as_list(stmt["Resource"]) == [f"arn:aws:route53:::hostedzone/{VARS['zone_id']}"]
+    assert stmt["Condition"] == {
+        "ForAllValues:StringEquals": {
+            "route53:ChangeResourceRecordSetsNormalizedRecordNames": [VARS["hostname"]],
+            "route53:ChangeResourceRecordSetsRecordTypes": ["A", "AAAA"],
+            "route53:ChangeResourceRecordSetsActions": ["DELETE"],
+        }
+    }
+    # Nothing broader: no wildcard in the resource or the condition values.
+    assert not any("*" in s for s in all_strings(stmt))
+    # The template takes the zone and hostname from Terraform, never a literal.
+    text = (POLICIES / "deploy-permissions.json.tftpl").read_text(encoding="utf-8")
+    assert "${zone_id}" in text and "${hostname}" in text
 
 
 @pytest.mark.criterion("ticketscope--e5-s1--AC-1")

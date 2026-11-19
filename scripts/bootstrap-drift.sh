@@ -27,7 +27,18 @@ if ! aws iam get-role-policy --role-name "$ROLE" --policy-name "$POLICY" \
   exit 2
 fi
 
+# The one hosted zone named ticketscope.* is the bootstrap zone and the fixed hostname.
+if ! zone="$(aws route53 list-hosted-zones \
+  --query "HostedZones[?starts_with(Name, 'ticketscope.')].[Name,Id]" --output text 2>"$work/err")" \
+  || [[ "$(printf '%s\n' "$zone" | grep -c .)" -ne 1 ]]; then
+  echo "bootstrap-drift: expected exactly one ticketscope.* hosted zone: $(sed -E 's/[0-9]{12}/<acct>/g' "$work/err")" >&2
+  exit 2
+fi
+hostname="$(printf '%s' "$zone" | cut -f1)"
+zone_id="$(printf '%s' "$zone" | cut -f2)"
+
 python3 scripts/bootstrap_drift.py \
   --template infra/bootstrap/policies/deploy-permissions.json.tftpl \
   --account-id "$account" --region "$REGION" --bucket "ticketscope-$account" \
+  --zone-id "${zone_id##*/}" --hostname "${hostname%.}" \
   --live "$work/live.json"

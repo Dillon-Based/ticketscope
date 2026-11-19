@@ -93,6 +93,7 @@ carried_to: epic-eks-environment (5), where corpus reloads first run under live 
 - source_plan: `_bmad-output/initiative-ticketscope/tickets/epic-eks-environment/tickets/story-tracer-the-page-and-mcp-answer-over-https-on-the-fixed-hostn-plan.md`
   summary: external-dns wrote no TXT ownership records and so deleted neither DNS record at teardown (story 5.4 teardown must handle it).
   evidence: Tracer run 2026-11-17: after Gateway delete the A and AAAA alias records stayed in the bootstrap zone and no TXT records existed; deleted by hand. Settle why (registry txt for alias records, v0.23) or have env-down delete the records explicitly.
+  resolution: the symptom is resolved by bug 5.12: `scripts/eks-teardown.sh` deletes the hostname's A and AAAA records after `terraform destroy` (deploy role statement `DeleteHostnameAddressRecords`). Why external-dns writes no TXT ownership records stays open (user, 2026-11-19).
 - source_plan: `_bmad-output/initiative-ticketscope/tickets/epic-eks-environment/tickets/story-tracer-the-page-and-mcp-answer-over-https-on-the-fixed-hostn-plan.md`
   summary: The ALB's HTTPS listener uses the default `ELBSecurityPolicy-2016-08`, which allows TLS 1.0 and 1.1.
   evidence: Seen in the controller's built model during the tracer run; set a modern sslPolicy in the LoadBalancerConfiguration.
@@ -104,3 +105,8 @@ carried_to: epic-eks-environment (5), where corpus reloads first run under live 
 - source_plan: `_bmad-output/initiative-ticketscope/tickets/epic-eks-environment/tickets/story-env-down-tears-down-in-order-finds-nothing-left-and-expires-plan.md`
   summary: external-dns writes no TXT ownership records, so policy `sync` never deletes the hostname's A and AAAA records (open since story 5.2; env-down now fails loudly on them).
   evidence: Live env-down 2026-11-19: after an ordered teardown the A and AAAA records stayed in the zone pointing at a dead ALB and broke the next env-up's DNS stage. `scripts/eks-teardown.sh` lists them read-only after `terraform destroy`, prints the delete commands and exits 3; the records are still deleted by hand. Settle why external-dns (registry `txt`) writes no ownership records for the alias records, then let it delete them or have env-down delete them explicitly.
+  resolution: the symptom is resolved by bug 5.12: `env-down` now deletes the records explicitly (only the hostname's A and AAAA, DELETE only) and no longer needs a hand step. The cause, external-dns writing no TXT ownership records, stays open (user, 2026-11-19).
+
+- source_plan: `_bmad-output/initiative-ticketscope/tickets/epic-eks-environment/tickets/bug-teardown-leaves-the-hostnames-dns-records-behind-plan.md`
+  summary: The deploy role's `route53:ChangeResourceRecordSetsNormalizedRecordNames` condition may not match the hostname as written, which would deny the record delete (unverified, medium if true).
+  evidence: The template compares to the bare lowercase hostname; whether AWS normalises with or without the trailing dot is not tested. After the bootstrap re-apply, a live `env-down` that exits 3 with AccessDenied on `change-resource-record-sets` settles it; the fix is the other form of the name in the condition.

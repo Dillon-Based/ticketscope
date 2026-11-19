@@ -20,15 +20,17 @@
 #   5. helm uninstall platform
 #   6. wait until tagged ENIs and volumes are gone
 #   7. terraform destroy of infra/env (the caller has run `terraform init`; TF_VAR_* are set)
-#   8. read-only DNS check: the zone must hold no A or AAAA record for the hostname
+#   8. delete the hostname's A and AAAA records from the zone (external-dns leaves them), then
+#      list again: the zone must hold none
 #
 # A Gateway or configuration object that is not gone in time prints its finalizers and the remedy,
 # and the script exits 1 before `platform` is uninstalled: the controller must stay to finish.
 #
 # Exit status: 0 clean; 1 a stage failed (nothing after it ran); 2 usage; 3 the environment was
-# destroyed but the DNS check found stale records for the hostname or could not read the zone.
-# external-dns writes no TXT ownership records, so it never deletes them; the check prints the
-# records and the commands that delete them. It runs after the destroy so billing stops anyway.
+# destroyed but the DNS step could not read the zone, could not delete the hostname's A and AAAA
+# records, or still found them afterwards. external-dns writes no TXT ownership records, so it
+# never deletes them; on failure the script prints the commands that delete them by hand. The step
+# runs after the destroy so billing stops anyway.
 #
 # Env overrides:
 #   ALB_WAIT_SECONDS          give-up time for the ALB and the Gateway (default 900, 15 minutes)
@@ -227,13 +229,36 @@ delete_and_wait() {
   log "${TARGET[*]} is gone"
 }
 
-# dns_check: read-only. Lists the zone's A and AAAA records for the hostname. Returns 0 when there
-# are none, 1 when there are (printed with the remedy) or when the zone cannot be read.
-dns_check() {
-  local query out
-  query="ResourceRecordSets[?Name=='${DNS_NAME}.' && (Type=='A' || Type=='AAAA')]"
-  if ! out="$(aws route53 list-resource-record-sets --hosted-zone-id "$ZONE_ID" \
-    --query "$query.[Name,Type]" --output text)"; then
+# DNS: only the hostname's A and AAAA records are ever listed or changed. The zone's NS and SOA
+# records, the certificate validation records and every other name are never selected, and the
+# deploy role may change only those two types for this name, with the DELETE action.
+DNS_FILTER="ResourceRecordSets[?Name=='${DNS_NAME}.' && (Type=='A' || Type=='AAAA')]"
+
+# dns_listing: prints the hostname's A and AAAA records (name and type, tab separated). Fails when
+# the zone cannot be read; that is never clean.
+dns_listing() {
+  aws route53 list-resource-record-sets --hosted-zone-id "$ZONE_ID" \
+    --query "$DNS_FILTER.[Name,Type]" --output text
+}
+
+dns_remedy() {
+  cat >&2 <<EOF
+They point at a load balancer that no longer exists and break the next env-up's DNS stage.
+Remedy (with an identity that may change the zone, after checking the listing above):
+  aws route53 list-resource-record-sets --hosted-zone-id $ZONE_ID \\
+    --query "$DNS_FILTER" --output json \\
+    | jq '{Changes: [.[] | {Action: "DELETE", ResourceRecordSet: .}]}' > stale-records.json
+  aws route53 change-resource-record-sets --hosted-zone-id $ZONE_ID \\
+    --change-batch file://stale-records.json
+EOF
+}
+
+# dns_clean_up: external-dns writes no TXT ownership records, so it never deletes the hostname's
+# A and AAAA records. After the destroy they are deleted here, then listed again. Returns 0 only
+# when the zone was read and holds none afterwards; any failure returns 1 (exit 3 semantics).
+dns_clean_up() {
+  local out batch
+  if ! out="$(dns_listing)"; then
     echo "eks-teardown: could not list the records of zone $ZONE_ID; the DNS check is not clean" >&2
     return 1
   fi
@@ -241,18 +266,31 @@ dns_check() {
     log "no A or AAAA record for $DNS_NAME is left in the zone"
     return 0
   fi
-  echo "eks-teardown: the zone still holds records for $DNS_NAME (external-dns did not delete them):" >&2
-  printf '%s\n' "$out" >&2
-  cat >&2 <<EOF
-They point at a load balancer that no longer exists and break the next env-up's DNS stage.
-Remedy (with an identity that may change the zone, after checking the listing above):
-  aws route53 list-resource-record-sets --hosted-zone-id $ZONE_ID \\
-    --query "$query" --output json \\
-    | jq '{Changes: [.[] | {Action: "DELETE", ResourceRecordSet: .}]}' > stale-records.json
-  aws route53 change-resource-record-sets --hosted-zone-id $ZONE_ID \\
-    --change-batch file://stale-records.json
-EOF
-  return 1
+  log "deleting the stale records external-dns left for $DNS_NAME:"
+  printf '%s\n' "$out"
+  batch="$(mktemp)"
+  if ! aws route53 list-resource-record-sets --hosted-zone-id "$ZONE_ID" \
+    --query "{Changes: $DNS_FILTER.{Action: 'DELETE', ResourceRecordSet: @}}" --output json >"$batch" \
+    || ! aws route53 change-resource-record-sets --hosted-zone-id "$ZONE_ID" \
+      --change-batch "file://$batch" >/dev/null; then
+    rm -f "$batch"
+    echo "eks-teardown: could not delete the records of $DNS_NAME from zone $ZONE_ID:" >&2
+    printf '%s\n' "$out" >&2
+    dns_remedy
+    return 1
+  fi
+  rm -f "$batch"
+  if ! out="$(dns_listing)"; then
+    echo "eks-teardown: could not list the records of zone $ZONE_ID after the delete; not clean" >&2
+    return 1
+  fi
+  if [[ -n "$out" && "$out" != None ]]; then
+    echo "eks-teardown: the zone still holds records for $DNS_NAME after the delete:" >&2
+    printf '%s\n' "$out" >&2
+    dns_remedy
+    return 1
+  fi
+  log "the stale records for $DNS_NAME are deleted"
 }
 
 log "eks-teardown start (cluster ${CLUSTER_NAME}, environment ${ENVIRONMENT_TAG})"
@@ -298,11 +336,11 @@ terraform -chdir=infra/env destroy -auto-approve -input=false
 
 stage "dns-records"
 dns_clean=1
-dns_check || dns_clean=0
+dns_clean_up || dns_clean=0
 
 stage ""
 if ((dns_clean == 0)); then
-  echo "eks-teardown: the environment is destroyed, but the DNS check failed (see above)" >&2
+  echo "eks-teardown: the environment is destroyed, but the DNS step failed (see above)" >&2
   exit 3
 fi
 log "eks-teardown done; run scripts/leftover-check.sh next"

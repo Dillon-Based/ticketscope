@@ -1,9 +1,10 @@
 # env-up: dispatch, read and tear down by hand (story 5.3)
 
 `env-up` brings the EKS environment up from the bootstrap layer through GitHub Actions OIDC and
-records how long each stage took. There is no `env-down` yet (story 5.4), so a person tears the
-environment down by hand. Region is `us-east-1`. The agent never dispatches this workflow or
-applies anything against AWS; every step below is yours.
+records how long each stage took. `env-down` tears it down (`docs/runbooks/env-down.md`), and the
+`expire` job dispatches it when the expiry passes; the by-hand teardown below is for when it
+cannot run. Region is `us-east-1`. The agent dispatches environments only with an expiry of at
+most 4 hours, one at a time, and never applies anything against AWS outside the workflows.
 
 ## Once, before the first dispatch
 
@@ -41,9 +42,13 @@ gh workflow run env-up.yml --ref main -f sha=<40 hex> -f expiry_hours=4
 gh run watch
 ```
 
-`sha` is the commit whose images and scripts are deployed. `expiry_hours` is 1 to 24 (default 4);
-the environment carries `expires_at` (UTC) as a tag. Bad input fails the `plan` job before any AWS
-call. The `plan` job also looks in ECR for `ticketscope-app:<sha>` and `ticketscope-postgres:18-<sha>`;
+`sha` is the commit whose images and scripts are deployed. `expiry_hours` is 1 to 5 (default 4),
+or `expiry_minutes` 5 to 240, which overrides it; the environment carries `expires_at` (UTC) as a
+tag. The cap is 5 hours because the run's `expire` job sleeps until `expires_at` and then
+dispatches `env-down` with `only_if_expired=true`, and a hosted job stops at 6 hours (see
+`docs/runbooks/env-down.md`). The `expire` job keeps the run in progress until then; cancelling the
+run cancels the expiry too, leaving only `env-down`'s hourly schedule as a backstop. Bad input
+fails the `plan` job before any AWS call. The `plan` job also looks in ECR for `ticketscope-app:<sha>` and `ticketscope-postgres:18-<sha>`;
 when both exist, `build` and `images` are skipped, so a second dispatch on the same SHA reuses
 them. Otherwise the images are built natively on amd64 and arm64 runners, pushed by digest, and
 joined into one multi-arch tag each. That is outside the clock.
@@ -64,8 +69,8 @@ stage:
 
 The smoke check (`tests/eks`) gets a search result from the page, lists `/mcp` tools and calls
 `search_similar_issues`, and compares the load Job's issue count with the `Issues:` line of the
-pinned snapshot's Release. A red smoke check fails the run and leaves the environment up for the
-expiry sweep; read the job log, fix, and re-dispatch only after tearing down, or by hand against
+pinned snapshot's Release. A red smoke check fails the run and leaves the environment up until
+its expiry, when the `expire` job dispatches `env-down`; read the job log, fix, and re-dispatch only after tearing down, or by hand against
 the same environment.
 
 ## Tear down by hand, in AD-24 order
@@ -103,6 +108,12 @@ kubectl -n platform delete gateway ticketscope
 # wait until the ALB is gone, while the controller still runs:
 until [ -z "$(aws elbv2 describe-load-balancers --region us-east-1 \
   --query "LoadBalancers[?contains(LoadBalancerName, 'k8s')].LoadBalancerArn" --output text)" ]; do sleep 10; done
+kubectl -n platform wait --for=delete gateway/ticketscope --timeout=15m
+# the controller's configuration objects carry its finalizers: delete them while it still runs
+# (kubectl waits for each), or they stay Terminating after `helm uninstall platform`:
+kubectl -n ticketscope delete targetgroupconfiguration.gateway.k8s.aws --all
+kubectl -n platform delete loadbalancerconfiguration.gateway.k8s.aws --all
+kubectl delete gatewayclass alb
 # external-dns wrote no TXT ownership records in the tracer run, so check the zone and delete
 # stray A, AAAA and TXT records for the hostname by hand while the controllers still run:
 aws route53 list-resource-record-sets --hosted-zone-id "$TICKETSCOPE_ZONE_ID" \

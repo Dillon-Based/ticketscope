@@ -42,6 +42,8 @@ def test_no_aws_credential_is_stored_and_every_aws_job_assumes_the_role_through_
     assert not re.search(r"AWS_(ACCESS_KEY_ID|SECRET_ACCESS_KEY|SESSION_TOKEN)", TEXT)
     assert not re.search(r"(?<!\d)\d{12}(?!\d)", TEXT)
     for name, job in JOBS.items():
+        if name == "expire":
+            continue  # no AWS at all; see test_the_expire_job_*
         assert job["environment"] == "eks", name
         assert job["permissions"]["id-token"] == "write", name
         configure = [
@@ -61,8 +63,19 @@ def test_it_is_dispatch_only_and_takes_a_sha_and_expiry_hours_defaulting_to_four
     assert inputs["expiry_hours"]["default"] == "4"
     minutes = inputs["expiry_minutes"]
     assert minutes["required"] is False and minutes["default"] == ""
-    # One group with env-down, so a destroy and an apply never overlap.
-    assert DOC["concurrency"] == {"group": "eks-environment", "cancel-in-progress": False}
+    # Hosted jobs stop at 6 hours and the expire job waits for the expiry: at most 5 hours.
+    assert "1 to 5" in inputs["expiry_hours"]["description"]
+    assert "5 to 240" in minutes["description"]
+
+
+def test_only_the_env_job_holds_the_group_shared_with_env_down() -> None:
+    # One group with env-down, so a destroy and an apply never overlap; on the env job only, so
+    # the sleeping expire job never holds it and a manual env-down can always run.
+    assert "concurrency" not in DOC
+    assert JOBS["env"]["concurrency"] == {"group": "eks-environment", "cancel-in-progress": False}
+    for name, job in JOBS.items():
+        if name != "env":
+            assert "concurrency" not in job, name
 
 
 @pytest.mark.criterion("ticketscope--e5-s3--AC-1")
@@ -76,7 +89,8 @@ def test_bad_input_fails_in_a_job_that_has_made_no_aws_call() -> None:
     )
     assert validate < first_aws
     run = steps[validate]["run"]
-    assert "^[0-9a-f]{40}$" in run and "10#$INPUT_HOURS < 1" in run and "> 24" in run
+    assert "^[0-9a-f]{40}$" in run and "10#$INPUT_HOURS < 1" in run and "> 5)" in run
+    assert "INPUT_HOURS > 24" not in run and "from 1 to 5" in run
     assert "10#$INPUT_MINUTES < 5" in run and "> 240" in run and "input expiry_minutes" in run
     # The messages name the input.
     assert "input sha" in run and "input expiry_hours" in run
@@ -142,9 +156,12 @@ def test_the_clock_starts_at_terraform_apply_and_stops_after_the_smoke_check() -
 
 @pytest.mark.criterion("ticketscope--e5-s3--AC-5")
 def test_a_failed_deploy_or_smoke_leaves_the_environment_up() -> None:
-    assert "terraform destroy" not in TEXT and "env-down.yml" not in TEXT
-    assert "gh workflow run" not in TEXT
-    assert "helm uninstall" not in TEXT
+    assert "terraform destroy" not in TEXT and "helm uninstall" not in TEXT
+    # Only the expire job, after the expiry, asks env-down to act.
+    for name, job in JOBS.items():
+        if name != "expire":
+            assert "env-down.yml" not in json.dumps(job), name
+            assert "gh workflow run" not in json.dumps(job), name
     summary = _step("env", "Job summary")
     assert summary["if"] == "${{ always() && !inputs.plan_only }}"
     upload = _steps("env")[-1]
@@ -274,3 +291,34 @@ def test_the_terraform_log_is_kept_and_denied_actions_are_listed_in_the_summary(
     assert "env-up-stages/denied-actions.txt" in upload["with"]["path"]
     # The summary is public on a public repo: the full logs never leave the runner.
     assert "upload-artifact" in upload["uses"] and "terraform.log" not in upload["with"]["path"]
+
+
+@pytest.mark.criterion("ticketscope--e5-s4--AC-3")
+def test_the_expire_job_waits_for_the_expiry_then_dispatches_env_down_only_if_expired() -> None:
+    expire = JOBS["expire"]
+    assert expire["needs"] == "env"
+    # Not with plan_only; after `env` passed or failed, but only once the apply started.
+    condition = expire["if"]
+    assert condition.startswith("${{ always()") and "!inputs.plan_only" in condition
+    assert "needs.env.outputs.applied == 'true'" in condition
+    assert JOBS["env"]["outputs"]["applied"] == "${{ steps.apply.outputs.applied }}"
+    apply = _step("env", "terraform apply")
+    assert apply["id"] == "apply"
+    assert apply["run"].index("applied=true") < apply["run"].index("terraform -chdir=infra/env")
+    assert JOBS["env"]["outputs"]["expires_at"] == "${{ steps.facts.outputs.expires_at }}"
+    assert 'echo "expires_at=$expires_at" >> "$GITHUB_OUTPUT"' in _step("env", "Read the")["run"]
+    # No AWS credentials: no OIDC, no environment, only the token to dispatch a workflow.
+    assert expire["permissions"] == {"actions": "write", "contents": "read"}
+    assert "environment" not in expire
+    assert not any("aws-actions" in str(s.get("uses", "")) for s in expire["steps"])
+    assert "AWS_ROLE_ARN" not in json.dumps(expire)
+    # The wait is bounded inside a hosted job's 6 hours, and covers the 5-hour cap.
+    wait, dispatch = expire["steps"]
+    assert 300 < wait["timeout-minutes"] < expire["timeout-minutes"] <= 360
+    assert wait["env"]["EXPIRES_AT"] == "${{ needs.env.outputs.expires_at }}"
+    assert 'date -u -d "$EXPIRES_AT" +%s' in wait["run"] and 'sleep "$seconds"' in wait["run"]
+    assert dispatch["env"]["GH_TOKEN"] == "${{ github.token }}"
+    assert "gh workflow run env-down.yml" in dispatch["run"]
+    assert "--ref main" in dispatch["run"] and "-f only_if_expired=true" in dispatch["run"]
+    for step in expire["steps"]:
+        assert "${{" not in step["run"]

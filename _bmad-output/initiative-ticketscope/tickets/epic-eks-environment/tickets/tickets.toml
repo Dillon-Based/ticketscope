@@ -80,13 +80,39 @@ hitl = false
 risk = "low"
 
 [[entry]]
+id = 12
+type = "bug"
+title = "env-down ends red and leaves the hostname's A and AAAA records pointing at a dead ALB"
+description = "After an ordered teardown the hostname's A and AAAA alias records stay in the bootstrap zone, so env-down exits 3 and the next env-up fails its DNS stage until a person deletes them. Found on the tracer run and on every live env-down since (deferred-work.md, two entries)."
+verify = "After env-down the zone holds no record for the hostname and the job is green; the next env-up passes its DNS stage with no hand step; only the environment's own records are touched, shown by a test on the filter (R2, R3, R4)."
+covers = ["R2", "R3", "R4"]
+after = [4]
+hitl = false
+risk = "medium"
+refine = true
+notes = ["Before story 6 so every environment stories 6 to 9 create ends clean (user, 2026-11-19)."]
+
+[[entry]]
+id = 13
+type = "story"
+title = "The embedding model is pinned and its vectors are checked against references"
+description = "Closes DW-6 and DW-3, carried to this epic from epic 3. The app image's model download gets a revision pin and a file checksum, so a changed upstream file cannot change retrieval under the same model_id. Reference vectors for the embedder are produced outside this code path with the model run once, committed as the test oracle, and checked on the arm64 image the EKS nodes run (retro A6, R-004 cross-machine ranking). Runs beside the lane; it does not need a live environment."
+verify = "The Dockerfile download names a revision and the build fails on a checksum mismatch, shown by a test (DW-6); committed reference vectors match the embedder's output within a stated tolerance on the amd64 and arm64 images (DW-3); the eval baseline is unchanged, or a changed one is a CI output and a new baseline per the ADR."
+covers = []
+after = [3]
+hitl = false
+risk = "medium"
+refine = true
+notes = ["DW-7 (reload race under live traffic) is not in this story; it is recorded as a known limit in the epic Notes (user, 2026-11-19)."]
+
+[[entry]]
 id = 6
 type = "story"
 title = "CloudNativePG backs up to the bootstrap bucket through an IRSA role"
 description = "Wires backups on EKS. The env stack creates the backup IRSA role for the Cluster's service account, trusting that cluster's OIDC provider, with a policy on the bootstrap bucket's prefix: Put, Get, Delete (for retention) and the multipart actions on objects, and List on the bucket with a prefix condition. The Barman Cloud Plugin is pinned to 0.16.0 or later. The ticketscope chart's ObjectStore reads its endpoint, bucket and prefix from values, and sets inheritFromIAMRole with the role's ARN on the service account template for EKS; kind keeps its SeaweedFS static credentials. The Cluster's plugin entry takes serverName from a value that env-up sets per incarnation, and the Cluster leaves spec.serviceAccountName unset. env-up passes the incarnation id and the role ARN through to the release. Scheduled backups are on and one on-demand backup is triggered."
 verify = "A person runs env-up; the Cluster archives WAL and an on-demand backup completes with status completed on EKS, and its objects are under the incarnation's prefix in the bootstrap bucket (R8); with an IAM policy limited to the candidate actions, a backup, a restore read and a retention delete each succeed, and the exact set that was needed is recorded in the plan (R8); the pods hold no AWS key and the Cluster has no skipEmptyWalArchiveCheck annotation (R6); render tests show the EKS values set the role annotation and serverName and the kind values still use SeaweedFS (R6, R8); the kind backup check from epic 1 still passes in CI (R8); IAM policy simulation of the backup role is denied on the Terraform state prefix (R6); the namespace's Secret names and the plugin Role's rules are recorded (R8)."
 covers = ["R6", "R8"]
-after = [4]
+after = [4, 12]
 hitl = true # a person runs env-up and the backup
 risk = "medium"
 plan_checkpoint = true
@@ -137,7 +163,7 @@ title = "Refactor sweep"
 description = "Cleanup only, scoped at its start from the plans' deferred items and review findings in this epic: duplication across infra/env and infra/bootstrap, the chart templates for the ALB gateway and the plugin, the drill scripts' shared helpers, and the workflows' shared steps. Behaviour, the values keys and the teardown order do not change."
 verify = "On a PR, ci.yml and mcp-e2e.yml pass, both charts render with each environment file, terraform validate passes for both stacks, and a dispatched env-up and env-down still finish clean (R1, R3, R7)."
 covers = []
-after = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+after = [1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13]
 hitl = false
 risk = "low"
 

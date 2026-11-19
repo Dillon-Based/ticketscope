@@ -3,7 +3,7 @@ title: 'A PR check renders both environments and validates Terraform'
 type: 'feature'
 ticket: '5'
 created: '2026-11-19'
-status: 'built'
+status: done
 baseline_revision: '88e564469bd2b8a887b6fbb332db1118af206948'
 route: 'full'
 route_source: 'auto'

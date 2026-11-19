@@ -36,12 +36,15 @@ PLATFORM_ENV_KEYS = {
     "storageClass.create",
 }
 PLATFORM_ENV_PREFIXES = ("aws-load-balancer-controller.", "external-dns.")
+# AD-25 names the IRSA role annotation and the instance placement rule as environment facts. No
+# committed value sets them yet (the backup and placement stories do), so the names are reserved.
+RESERVED_ENV_KEYS = {"database.serviceAccount.annotations", "database.instancePlacement"}
 TICKETSCOPE_ENV_KEYS = {
     "api.replicas",
     "mcp.replicas",
     "database.storage.storageClass",
     "backup.enabled",
-}
+} | RESERVED_ENV_KEYS
 
 
 def _load(path: Path) -> dict[str, Any]:
@@ -261,6 +264,68 @@ def test_kind_platform_render_has_no_eks_resources_and_its_old_gateway() -> None
     assert not names
     [cls] = _docs(docs, "GatewayClass", "envoy")
     assert "controllerName: gateway.envoyproxy.io/gatewayclass-controller" in cls
+
+
+def _ticketscope_render(environment: str) -> list[str]:
+    """The ticketscope chart with one environment file. EKS has no hostname of its own, so the
+    live-style host is passed the way eks-deploy.sh passes it; kind keeps its own."""
+    args = ["-f", str(TICKETSCOPE / f"values-{environment}.yaml"), *_IMAGE_TAGS[:4]]
+    if environment == "eks":
+        args += ["--set-string", f"hostname={HOST}"]
+    return _render(TICKETSCOPE, *args)
+
+
+@pytest.mark.criterion("ticketscope--e5-s5--AC-1")
+@pytest.mark.parametrize("environment", ["kind", "eks"])
+@pytest.mark.parametrize("chart", ["platform", "ticketscope"])
+@needs_platform_deps
+def test_both_charts_render_with_both_environment_files(chart: str, environment: str) -> None:
+    if chart == "ticketscope":
+        assert _ticketscope_render(environment)
+    elif environment == "eks":
+        assert _platform_eks()
+    else:
+        assert _render(PLATFORM, "-f", str(PLATFORM / "values-kind.yaml"))
+
+
+@pytest.mark.criterion("ticketscope--e5-s5--AC-1")
+def test_eks_mcp_allows_exactly_the_live_hostname_and_no_kind_name_renders() -> None:
+    text = "\n".join(_ticketscope_render("eks"))
+    match = re.search(r'name: TICKETSCOPE_MCP_ALLOWED_HOSTS\s+value: "([^"]*)"', text)
+    assert match is not None, "mcp renders no allowed-hosts list"
+    assert match.group(1) == HOST
+    assert "*" not in match.group(1)
+    assert "kind.internal" not in text
+
+
+@pytest.mark.criterion("ticketscope--e5-s5--AC-2")
+def test_the_override_and_allowlist_checks_name_each_stray_key() -> None:
+    defaults = _leaves(_load(TICKETSCOPE / "values.yaml"))
+    stray = _leaves(
+        {
+            "snapshot": {"version": "x"},
+            "retrieval": {"defaultMode": "keyword"},
+            "database": {"unlisted": "x"},
+        }
+    )
+    assert _overrides(stray, defaults, TICKETSCOPE_ENV_KEYS) == [
+        "snapshot.version",
+        "retrieval.defaultMode",
+    ]
+    assert {k for k in stray if k not in TICKETSCOPE_ENV_KEYS} == {
+        "snapshot.version",
+        "retrieval.defaultMode",
+        "database.unlisted",
+    }
+
+
+@pytest.mark.criterion("ticketscope--e5-s5--AC-2")
+def test_the_reserved_names_are_the_ad25_irsa_and_placement_keys() -> None:
+    assert {
+        "database.serviceAccount.annotations",
+        "database.instancePlacement",
+    } == RESERVED_ENV_KEYS
+    assert RESERVED_ENV_KEYS <= TICKETSCOPE_ENV_KEYS
 
 
 @pytest.mark.criterion("ticketscope--e5-s2--AC-3")

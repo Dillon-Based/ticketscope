@@ -104,6 +104,8 @@ jobs:
           terraform -chdir=infra/env fmt -check
           terraform -chdir=infra/env init -backend=false
           terraform -chdir=infra/env validate
+      - name: infra/env plans with no AWS credential, and a deliberately broken copy fails
+        run: scripts/tf-plan-check.sh
 
   workflows:
     # Static checks of the workflows and the deploy script (story 5.3): actionlint also runs
@@ -125,6 +127,7 @@ jobs:
           shellcheck scripts/eks-teardown.sh
           shellcheck scripts/leftover-check.sh
           shellcheck scripts/check.sh
+          shellcheck scripts/tf-plan-check.sh
 
   eks-gateway:
     # The rendered EKS Gateway objects against the real CRDs on a throwaway kind cluster (no

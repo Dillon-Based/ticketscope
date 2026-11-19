@@ -3,7 +3,7 @@ title: 'Tracer: the page and /mcp answer over HTTPS on the fixed hostname from a
 type: 'feature'
 ticket: '2'
 created: '2026-11-17'
-status: 'built'
+status: done
 baseline_revision: 'e2a48fa2d63687781f9c4c5dc6631207cfd61d12'
 route: 'full'
 route_source: 'auto'

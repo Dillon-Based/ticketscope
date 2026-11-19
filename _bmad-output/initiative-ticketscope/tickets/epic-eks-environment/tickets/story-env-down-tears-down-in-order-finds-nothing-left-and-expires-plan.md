@@ -3,7 +3,7 @@ title: 'env-down tears down in order, finds nothing left, and expires forgotten 
 type: 'feature'
 ticket: '4'
 created: '2026-11-18'
-status: 'built'
+status: done
 baseline_revision: '59ccbefed030eb8b4419ed689a7c2318a29c87ae'
 route: 'full'
 route_source: 'auto'

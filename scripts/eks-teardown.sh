@@ -96,6 +96,18 @@ alb_gone() {
   [[ -z "$out" || "$out" == None ]]
 }
 
+# gateway_gone: true only when the cluster answers and the Gateway object no longer exists. The
+# controller removes its finalizer after it deletes the ALB, target groups and security group, and
+# the ALB leaves the tagging API first, so the ALB alone is not enough to uninstall the controller.
+gateway_gone() {
+  local out
+  out="$(kubectl -n "$PLATFORM_NS" get gateway "$GATEWAY" --ignore-not-found -o name)" || return 1
+  [[ -z "$out" ]]
+}
+
+# alb_and_gateway_gone: both conditions, in one poll.
+alb_and_gateway_gone() { alb_gone && gateway_gone; }
+
 # eni_volume_gone: true only when no tagged ENI or volume is listed; an `aws` error is "not gone".
 eni_volume_gone() {
   local out
@@ -146,12 +158,12 @@ if ((SKIP_CLUSTER == 0)); then
 
   stage "gateway-and-alb"
   kubectl -n "$PLATFORM_NS" delete gateway "$GATEWAY" --ignore-not-found --wait=false
-  log "waiting up to ${ALB_WAIT_SECONDS}s for the ALB to go, with the controller running"
-  if ! wait_for "$ALB_WAIT_SECONDS" alb_gone; then
+  log "waiting up to ${ALB_WAIT_SECONDS}s for the ALB and the Gateway to go, with the controller running"
+  if ! wait_for "$ALB_WAIT_SECONDS" alb_and_gateway_gone; then
     stuck_gateway
     exit 1
   fi
-  log "the ALB is gone"
+  log "the ALB and the Gateway are gone"
 
   stage "helm-uninstall-platform"
   helm uninstall platform --namespace "$PLATFORM_NS" --ignore-not-found --wait --timeout 10m

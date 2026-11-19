@@ -76,6 +76,13 @@ context:
 
 ## Implementation Notes
 
+Live record (2026-11-18/19, after merge in PR #75):
+
+- First scheduled run did not appear within about an hour of the merge; dispatched runs worked.
+- Runs 1 and 2 of `env-down` (no environment up) failed at the leftover check with `tag:GetResources` denied until bootstrap was re-applied with the new read actions; the check exited 2 and never read clean. After the re-apply, `env-down` on an empty account was green.
+- Positive control (`--list` while up) found the ALB, two target groups, four security groups and two volumes, 37 tagged resources in all. It found no ENI: the ALB's and the nodes' ENIs carry neither tag, so the tag-based ENI wait and ENI leg are vacuous (deferred entry stays open; `terraform destroy` still fails on a leftover ENI).
+- First `env-down` on a live environment (run 44424242091) failed: the ALB left the tagging API within seconds, `gateway-and-alb` finished in 2 s, `helm uninstall platform` removed the controller, and the Gateway stayed Terminating (finalizer owned by the controller), failing the uninstall after 10 minutes. Fixed by also waiting for the Gateway object to be gone (`gateway_gone`), with a regression test. The environment was left with no controller and a stuck Gateway, to be cleaned by hand.
+
 ## Plan Change Log
 
 ## Review Triage Log

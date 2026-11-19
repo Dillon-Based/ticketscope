@@ -372,12 +372,12 @@ flowchart TD
   - **Teardown order.** `env-down.yml` runs:
     1. `helm uninstall ticketscope`
     2. delete the PVCs
-    3. delete the `Gateway` and wait until its ALB is gone, while the controller still runs (the controller removes the Gateway's finalizer only after it deletes the ALB, target groups and security group; amended 2026-11-12, EKS research)
+    3. delete every object the load balancer controller holds a finalizer on, and wait until each object itself is gone, while the controller still runs: the `Gateway` first, then the TargetGroupConfigurations, the LoadBalancerConfiguration and the GatewayClass. The object, not its AWS side, is what to wait on: the ALB leaves AWS's listings seconds before the controller releases the Gateway, and the controller's config objects outlive the Gateway. A wait that times out reports the finalizers and fails, never forcing (amended 2026-11-12, EKS research; amended 2026-11-19, story 5.4 live runs; `tests/unit/test_eks_teardown.py` fails if the platform chart gains a finalizer-carrying kind this step does not delete)
     4. `helm uninstall platform`
     5. wait until the tagged ENIs and EBS volumes are gone
     6. `terraform destroy` the `env` stack
-    7. run a tag-scoped leftover check, which fails the job if anything but `bootstrap` remains
-  - **Expiry.** `env-up` stamps an expiry, 4 hours by default. A scheduled run of `env-down.yml` tears down any expired environment.
+    7. check that the hostname has no A or AAAA record left in the bootstrap zone (external-dns writes no ownership records yet, so it never deletes them), and run a tag-scoped leftover check that confirms each hit with its own service's describe call, since the tagging API lists deleted resources for minutes. Either failing fails the job; neither deletes anything (amended 2026-11-19)
+  - **Expiry.** `env-up` stamps an expiry, 4 hours by default and at most 5, and its `expire` job waits until then and dispatches `env-down.yml` for expired environments only. The hourly schedule of `env-down.yml` is a backstop: GitHub ran about 2 of 19 slots in the story 5.4 runs (amended 2026-11-19).
   - **Budget.** About 25 env-hours a month.
 
 ### AD-25 — Chart values ownership [ADOPTED]

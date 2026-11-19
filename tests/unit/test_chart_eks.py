@@ -34,6 +34,7 @@ PLATFORM_ENV_KEYS = {
     "gateway.aws.enabled",
     "envoy-gateway.enabled",
     "storageClass.create",
+    "readonly.group",
 }
 PLATFORM_ENV_PREFIXES = ("aws-load-balancer-controller.", "external-dns.")
 TICKETSCOPE_ENV_KEYS = {
@@ -269,3 +270,39 @@ def test_kind_ticketscope_render_is_the_one_mcp_e2e_runs_against() -> None:
     [cluster] = _docs(docs, "Cluster", "ticketscope-db")
     assert "storageClass: standard" in cluster
     assert _docs(docs, "ObjectStore")
+
+
+READONLY_GROUP_RE = re.compile(r'kubernetes_groups\s*=\s*\["([^"]+)"\]')
+
+
+@needs_platform_deps
+def test_the_read_only_role_can_read_the_gateway_api_objects_and_change_nothing() -> None:
+    # Story 5.4: a stuck Gateway was invisible to the agent, because EKS's view policy does not
+    # reach the Gateway API groups. The binding grants get, list and watch on them only.
+    docs = _platform_eks()
+    [role] = _docs(docs, "ClusterRole", "ticketscope-readonly-gateway")
+    assert yaml.safe_load(role)["rules"] == [
+        {
+            "apiGroups": ["gateway.networking.k8s.io", "gateway.k8s.aws"],
+            "resources": ["*"],
+            "verbs": ["get", "list", "watch"],
+        }
+    ]
+    [binding] = _docs(docs, "ClusterRoleBinding", "ticketscope-readonly-gateway")
+    group = _load(PLATFORM / "values-eks.yaml")["readonly"]["group"]
+    assert yaml.safe_load(binding)["subjects"] == [
+        {"apiGroup": "rbac.authorization.k8s.io", "kind": "Group", "name": group}
+    ]
+
+
+def test_the_group_the_chart_binds_is_the_group_terraform_maps_the_role_into() -> None:
+    eks_tf = (PLATFORM.parents[2] / "infra" / "env" / "eks.tf").read_text(encoding="utf-8")
+    groups = READONLY_GROUP_RE.findall(eks_tf)
+    assert groups == [_load(PLATFORM / "values-eks.yaml")["readonly"]["group"]]
+
+
+@needs_platform_deps
+def test_kind_renders_no_read_only_rbac() -> None:
+    docs = _render(PLATFORM, "-f", str(PLATFORM / "values-kind.yaml"))
+    assert not _docs(docs, "ClusterRole", "ticketscope-readonly-gateway")
+    assert not _docs(docs, "ClusterRoleBinding", "ticketscope-readonly-gateway")

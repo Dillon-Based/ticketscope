@@ -16,6 +16,12 @@ on:
 permissions:
   contents: read
 
+# Every `run` step is `bash -eo pipefail`, so `cmd | tee log` fails when cmd fails
+# (tests/unit/test_workflow_shell.py).
+defaults:
+  run:
+    shell: bash
+
 jobs:
   caller-identity:
     runs-on: ubuntu-24.04

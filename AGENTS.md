@@ -16,7 +16,7 @@ Similar-issue search (keyword, dense, hybrid) over Mojang bug-tracker issues fro
 
 - Wiring lives in three composition roots: `ticketscope.http.app`, `ticketscope.mcp.main`, `ticketscope.jobs.<job>.main`.
 - Decisions: `docs/decisions/`. Deferred items: `_bmad-output/initiative-ticketscope/deferred-work.md` (the one the build workflow appends to).
-- Live EKS runs are hand-run (`docs/runbooks/eks-tracer.md`). A person runs `eval "$(scripts/eks-env.sh)"` in each terminal; the agent only reads, and never writes: AWS through `--profile ticketscope-readonly`, and the cluster through `kubectl` on a kubeconfig made with that profile (`aws eks update-kubeconfig --name ticketscope-env --kubeconfig /tmp/ticketscope-eks.kubeconfig --profile ticketscope-readonly`; the `env` stack grants the role EKS view access). A failed `env-up` or `env-down` run: read it with `gh run view <run id> --log-failed` (masked ids show as `***`). Read before asking the person to paste.
+- Live EKS runs are hand-run (`docs/runbooks/eks-tracer.md`). A person runs `eval "$(scripts/eks-env.sh)"` in each terminal; the agent only reads, and never writes: AWS through `--profile ticketscope-readonly`, and the cluster through `kubectl` on a kubeconfig made with that profile (`aws eks update-kubeconfig --name ticketscope-env --kubeconfig /tmp/ticketscope-eks.kubeconfig --profile ticketscope-readonly`; the `env` stack grants the role EKS view access). Read any `env-up` or `env-down` run with `scripts/run-summary.sh <run id>` before asking the person to paste. Before dispatching one after a change to `infra/bootstrap/policies/`, run `scripts/bootstrap-drift.sh`; drift means the person re-applies bootstrap first.
 
 ## Running and verifying
 

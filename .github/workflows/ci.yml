@@ -22,6 +22,12 @@ env:
   KIND_VERSION: v0.33.0
   KUBECTL_VERSION: v1.36.4
 
+# Every `run` step is `bash -eo pipefail`, so `cmd | tee log` fails when cmd fails
+# (tests/unit/test_workflow_shell.py).
+defaults:
+  run:
+    shell: bash
+
 jobs:
   checks:
     runs-on: ubuntu-24.04
@@ -124,6 +130,8 @@ jobs:
           shellcheck scripts/denied-actions.sh
           shellcheck scripts/eks-teardown.sh
           shellcheck scripts/leftover-check.sh
+          shellcheck scripts/bootstrap-drift.sh
+          shellcheck scripts/run-summary.sh
           shellcheck scripts/check.sh
 
   eks-gateway:

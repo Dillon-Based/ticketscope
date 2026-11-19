@@ -47,6 +47,12 @@ env:
   KUBECTL_VERSION: v1.36.4
   HELM_VERSION: v4.3.1
 
+# Every `run` step is `bash -eo pipefail`, so `cmd | tee log` fails when cmd fails
+# (tests/unit/test_workflow_shell.py).
+defaults:
+  run:
+    shell: bash
+
 jobs:
   deploy:
     if: inputs.enabled
@@ -139,7 +145,7 @@ jobs:
       - name: Runner-fit summary
         if: always()
         run: |
-          peak=$(sort -n /tmp/mem-used-mib.log 2>/dev/null | tail -1)
+          peak=$(sort -n /tmp/mem-used-mib.log 2>/dev/null | tail -1 || true)
           total=$(awk '/^MemTotal:/{print int($2/1024)}' /proc/meminfo)
           disk=$(df -h --output=avail / | tail -1 | tr -d ' ')
           if [[ -n "${TICKETSCOPE_KIND_UP_TO_READY_SECONDS:-}" ]]; then

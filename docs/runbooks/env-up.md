@@ -35,6 +35,10 @@ most 4 hours, one at a time, and never applies anything against AWS outside the 
    action is in the apply log. Add exactly that action to the same template, re-apply bootstrap,
    re-dispatch, and record every denied action in the plan's Implementation Notes.
 
+   After any re-apply, `scripts/bootstrap-drift.sh` (read-only) confirms the live role matches the
+   template before you dispatch; it names each action still missing, which usually means the
+   apply ran from a checkout without the template change.
+
 ## Dispatch
 
 ```sh

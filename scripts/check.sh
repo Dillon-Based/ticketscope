@@ -56,6 +56,8 @@ run shellcheck scripts/eks-deploy.sh
 run shellcheck scripts/denied-actions.sh
 run shellcheck scripts/eks-teardown.sh
 run shellcheck scripts/leftover-check.sh
+run shellcheck scripts/bootstrap-drift.sh
+run shellcheck scripts/run-summary.sh
 run shellcheck scripts/check.sh
 
 echo "check: all passed" >&2

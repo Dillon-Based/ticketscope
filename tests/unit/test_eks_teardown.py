@@ -32,7 +32,9 @@ esac
 exit 0
 """
 KUBECTL_BODY = """\
-if [[ "$*" == *"get gateway"* ]]; then
+if [[ "$*" == *"get gateway"* && "$*" == *"-o name"* ]]; then
+  [[ -n "${GATEWAY_STUCK:-}" ]] && echo "gateway.gateway.networking.k8s.io/ticketscope"
+elif [[ "$*" == *"get gateway"* ]]; then
   echo '["gateway.k8s.aws/resources"]'
 fi
 exit 0
@@ -150,3 +152,16 @@ def test_the_script_never_forces_deletes_or_touches_bootstrap() -> None:
     text = SCRIPT.read_text(encoding="utf-8")
     for forbidden in ("--force", " patch ", "--grace-period", "bootstrap"):
         assert forbidden not in text, forbidden
+
+
+@pytest.mark.criterion("ticketscope--e5-s4--AC-3")
+def test_an_alb_that_is_gone_while_the_gateway_still_exists_does_not_uninstall_the_controller(
+    tmp_path: Path,
+) -> None:
+    # Live finding (first env-down on EKS): the ALB left the tagging API within seconds, but the
+    # Gateway stayed Terminating until the controller finished the target groups and security
+    # group; uninstalling the controller then stranded it.
+    result, calls = _run(tmp_path, GATEWAY_STUCK="1", ALB_WAIT_SECONDS="2")
+    assert result.returncode == 1
+    assert not any("helm uninstall platform" in c for c in calls)
+    assert not any("terraform" in c for c in calls)

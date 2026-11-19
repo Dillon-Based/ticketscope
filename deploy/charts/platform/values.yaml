@@ -45,6 +45,11 @@ storageClass:
 aws-load-balancer-controller:
   enabled: false
 
+# The Kubernetes group infra/env maps the agent's read-only AWS role into; set per
+# environment (EKS). Empty renders no RBAC (templates/readonly-rbac.yaml).
+readonly:
+  group: ""
+
 external-dns:
   enabled: false
 

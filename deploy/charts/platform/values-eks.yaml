@@ -34,6 +34,10 @@ aws-load-balancer-controller:
     featureGates:
       ALBGatewayAPI: true
 
+# infra/env/eks.tf maps the ticketscope-readonly role into this group.
+readonly:
+  group: ticketscope-readonly
+
 external-dns:
   enabled: true
   # The name infra/env/irsa.tf trusts; the release prefix would otherwise change it.

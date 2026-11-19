@@ -1,0 +1,32 @@
+{{- /*
+Read access to the Gateway API objects for the agent's read-only role (EKS only).
+
+EKS's view access policy stops at core and apps resources, so the read-only role could not see
+the Gateway, GatewayClass, LoadBalancerConfiguration or TargetGroupConfiguration whose
+finalizers decide whether a teardown can proceed (story 5.4). infra/env maps the role into the
+Kubernetes group named by `readonly.group`; this binds that group to get, list and watch on both
+Gateway API groups, and nothing else. Empty `readonly.group` (kind) renders nothing.
+*/ -}}
+{{- with .Values.readonly.group }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ticketscope-readonly-gateway
+rules:
+  - apiGroups: ["gateway.networking.k8s.io", "gateway.k8s.aws"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: ticketscope-readonly-gateway
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ticketscope-readonly-gateway
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: {{ . | quote }}
+{{- end }}

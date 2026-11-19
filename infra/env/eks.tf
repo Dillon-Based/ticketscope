@@ -50,6 +50,10 @@ module "eks" {
   access_entries = merge({
     readonly = {
       principal_arn = "arn:aws:iam::${var.account_id}:role/ticketscope-readonly"
+      # The platform chart binds this group to read-only Gateway API access
+      # (templates/readonly-rbac.yaml, `readonly.group` in values-eks.yaml), which the view
+      # policy does not reach.
+      kubernetes_groups = ["ticketscope-readonly"]
       policy_associations = {
         view = {
           policy_arn   = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSViewPolicy"

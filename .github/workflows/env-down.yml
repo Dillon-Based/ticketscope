@@ -3,27 +3,43 @@
 # environment's branch rule) on dispatch and on an hourly schedule; there is no push or
 # pull-request trigger. It assumes the deploy role through OIDC, like env-up.
 #
-#   find      the sweep decision. A dispatch always tears down. The schedule reads `expires_at`
-#             from the environment VPC's tag: an unexpired or untagged environment is skipped with
-#             a summary line, an expired one is torn down, and no environment at all means the
-#             leftover check runs on its own (a tagged leftover with no environment fails the run).
-#   teardown  scripts/eks-teardown.sh (AD-24 order), then scripts/leftover-check.sh, then the
-#             stage times in the job summary.
+# Expiry: env-up's `expire` job sleeps until the environment's `expires_at` and then dispatches
+# this workflow with only_if_expired=true. The hourly schedule is only a backstop: GitHub created
+# runs for about 2 of 19 scheduled slots in the story 5.4 live runs.
+#
+#   find      the sweep decision. A plain dispatch always tears down. The schedule, and a dispatch
+#             with only_if_expired=true, read `expires_at` from the environment VPC's tag: an
+#             unexpired or untagged environment is skipped with a summary line (so a late
+#             dispatch from an old env-up run never destroys a newer environment), an expired one
+#             is torn down, and no environment at all means the leftover check runs on its own (a
+#             tagged leftover with no environment fails the run).
+#   teardown  scripts/eks-teardown.sh (AD-24 order, then a read-only DNS check), then
+#             scripts/leftover-check.sh, then the stage times in the job summary.
 #
 # Only the `env` stack is destroyed: nothing here reads or names a bootstrap resource. A stuck
-# Gateway fails the job with `platform` still installed (scripts/eks-teardown.sh prints why).
+# Gateway or controller configuration object fails the job with `platform` still installed
+# (scripts/eks-teardown.sh prints why). Stale A/AAAA records for the hostname fail the job after
+# the destroy, with the commands that delete them in the log; the leftover check still runs.
 name: env-down
 
 on:
   workflow_dispatch:
+    inputs:
+      only_if_expired:
+        description: >-
+          Tear down only when the environment's expires_at has passed, like the schedule
+          (env-up's expire job sets this). Leave false to tear down now.
+        required: false
+        default: false
+        type: boolean
   schedule:
     - cron: "17 * * * *"
 
 permissions:
   contents: read
 
-# One environment operation at a time, shared with env-up; a second run waits instead of
-# cancelling a running apply or destroy.
+# One environment operation at a time, shared with env-up's `env` job; a second run waits instead
+# of cancelling a running apply or destroy.
 concurrency:
   group: eks-environment
   cancel-in-progress: false
@@ -55,12 +71,14 @@ jobs:
         id: decide
         env:
           EVENT: ${{ github.event_name }}
+          ONLY_IF_EXPIRED: ${{ inputs.only_if_expired }}
         run: |
-          if [[ "$EVENT" != "schedule" ]]; then
+          if [[ "$EVENT" != "schedule" && "$ONLY_IF_EXPIRED" != "true" ]]; then
             echo "teardown=true" >> "$GITHUB_OUTPUT"
             echo "Dispatched: the environment is torn down now." >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
+          # The schedule, or a dispatch with only_if_expired (env-up's expire job): the sweep.
           vpcs="$(aws ec2 describe-vpcs \
             --filters "Name=tag:environment,Values=eks" "Name=tag:stack,Values=env" --output json)"
           count="$(jq '.Vpcs | length' <<<"$vpcs")"
@@ -130,9 +148,12 @@ jobs:
           zone_id="$(aws route53 list-hosted-zones-by-name --dns-name "$hostname" \
             --query "HostedZones[?Name=='${hostname}.'].Id | [0]" --output text)"
           zone_id="${zone_id##*/}"
+          [[ -n "$zone_id" && "$zone_id" != None ]] || { echo "::error::no hosted zone id for the fixed hostname"; exit 1; }
           {
             echo "TF_VAR_account_id=$account"
             echo "TF_VAR_zone_id=$zone_id"
+            echo "TICKETSCOPE_HOSTNAME=$hostname"
+            echo "TICKETSCOPE_ZONE_ID=$zone_id"
             echo "KUBECONFIG=$RUNNER_TEMP/eks.kubeconfig"
           } >> "$GITHUB_ENV"
           terraform -chdir=infra/env init -input=false -backend-config="bucket=ticketscope-$account"
@@ -152,16 +173,27 @@ jobs:
         if: steps.cluster.outputs.present == 'true'
         run: aws eks update-kubeconfig --name "$CLUSTER_NAME" --kubeconfig "$KUBECONFIG"
       - name: Tear down in AD-24 order (scripts/eks-teardown.sh)
+        id: teardown
         env:
           CLUSTER_PRESENT: ${{ steps.cluster.outputs.present }}
         run: |
           set -o pipefail
+          # Exit 3: the environment is destroyed but the DNS check failed; the leftover check
+          # still runs and the job still fails.
+          dns=(--hostname "$TICKETSCOPE_HOSTNAME" --zone-id "$TICKETSCOPE_ZONE_ID")
+          rc=0
           if [[ "$CLUSTER_PRESENT" == "true" ]]; then
-            scripts/eks-teardown.sh --kubeconfig "$KUBECONFIG" 2>&1 | tee "$RUNNER_TEMP/teardown.log"
+            scripts/eks-teardown.sh --kubeconfig "$KUBECONFIG" "${dns[@]}" 2>&1 | tee "$RUNNER_TEMP/teardown.log" || rc=$?
           else
-            scripts/eks-teardown.sh --skip-cluster 2>&1 | tee "$RUNNER_TEMP/teardown.log"
+            scripts/eks-teardown.sh --skip-cluster "${dns[@]}" 2>&1 | tee "$RUNNER_TEMP/teardown.log" || rc=$?
           fi
+          if ((rc == 0 || rc == 3)); then echo "destroyed=true" >> "$GITHUB_OUTPUT"; fi
+          if ((rc == 3)); then
+            echo "The environment is destroyed, but the zone still holds records for the hostname (or could not be read); the remedy is in the job log." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$rc"
       - name: Leftover check (read-only, fails on any tagged resource)
+        if: ${{ !cancelled() && steps.teardown.outputs.destroyed == 'true' }}
         run: |
           set -o pipefail
           scripts/leftover-check.sh 2>&1 | tee "$RUNNER_TEMP/leftover.log"

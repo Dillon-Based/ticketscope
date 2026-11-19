@@ -10,9 +10,16 @@
 #           With plan_only, only `terraform plan` runs: no build, no apply, nothing billed.
 #   env     the timed job. The clock starts at the start of `terraform apply` and stops when the
 #           smoke check has passed; every stage's time goes to the job summary and an artifact.
+#           It alone holds the `eks-environment` concurrency group shared with env-down.
+#   expire  (not with plan_only; runs whether `env` passed or failed, once the apply started) no
+#           AWS credentials: sleeps until the environment's expires_at, then dispatches env-down
+#           with only_if_expired=true using the run's GITHUB_TOKEN. env-down skips an environment
+#           that has not expired, so a late dispatch never destroys a newer one.
 #
-# A failed smoke check fails the run and leaves the environment up: the expiry tag on it is what
-# the sweep (env-down, story 5.4) destroys. env-down's runbook is docs/runbooks/env-down.md.
+# A failed smoke check fails the run and leaves the environment up until its expiry: the expire
+# job is the guarantee, env-down's hourly schedule only a backstop (GitHub ran it for about 2 of
+# 19 slots in story 5.4). Hosted jobs stop at 6 hours, so the expiry is at most 5 hours.
+# env-down's runbook is docs/runbooks/env-down.md.
 name: env-up
 
 on:
@@ -23,7 +30,9 @@ on:
         required: true
         type: string
       expiry_hours:
-        description: Hours until the environment's expiry tag (1 to 24)
+        description: >-
+          Hours until the environment's expiry tag (1 to 5; the expire job waits for it and
+          a hosted job stops at 6 hours)
         required: false
         default: "4"
         type: string
@@ -44,12 +53,6 @@ on:
 
 permissions:
   contents: read
-
-# One environment operation at a time, shared with env-down; a second run waits instead of
-# cancelling a running apply or destroy.
-concurrency:
-  group: eks-environment
-  cancel-in-progress: false
 
 env:
   AWS_REGION: us-east-1
@@ -78,8 +81,8 @@ jobs:
             echo "::error::input sha must be 40 lowercase hex characters"
             exit 1
           fi
-          if [[ ! "$INPUT_HOURS" =~ ^[0-9]+$ ]] || ((10#$INPUT_HOURS < 1 || 10#$INPUT_HOURS > 24)); then
-            echo "::error::input expiry_hours must be a whole number from 1 to 24"
+          if [[ ! "$INPUT_HOURS" =~ ^[0-9]+$ ]] || ((10#$INPUT_HOURS < 1 || 10#$INPUT_HOURS > 5)); then
+            echo "::error::input expiry_hours must be a whole number from 1 to 5 (the expire job must finish within a hosted job's 6 hours)"
             exit 1
           fi
           if [[ -n "$INPUT_MINUTES" ]] && { [[ ! "$INPUT_MINUTES" =~ ^[0-9]+$ ]] || ((10#$INPUT_MINUTES < 5 || 10#$INPUT_MINUTES > 240)); }; then
@@ -209,9 +212,18 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 75
     environment: eks
+    # One environment operation at a time, shared with env-down; a second run waits instead of
+    # cancelling a running apply or destroy. On this job only, so the sleeping `expire` job never
+    # holds the group and a manual env-down can always run.
+    concurrency:
+      group: eks-environment
+      cancel-in-progress: false
     permissions:
       contents: read
       id-token: write
+    outputs:
+      expires_at: ${{ steps.facts.outputs.expires_at }}
+      applied: ${{ steps.apply.outputs.applied }}
     env:
       TF_IN_AUTOMATION: "1"
       STAGES: ${{ github.workspace }}/env-up-stages/stages.tsv
@@ -275,6 +287,7 @@ jobs:
             echo "KUBECONFIG=$RUNNER_TEMP/eks.kubeconfig"
             echo "EXPIRES_AT=$expires_at"
           } >> "$GITHUB_ENV"
+          echo "expires_at=$expires_at" >> "$GITHUB_OUTPUT"
       - name: terraform init
         run: terraform -chdir=infra/env init -backend-config="bucket=$TICKETSCOPE_STATE_BUCKET"
 
@@ -283,8 +296,11 @@ jobs:
         run: terraform -chdir=infra/env plan -input=false 2>&1 | tee "$RUNNER_TEMP/terraform.log"
 
       - name: terraform apply (the clock starts here)
+        id: apply
         if: ${{ !inputs.plan_only }}
         run: |
+          # From here something may exist in AWS, so the expire job runs whatever happens next.
+          echo "applied=true" >> "$GITHUB_OUTPUT"
           date +%s > "$RUNNER_TEMP/clock-start"
           t0=$(date +%s)
           terraform -chdir=infra/env apply -auto-approve 2>&1 | tee "$RUNNER_TEMP/terraform.log"
@@ -350,7 +366,7 @@ jobs:
             echo "| **total, apply start to smoke pass** | **$total** |"
             echo
             echo "Run: $verdict. 30-minute target (R1): $target. Expiry tag: $EXPIRES_AT."
-            if [[ "$verdict" != "success" ]]; then echo "The environment was left up for the expiry sweep."; fi
+            if [[ "$verdict" != "success" ]]; then echo "The environment was left up until its expiry; the expire job then dispatches env-down."; fi
           } | tee env-up-stages/stages.md >> "$GITHUB_STEP_SUMMARY"
           jq -Rn --arg verdict "$verdict" --arg total "$total" --arg expires "$EXPIRES_AT" \
             '{verdict: $verdict, total_seconds: $total, expires_at: $expires,
@@ -395,3 +411,36 @@ jobs:
             env-up-stages/stages.md
             env-up-stages/denied-actions.txt
           if-no-files-found: ignore
+
+  expire:
+    # The expiry guarantee, independent of env-down's schedule. It runs when the apply started,
+    # whether `env` passed or failed (a failed smoke leaves the environment up), and never with
+    # plan_only. No AWS credentials and no environment: it only waits and dispatches env-down.
+    needs: env
+    if: ${{ always() && !inputs.plan_only && needs.env.outputs.applied == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: Wait until the environment expires
+        timeout-minutes: 310
+        env:
+          EXPIRES_AT: ${{ needs.env.outputs.expires_at }}
+        run: |
+          if [[ ! "$EXPIRES_AT" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]]; then
+            echo "::error::no valid expires_at from the env job; env-down's schedule is the backstop"
+            exit 1
+          fi
+          seconds=$(($(date -u -d "$EXPIRES_AT" +%s) - $(date -u +%s)))
+          if ((seconds > 0)); then
+            echo "Sleeping ${seconds}s until $EXPIRES_AT."
+            sleep "$seconds"
+          fi
+      - name: Dispatch env-down (only if the environment has expired)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run env-down.yml --repo "$GITHUB_REPOSITORY" --ref main -f only_if_expired=true
+          echo "Dispatched env-down with only_if_expired=true at $(date -u +%Y-%m-%dT%H:%M:%SZ)." >> "$GITHUB_STEP_SUMMARY"

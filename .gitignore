@@ -3,6 +3,7 @@
 .bmad-loop/policy.toml
 _bmad/render/
 .claude/worktrees/
+.claude/settings.local.json
 
 # Python
 .venv/

@@ -208,3 +208,178 @@ def test_the_check_has_no_destructive_verb() -> None:
     for path in (CHECK, WRAPPER):
         text = path.read_text(encoding="utf-8").lower()
         assert "delete" not in text and "terminate" not in text and "destroy" not in text, path
+
+
+# The tagging API lags (run 44570082818: two volumes listed minutes after EC2 said NotFound), so
+# the wrapper confirms each candidate with its own service. The stub answers each describe call
+# from a map of id or ARN to: "found", "empty", "notfound:<Code>", "error" or "state:<KeyState>".
+AWS_STUB = f"""#!{sys.executable}
+import json, os, sys
+args = sys.argv[1:]
+with open(os.environ["AWS_LOG"], "a") as log:
+    log.write(" ".join(args) + "\\n")
+if args[:2] == ["resourcegroupstaggingapi", "get-resources"]:
+    if "Key=environment,Values=eks" in args:
+        print(open(os.environ["TAGGING_FILE"]).read())
+    else:
+        print('{{"ResourceTagMappingList": []}}')
+    sys.exit(0)
+if "--filters" in args:
+    print('{{"NetworkInterfaces": []}}')
+    sys.exit(0)
+answers = json.load(open(os.environ["ANSWERS_FILE"]))
+answer = next((answers[a] for a in args if a in answers), None)
+if answer is None:
+    print("stub: no recorded answer", file=sys.stderr)
+    sys.exit(254)
+if answer == "found":
+    print("present")
+elif answer == "empty":
+    pass
+elif answer.startswith("state:"):
+    print(answer.split(":", 1)[1])
+elif answer.startswith("notfound:"):
+    code = answer.split(":", 1)[1]
+    print(f"An error occurred ({{code}}) when calling Describe: not found", file=sys.stderr)
+    sys.exit(254)
+else:
+    print("An error occurred (UnauthorizedOperation) when calling Describe", file=sys.stderr)
+    sys.exit(254)
+"""
+
+UNKNOWN_ARN = f"arn:aws:eks:us-east-1:{ACCOUNT}:cluster/ticketscope-env"
+
+
+def _confirmed_run(
+    tmp_path: Path, rows: list[str], answers: dict[str, str], *args: str
+) -> tuple[subprocess.CompletedProcess[str], str]:
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    stub = bin_dir / "aws"
+    stub.write_text(AWS_STUB)
+    stub.chmod(0o755)
+    log = tmp_path / "aws.log"
+    log.write_text("")
+    tagging = _write(tmp_path, _tagging(*[(arn, ENV_TAGS) for arn in rows]), "tagging.json")
+    answers_file = _write(tmp_path, answers, "answers.json")
+    env = {
+        "PATH": f"{bin_dir}:/usr/bin:/bin",
+        "AWS_LOG": str(log),
+        "TAGGING_FILE": str(tagging),
+        "ANSWERS_FILE": str(answers_file),
+    }
+    result = subprocess.run(
+        [str(WRAPPER), *args], capture_output=True, text=True, check=False, env=env
+    )
+    return result, log.read_text()
+
+
+@pytestmark_bash
+@pytest.mark.criterion("ticketscope--e5-s4--AC-1")
+def test_a_tagged_volume_that_ec2_no_longer_finds_is_dropped_and_the_check_passes(
+    tmp_path: Path,
+) -> None:
+    result, calls = _confirmed_run(
+        tmp_path, [ARNS["volume"]], {"vol-0123": "notfound:InvalidVolume.NotFound"}
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert f"GONE ec2:volume {ARNS['volume']} (tagging API lag)" in result.stdout
+    assert "clean" in result.stdout
+    assert "ec2 describe-volumes --volume-ids vol-0123" in calls
+
+
+@pytestmark_bash
+@pytest.mark.criterion("ticketscope--e5-s4--AC-1")
+def test_a_volume_that_ec2_still_finds_fails(tmp_path: Path) -> None:
+    result, _ = _confirmed_run(tmp_path, [ARNS["volume"]], {"vol-0123": "found"})
+    assert result.returncode == 1
+    assert f"LEFTOVER ec2:volume {ARNS['volume']}" in result.stdout
+    assert "GONE" not in result.stdout
+
+
+@pytestmark_bash
+@pytest.mark.criterion("ticketscope--e5-s4--AC-2")
+@pytest.mark.parametrize(
+    "answer",
+    ["error", "notfound:InvalidGroup.NotFound"],  # an error, or another type's not-found code
+)
+def test_a_describe_error_other_than_not_found_fails(tmp_path: Path, answer: str) -> None:
+    result, _ = _confirmed_run(tmp_path, [ARNS["volume"]], {"vol-0123": answer})
+    assert result.returncode == 1
+    assert f"LEFTOVER ec2:volume {ARNS['volume']} (error)" in result.stdout
+    assert "clean" not in result.stdout
+
+
+@pytestmark_bash
+@pytest.mark.parametrize(
+    ("state", "dropped"), [("PendingDeletion", True), ("Disabled", True), ("Enabled", False)]
+)
+def test_a_kms_key_pending_deletion_is_dropped(tmp_path: Path, state: str, dropped: bool) -> None:
+    arn = ARNS["kms key"]
+    result, calls = _confirmed_run(tmp_path, [arn], {arn: f"state:{state}"})
+    assert result.returncode == (0 if dropped else 1), result.stdout
+    assert ("GONE kms:key" in result.stdout) is dropped
+    assert "kms describe-key --key-id" in calls
+
+
+@pytestmark_bash
+def test_each_confirmable_type_asks_its_own_service(tmp_path: Path) -> None:
+    rows = [ARNS[k] for k in ("alb", "target group", "security group", "log group")]
+    log_group = "/aws/eks/ticketscope-env/cluster"
+    answers = {
+        ARNS["alb"]: "notfound:LoadBalancerNotFound",
+        ARNS["target group"]: "notfound:TargetGroupNotFound",
+        "sg-0123": "notfound:InvalidGroup.NotFound",
+        log_group: "empty",  # no exact name match
+    }
+    result, calls = _confirmed_run(tmp_path, rows, answers)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert result.stdout.count("GONE ") == 4
+    assert "elbv2 describe-load-balancers --load-balancer-arns" in calls
+    assert "elbv2 describe-target-groups --target-group-arns" in calls
+    assert "ec2 describe-security-groups --group-ids sg-0123" in calls
+    assert f"logs describe-log-groups --log-group-name-prefix {log_group}" in calls
+    assert f"logGroupName=='{log_group}'" in calls
+
+
+@pytestmark_bash
+def test_an_unknown_type_stays_a_leftover(tmp_path: Path) -> None:
+    result, calls = _confirmed_run(tmp_path, [UNKNOWN_ARN], {UNKNOWN_ARN: "notfound:x"})
+    assert result.returncode == 1
+    assert f"LEFTOVER eks:cluster {UNKNOWN_ARN} (unconfirmed)" in result.stdout
+    assert UNKNOWN_ARN not in calls  # no describe call is made for it
+
+
+@pytestmark_bash
+@pytest.mark.criterion("ticketscope--e5-s4--AC-1")
+def test_list_drops_nothing_and_confirms_nothing(tmp_path: Path) -> None:
+    result, calls = _confirmed_run(
+        tmp_path, [ARNS["volume"]], {"vol-0123": "notfound:InvalidVolume.NotFound"}, "--list"
+    )
+    assert result.returncode == 0
+    assert f"found ec2:volume {ARNS['volume']}" in result.stdout
+    assert "GONE" not in result.stdout and "describe-volumes" not in calls
+
+
+def test_only_a_gone_confirmation_drops_a_candidate(tmp_path: Path) -> None:
+    listing = _write(tmp_path, _tagging((ARNS["volume"], ENV_TAGS), (ARNS["alb"], ENV_TAGS)))
+    confirmations = _write(tmp_path, f"{ARNS['volume']}\tgone\n", "confirmations.tsv")
+    result = _run("--confirmations", str(confirmations), files=[listing])
+    assert result.returncode == 1
+    assert f"GONE ec2:volume {ARNS['volume']} (tagging API lag)" in result.stdout
+    alb = f"LEFTOVER elasticloadbalancing:loadbalancer {ARNS['alb']} (unconfirmed)"
+    assert alb in result.stdout
+
+
+def test_malformed_confirmations_fail(tmp_path: Path) -> None:
+    listing = _write(tmp_path, _tagging((ARNS["volume"], ENV_TAGS)))
+    confirmations = _write(tmp_path, f"{ARNS['volume']}\tprobably\n", "confirmations.tsv")
+    result = _run("--confirmations", str(confirmations), files=[listing])
+    assert result.returncode == 2 and "clean" not in result.stdout
+
+
+def test_candidates_prints_type_and_id_only(tmp_path: Path) -> None:
+    listing = _write(tmp_path, _tagging((ARNS["volume"], ENV_TAGS)))
+    result = _run("--candidates", files=[listing])
+    assert result.returncode == 0
+    assert result.stdout == f"ec2:volume\t{ARNS['volume']}\n"

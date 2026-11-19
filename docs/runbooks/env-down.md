@@ -105,6 +105,16 @@ or another environment's tag, and also lists ENIs through EC2 because the taggin
 them. An `aws` error, an empty answer or a malformed listing fails the check; it never reads as
 clean.
 
+The tagging API lags behind the services: in run 44570082818 it still listed two volumes four
+minutes after EC2 answered `InvalidVolume.NotFound` for them, so a retry alone does not help. The
+check therefore confirms each hit with one read-only describe call to the owning service (EC2
+volumes, network interfaces and security groups, ELB load balancers and target groups, KMS keys,
+log groups), using only actions the deploy role already has. A hit is dropped only on that
+service's own not-found error code, an empty answer, or a KMS key that is pending deletion or
+disabled; the log prints it as `GONE <type> <arn> (tagging API lag)`. Any other error, and any type
+with no describe call, stays a leftover and fails the check. `--list` shows the raw tagging
+listing and drops nothing; `--dry-run` and `--from-file` make no call.
+
 - `scripts/leftover-check.sh --list` prints what is found (the positive control while the
   environment is up: the Gateway's ALB, target groups, the security group, the PVC volumes).
 - `scripts/leftover-check.sh --dry-run` injects a tagged ALB and must fail naming it.

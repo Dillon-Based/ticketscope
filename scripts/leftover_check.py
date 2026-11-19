@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Classify AWS listings for the env-down leftover check (story 5.4, R3).
 
-    python3 scripts/leftover_check.py [--list] [--dry-run] [--environment eks]
+    python3 scripts/leftover_check.py [--list] [--dry-run] [--candidates]
+                                      [--confirmations TSV] [--environment eks]
                                       [--cluster ticketscope-env] FILE [FILE ...]
 
 Each FILE is the JSON of one read-only AWS listing: `aws resourcegroupstaggingapi get-resources`
@@ -13,10 +14,19 @@ Exit 0 when nothing is left, 1 when something is (each is named), 2 when a listi
 trusted: unreadable, malformed, missing its key or empty. An unreadable listing never reads as
 clean. `--list` prints what is found and exits 0 unless a listing is untrustworthy. `--dry-run`
 reads no file: it injects one tagged load balancer, so the run must fail and name it.
+
+The tagging API lags: it listed removed volumes for at least four minutes after the env stack
+was torn down. So scripts/leftover-check.sh confirms each candidate with its own service. It runs
+`--candidates` first (prints `<type>\t<id>` per candidate, exit 0), makes one read-only describe
+call per candidate, and passes the answers back as `--confirmations`: a TSV of `<id>\t<status>`,
+status `gone`, `found`, `error` or `unconfirmed`. Only `gone` drops a candidate, printed as
+`GONE <type> <id> (tagging API lag)`; any other status, or none, keeps it a leftover. This module
+makes no call itself.
 """
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -54,7 +64,8 @@ def classify(arn: str) -> str:
     if len(parts) < 6:
         return "unknown"
     resource = parts[5]
-    kind = resource.split("/", 1)[0] if "/" in resource else resource.split(":", 1)[0]
+    # The type ends at the first `/` or `:` (`volume/vol-1`, `log-group:/aws/eks/...`).
+    kind = re.split(r"[/:]", resource, maxsplit=1)[0]
     return f"{parts[2]}:{kind}"
 
 
@@ -99,6 +110,26 @@ def leftovers(rows: list[Row], environment: str, cluster: str) -> list[tuple[str
     return sorted(found)
 
 
+STATUSES = {"gone", "found", "error", "unconfirmed"}
+
+
+def read_confirmations(path: Path) -> dict[str, str]:
+    """`<id>\t<status>` per line; an unreadable file or unknown status is untrustworthy."""
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as error:
+        raise ListingError(f"{path}: unreadable confirmations ({error})") from error
+    statuses: dict[str, str] = {}
+    for line in text.splitlines():
+        if not line.strip():
+            continue
+        ident, sep, status = line.partition("\t")
+        if not sep or status not in STATUSES:
+            raise ListingError(f"{path}: malformed confirmation line {line!r}")
+        statuses[ident] = status
+    return statuses
+
+
 def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser(description="env-down leftover check")
     parser.add_argument("files", nargs="*", type=Path)
@@ -106,6 +137,8 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--cluster", default="ticketscope-env")
     parser.add_argument("--list", action="store_true", dest="list_only")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--candidates", action="store_true")
+    parser.add_argument("--confirmations", type=Path)
     args = parser.parse_args(argv)
 
     rows: list[Row] = []
@@ -123,12 +156,33 @@ def main(argv: list[str]) -> int:
             return 2
 
     found = leftovers(rows, args.environment, args.cluster)
-    label = "found" if args.list_only else "LEFTOVER"
-    for kind, ident in found:
-        print(f"{label} {kind} {ident}")
+    if args.candidates:
+        for kind, ident in found:
+            print(f"{kind}\t{ident}")
+        return 0
     if args.list_only:
+        for kind, ident in found:
+            print(f"found {kind} {ident}")
         print(f"leftover-check: {len(found)} tagged resource(s) for environment={args.environment}")
         return 0
+    statuses: dict[str, str] = {}
+    if args.confirmations is not None:
+        try:
+            statuses = read_confirmations(args.confirmations)
+        except ListingError as error:
+            print(f"leftover-check: FAIL, {error}", file=sys.stderr)
+            return 2
+        kept: list[tuple[str, str]] = []
+        for kind, ident in found:
+            if statuses.get(ident) == "gone":
+                print(f"GONE {kind} {ident} (tagging API lag)")
+            else:
+                kept.append((kind, ident))
+        found = kept
+    for kind, ident in found:
+        status = statuses.get(ident, "unconfirmed") if args.confirmations is not None else "found"
+        note = "" if status == "found" else f" ({status})"
+        print(f"LEFTOVER {kind} {ident}{note}")
     if found:
         print(
             f"leftover-check: FAIL, {len(found)} tagged resource(s) outside Terraform state",

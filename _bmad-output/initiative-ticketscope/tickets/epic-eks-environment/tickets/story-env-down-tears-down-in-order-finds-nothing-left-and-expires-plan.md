@@ -91,6 +91,7 @@ Live record (2026-11-19, after PR #76; fixed in the follow-up PR):
 - The hourly cron sweep ran for only about 2 of about 19 scheduled slots; GitHub created no run for the rest. The sweep cannot be the expiry guarantee: `env-up` gained an `expire` job (no AWS credentials, `actions: write`) that sleeps until `expires_at` and dispatches `env-down` with the new `only_if_expired=true` input, which applies the schedule's expiry logic. `expiry_hours` is capped at 5 (a hosted job stops at 6 hours); env-up's concurrency group moved to the `env` job so the sleeping job never blocks a manual `env-down`. The cron stays as a backstop.
 - Bootstrap protection, simulated with `aws iam simulate-principal-policy` for the deploy role: denied on the state bucket, the bootstrap state keys, the backups and ECR (explicit deny), and on the hosted zone and the certificate (implicit deny). `terraform plan -lock=false` of `infra/bootstrap` showed no changes.
 - Positive control (`--list` while up) again found the ALB, target groups, security groups and volumes, and no ENI.
+- 2026-11-19: run 44570082818 destroyed 52 resources; the leftover check's two `ec2:volume` hits, 2 s after the destroy, were tagging-API lag (EC2 `describe-volumes` answered NotFound while the tagging API still listed them). The check now confirms each hit with its own service's describe call before failing.
 
 ## Plan Change Log
 

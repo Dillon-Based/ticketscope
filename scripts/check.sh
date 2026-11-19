@@ -51,6 +51,7 @@ run terraform -chdir=infra/bootstrap validate
 run terraform -chdir=infra/env fmt -check
 run terraform -chdir=infra/env init -backend=false
 run terraform -chdir=infra/env validate
+run scripts/tf-plan-check.sh
 run actionlint -ignore 'SC2016:info'
 run shellcheck scripts/eks-deploy.sh
 run shellcheck scripts/denied-actions.sh
@@ -59,5 +60,6 @@ run shellcheck scripts/leftover-check.sh
 run shellcheck scripts/bootstrap-drift.sh
 run shellcheck scripts/run-summary.sh
 run shellcheck scripts/check.sh
+run shellcheck scripts/tf-plan-check.sh
 
 echo "check: all passed" >&2

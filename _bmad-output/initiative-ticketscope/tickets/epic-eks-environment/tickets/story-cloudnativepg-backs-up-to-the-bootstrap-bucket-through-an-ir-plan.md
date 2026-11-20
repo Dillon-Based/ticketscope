@@ -83,6 +83,16 @@ context:
 - `iam simulate-principal-policy` returned `explicitDeny` for every action on this role (`AllowedByOrganizations: false`, no matched statement), including ones the plugin actually performed. `simulate-custom-policy` on the policy document is the usable check: `env/*` implicitDeny, `backups/*` Put/Get/Delete allowed.
 - The read-only role's EKS view access does not cover the CNPG custom resources; pod logs are readable.
 
+- Live result, run 44802980572, incarnation `inc-44802980572-1` (2026-11-20), after the policy gained `BackupBucketReachable` by hand at 20:54Z (`iam create-policy-version`; the same statement is in `infra/env/irsa.tf`, so the next `env-up` creates it):
+  - The on-demand Backup `ticketscope-db-ondemand-inc-44802980572-1` is `completed` (plugin, v0.16.0 on chart 0.9.0). The bucket holds `backups/inc-44802980572-1/base/20261120T195011/{backup.info,data.tar}` (186 MB) and 25 gzip WAL files under `wals/0000000100000000/`. The `env-up` step failed only because it timed out at 900 s while the policy was wrong; the backup finished at 20:55:33Z once the policy was fixed.
+  - R6: the service account `ticketscope-db` carries only `eks.amazonaws.com/role-arn`; both database pods have `AWS_ROLE_ARN` and `AWS_WEB_IDENTITY_TOKEN_FILE` and no access key variable; `spec.serviceAccountName` is unset.
+  - Needed policy set (live-proven for backup and WAL archive): object `PutObject`, `GetObject`, `DeleteObject`, `AbortMultipartUpload`, `ListMultipartUploadParts` on `backups/*`; `ListBucket` with `s3:prefix` `backups/*`; `ListBucket` with `Null s3:prefix` (HeadBucket); `ListBucketMultipartUploads`. `GetBucketLocation` was not needed. Restore read (`GetObject`) and retention delete (`DeleteObject`) are simulation-only for now (user, 2026-11-20); `GetObject`/`DeleteObject` are not yet exercised by a real restore or prune, so December's drills confirm or tighten them.
+  - Namespace Secrets: `sh.helm.release.v1.ticketscope.v1`, `ticketscope-db-app`, `ticketscope-db-ca`, `ticketscope-db-replication`, `ticketscope-db-ro`, `ticketscope-db-server`. No backup-credential Secret exists on EKS (`ticketscope-backup-s3` is kind only).
+  - Plugin Role `ticketscope-db-barman-cloud` (RoleBinding to `ticketscope-db`): `objectstores` named `ticketscope-backup` get/watch/list; `objectstores/status` update; `secrets` get/watch/list for every Secret in the namespace (plugin issue 892, accepted and recorded, not fixed). The operator's own Role `ticketscope-db` limits `secrets` to the six Cluster Secrets.
+  - Not yet seen: the ScheduledBackup has not fired (its `0 0 3 * * *` schedule is never reached in a short-lived environment). Its render is tested; a fire is observed in a longer window.
+  - The ObjectStore status update logged "object has been modified" once (a harmless conflict; the plugin skips and carries on).
+  - The IAM-policy denied-actions summary and the deploy role needed no change: no `iam` denial occurred on the new role or policy.
+
 ## Plan Change Log
 
 ## Review Triage Log

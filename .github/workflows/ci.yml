@@ -130,6 +130,7 @@ jobs:
         run: |
           shellcheck scripts/eks-deploy.sh
           shellcheck scripts/eks-backup.sh
+          shellcheck scripts/restore-drill.sh
           shellcheck scripts/denied-actions.sh
           shellcheck scripts/eks-teardown.sh
           shellcheck scripts/leftover-check.sh

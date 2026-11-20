@@ -3,23 +3,28 @@
 # for it to complete, and prints what the archive and the Backup recorded. Run by env-up after the
 # smoke check, outside the 30-minute clock.
 #
-#   scripts/eks-backup.sh --kubeconfig <file> --incarnation <id>
+#   scripts/eks-backup.sh --kubeconfig <file> --incarnation <id> [--name-suffix <s>]
+#
+# The Backup is named ticketscope-db-ondemand-<id>[-<s>]; a suffix makes another one in the same
+# incarnation (the restore drill takes its own). The objects always land under backups/<id>/.
 #
 # Env overrides:
 #   BACKUP_TIMEOUT  seconds to wait for the Backup to complete (default 900)
 set -euo pipefail
 
 usage() {
-  echo "usage: scripts/eks-backup.sh --kubeconfig <file> --incarnation <id>" >&2
+  echo "usage: scripts/eks-backup.sh --kubeconfig <file> --incarnation <id> [--name-suffix <s>]" >&2
   exit 2
 }
 
 KUBECONFIG_FILE=""
 INCARNATION=""
+SUFFIX=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --kubeconfig) [[ $# -ge 2 ]] || usage; KUBECONFIG_FILE="$2"; shift 2 ;;
     --incarnation) [[ $# -ge 2 ]] || usage; INCARNATION="$2"; shift 2 ;;
+    --name-suffix) [[ $# -ge 2 ]] || usage; SUFFIX="$2"; shift 2 ;;
     -h | --help) usage ;;
     *) echo "eks-backup: unknown argument $1" >&2; usage ;;
   esac
@@ -30,7 +35,7 @@ done
 export KUBECONFIG="$KUBECONFIG_FILE"
 NS=ticketscope
 CLUSTER=ticketscope-db
-NAME="${CLUSTER}-ondemand-${INCARNATION}"
+NAME="${CLUSTER}-ondemand-${INCARNATION}${SUFFIX:+-$SUFFIX}"
 BACKUP_TIMEOUT="${BACKUP_TIMEOUT:-900}"
 
 kubectl -n "$NS" apply -f - <<EOF

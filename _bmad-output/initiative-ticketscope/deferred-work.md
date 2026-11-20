@@ -28,7 +28,8 @@ location: n/a
 source_spec: `tickets/epic-hybrid-retrieval/tickets/story-tracer-dense-search-answers-through-v1-on-kind-plan.md`
 severity: medium
 reason: No red-mode session ran; the cosine fixture was committed, reference vectors were not producible in-code.
-status: open
+status: resolved 2026-11-20
+resolution: resolved by story 5.13: scripts/reference_vectors.py (onnxruntime and tokenizers, no fastembed) made tests/fixtures/embedder_reference.json, pinned by test_embedder_reference_pinned.py and compared to the image embedder by tests/image/test_app_image.py on amd64 and arm64
 carried_to: epic-eks-environment (5), raised at its refinement together with DW-6 and the R-004 embedding parity row (retro A6); carried at epic 3's closure (user, 2026-11-11)
 
 ### DW-4: Kind run (EMBEDDINGS_COMPUTE=1 and flag-off kind-up), Tempo trace check, OOM and api memory measurement on kind were not run.
@@ -55,7 +56,8 @@ location: images/app.Dockerfile
 source_spec: `tickets/epic-hybrid-retrieval/tickets/story-tracer-dense-search-answers-through-v1-on-kind-plan.md`
 severity: medium
 reason: images/app.Dockerfile downloads BAAI/bge-small-en-v1.5 unpinned; a changed upstream file would change retrieval under the same model_id.
-status: open
+status: resolved 2026-11-20
+resolution: resolved by story 5.13: images/fetch_model.py downloads Qdrant/bge-small-en-v1.5-onnx-Q at EMBEDDING_MODEL_REVISION and fails unless model_optimized.onnx matches EMBEDDING_MODEL_SHA256 (tests/unit/test_model_pin.py)
 carried_to: epic-eks-environment (5), the first epic to build the app image for a non-kind environment; overlaps the NFR CONCERNS on cross-machine ranking reproducibility (R-004, retro A6); carried at epic 3's closure (user, 2026-11-11)
 
 ### DW-7: Corpus identity and retrieval use separate connections, so a concurrent reload can label results with the previously read corpus version.

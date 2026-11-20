@@ -173,6 +173,11 @@ jobs:
           filters: |
             images:
               - 'images/**'
+              # The arm64 embedder check (R-004) runs in this job, so what it tests triggers it.
+              - 'src/ticketscope/adapters/embedder.py'
+              - 'tests/image/**'
+              - 'tests/fixtures/embedder_reference.json'
+              - 'uv.lock'
       # The kind deploy runs only when a path it depends on changed (.github/kind-paths.yml).
       - uses: dorny/paths-filter@v4
         id: kind
@@ -204,6 +209,14 @@ jobs:
         run: >-
           docker build --platform ${{ matrix.platform }}
           -f images/postgres.Dockerfile -t ticketscope-postgres:18-${{ github.sha }} .
+      # R-004: the embedder must match the committed reference vectors on each architecture.
+      - uses: astral-sh/setup-uv@v10.3.3
+      - run: uv sync --locked
+      - name: Image tests (${{ matrix.platform }})
+        env:
+          TICKETSCOPE_REQUIRE_CONTAINER_TESTS: "1"
+          TICKETSCOPE_TEST_APP_IMAGE: ticketscope-app:${{ github.sha }}
+        run: uv run pytest tests/image
 
   # The tests that need a built image: tests/postgres (the only real-SQL tests: the dense SQL,
   # the read-only role, the asset load, the eval's search reuse) and tests/image (the app image

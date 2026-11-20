@@ -383,3 +383,71 @@ def test_candidates_prints_type_and_id_only(tmp_path: Path) -> None:
     result = _run("--candidates", files=[listing])
     assert result.returncode == 0
     assert result.stdout == f"ec2:volume\t{ARNS['volume']}\n"
+
+
+# Bug 5.14: the interface the VPC CNI left behind, as `describe-network-interfaces` records it
+# (tags per the bug's reproduction): detached, with neither the environment nor the controller tag.
+CNI_ENI = {
+    "NetworkInterfaces": [
+        {
+            "NetworkInterfaceId": "eni-0leak",
+            "Status": "available",
+            "Description": "aws-K8S-i-0example",
+            "TagSet": [
+                {"Key": "node.k8s.amazonaws.com/instance_id", "Value": "i-0example"},
+                {"Key": "eks:eni:owner", "Value": "amazon-vpc-cni"},
+                {"Key": "cluster.k8s.amazonaws.com/name", "Value": "ticketscope-env"},
+                {"Key": "node.k8s.amazonaws.com/createdAt", "Value": "2026-11-19T00:00:00Z"},
+            ],
+        }
+    ]
+}
+
+
+@pytest.mark.criterion("ticketscope--bug-5-14--AC-2")
+def test_a_detached_cni_interface_without_the_environment_tags_fails_and_is_named(
+    tmp_path: Path,
+) -> None:
+    result = _run(files=[FIXTURES / "down.json", _write(tmp_path, CNI_ENI)])
+    assert result.returncode == 1
+    assert "eni-0leak" in result.stdout and "network-interface" in result.stdout
+
+
+@pytest.mark.criterion("ticketscope--bug-5-14--AC-2")
+def test_a_cni_interface_of_another_cluster_or_without_the_owner_tag_is_ignored(
+    tmp_path: Path,
+) -> None:
+    other = json.loads(json.dumps(CNI_ENI))
+    other["NetworkInterfaces"][0]["TagSet"][2]["Value"] = "someone-else"
+    no_owner = json.loads(json.dumps(CNI_ENI))
+    del no_owner["NetworkInterfaces"][0]["TagSet"][1]
+    for doc in (other, no_owner):
+        assert _run(files=[_write(tmp_path, doc)]).returncode == 0
+
+
+@pytestmark_bash
+@pytest.mark.criterion("ticketscope--bug-5-14--AC-2")
+def test_the_wrapper_lists_interfaces_by_the_cnis_own_tags_and_fails_on_a_leaked_one(
+    tmp_path: Path,
+) -> None:
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    log = tmp_path / "aws.log"
+    cni = _write(tmp_path, CNI_ENI, "cni.json")
+    stub = bin_dir / "aws"
+    stub.write_text(
+        "#!/usr/bin/env bash\n"
+        f'echo "$*" >> "{log}"\n'
+        'if [[ "$*" == *eks:eni:owner* ]]; then\n'
+        f'  cat "{cni}"\n'
+        'elif [[ "$1" == ec2 && "$*" == *--filters* ]]; then echo \'{"NetworkInterfaces": []}\'\n'
+        'elif [[ "$*" == *--network-interface-ids* ]]; then echo eni-0leak\n'
+        "else echo '{\"ResourceTagMappingList\": []}'; fi\n"
+    )
+    stub.chmod(0o755)
+    env = {"PATH": f"{bin_dir}:/usr/bin:/bin"}
+    result = subprocess.run([str(WRAPPER)], capture_output=True, text=True, check=False, env=env)
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert "eni-0leak" in result.stdout
+    calls = log.read_text()
+    assert "Name=tag:cluster.k8s.amazonaws.com/name,Values=ticketscope-env" in calls

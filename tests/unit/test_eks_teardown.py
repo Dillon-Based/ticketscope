@@ -32,8 +32,19 @@ case "$*" in
     [[ -n "${ALB_ERROR:-}" ]] && { echo "boom" >&2; exit 255; }
     [[ -n "${ALB_STUCK:-}" ]] && echo "arn:aws:elasticloadbalancing:::loadbalancer/app/k8s/x"
     ;;
+  *describe-vpcs*)
+    [[ -n "${VPC_ERROR:-}" ]] && { echo "boom" >&2; exit 255; }
+    echo "${VPC_ID-vpc-0abc}"
+    ;;
   *describe-network-interfaces*)
-    [[ -n "${ENI_STUCK:-}" ]] && echo "eni-0abc"
+    [[ -n "${ENI_LIST_ERROR:-}" ]] && { echo "boom" >&2; exit 255; }
+    if [[ "$*" == *Name=vpc-id* ]]; then
+      echo "${CNI_ORPHANS:-}"
+    elif [[ "$*" == *eks:eni:owner* ]]; then
+      [[ -n "${CNI_WAIT_STUCK:-}" ]] && echo "eni-0cni"
+    else
+      [[ -n "${ENI_STUCK:-}" ]] && echo "eni-0abc"
+    fi
     ;;
   *route53*)
     exec "$(dirname "$0")/route53.py" "$@"
@@ -101,7 +112,8 @@ def _setup(tmp_path: Path) -> tuple[Path, Path, Path]:
     bin_dir.mkdir(parents=True)
     log = tmp_path / "calls.log"
     log.write_text("")
-    bodies = {"helm": "exit 0", "terraform": "exit 0", "aws": AWS_BODY, "kubectl": KUBECTL_BODY}
+    terraform = 'sleep "${TF_SLEEP:-0}"; exit "${TF_RC:-0}"'
+    bodies = {"helm": "exit 0", "terraform": terraform, "aws": AWS_BODY, "kubectl": KUBECTL_BODY}
     for name, body in bodies.items():
         stub = bin_dir / name
         stub.write_text(STUB.format(name=name, body=body))
@@ -219,9 +231,12 @@ def test_the_give_up_times_come_from_env_vars(tmp_path: Path) -> None:
 def test_skip_cluster_runs_only_terraform_and_the_dns_check(tmp_path: Path) -> None:
     result, calls = _run(tmp_path, "--skip-cluster", "--hostname", HOSTNAME)
     assert result.returncode == 0, result.stderr
-    assert len(calls) == 2
-    assert calls[0].startswith("terraform -chdir=infra/env destroy")
-    assert calls[1].startswith(f"aws route53 list-resource-record-sets --hosted-zone-id {ZONE_ID}")
+    # The CNI sweep (aws ec2) runs beside the destroy; nothing of Kubernetes or helm is called.
+    assert not any(c.startswith(("helm", "kubectl")) for c in calls)
+    rest = [c for c in calls if not c.startswith("aws ec2")]
+    assert len(rest) == 2
+    assert rest[0].startswith("terraform -chdir=infra/env destroy")
+    assert rest[1].startswith(f"aws route53 list-resource-record-sets --hosted-zone-id {ZONE_ID}")
 
 
 def test_a_missing_kubeconfig_is_a_usage_error_and_calls_nothing(tmp_path: Path) -> None:
@@ -427,3 +442,85 @@ def test_the_dns_step_asks_only_for_the_hostnames_a_and_aaaa_records(tmp_path: P
     assert result.returncode == 0, result.stderr
     (query,) = [c for c in calls if "list-resource-record-sets" in c]
     assert f"Name=='{HOSTNAME}.'" in query and "Type=='A'" in query and "Type=='AAAA'" in query
+
+
+# Bug 5.14: the VPC CNI leaves a detached interface with neither environment tag behind.
+def _aws(calls: list[str], verb: str) -> list[str]:
+    return [c for c in calls if f"aws ec2 {verb}" in c]
+
+
+@pytest.mark.criterion("ticketscope--bug-5-14--AC-3")
+def test_the_sweep_selects_only_available_cni_interfaces_of_the_environments_vpc(
+    tmp_path: Path,
+) -> None:
+    result, calls = _run(tmp_path, CNI_ORPHANS="eni-0leak")
+    assert result.returncode == 0, result.stderr
+    (vpcs, *_) = _aws(calls, "describe-vpcs")
+    assert "Name=tag:environment,Values=eks" in vpcs
+    listings = [c for c in _aws(calls, "describe-network-interfaces") if "vpc-id" in c]
+    assert listings
+    for listing in listings:
+        assert "Name=vpc-id,Values=vpc-0abc" in listing
+        assert "Name=status,Values=available" in listing
+        assert "Name=tag:eks:eni:owner,Values=amazon-vpc-cni" in listing
+    deletes = _aws(calls, "delete-network-interface")
+    assert deletes
+    assert all(d.endswith("--network-interface-id eni-0leak") for d in deletes)
+    # Before the wait for tagged ENIs and before the destroy; nothing is forced.
+    assert _index(calls, "delete-network-interface") < _index(calls, "terraform -chdir")
+    assert "--force" not in "\n".join(calls)
+
+
+@pytest.mark.criterion("ticketscope--bug-5-14--AC-1")
+def test_the_sweep_also_runs_beside_the_destroy(tmp_path: Path) -> None:
+    # A slow destroy: the interface only appears once the nodes go, so the loop must sweep again.
+    result, calls = _run(tmp_path, CNI_ORPHANS="eni-0leak", TF_SLEEP="3")
+    assert result.returncode == 0, result.stderr
+    destroy = _index(calls, "terraform -chdir=infra/env destroy")
+    during = [c for c in calls[destroy:] if "delete-network-interface" in c]
+    assert during, "no sweep ran while terraform destroy ran"
+
+
+@pytest.mark.criterion("ticketscope--bug-5-14--AC-1")
+def test_a_failed_destroy_keeps_its_exit_status_and_skips_the_dns_step(tmp_path: Path) -> None:
+    result, calls = _run(tmp_path, TF_RC="7")
+    assert result.returncode == 7
+    assert not any("route53" in c for c in calls)
+
+
+@pytest.mark.criterion("ticketscope--bug-5-14--AC-3")
+def test_no_vpc_found_skips_the_sweep_and_the_run_continues(tmp_path: Path) -> None:
+    result, calls = _run(tmp_path, VPC_ID="")
+    assert result.returncode == 0, result.stderr
+    assert not _aws(calls, "delete-network-interface")
+    assert not [c for c in _aws(calls, "describe-network-interfaces") if "vpc-id" in c]
+    assert "sweep is skipped" in result.stdout
+
+
+@pytest.mark.criterion("ticketscope--bug-5-14--AC-4")
+def test_a_vpc_lookup_error_fails_the_job_before_terraform(tmp_path: Path) -> None:
+    result, calls = _run(tmp_path, VPC_ERROR="1")
+    assert result.returncode == 1
+    assert not any("terraform" in c for c in calls)
+
+
+@pytest.mark.criterion("ticketscope--bug-5-14--AC-2")
+def test_a_cni_interface_that_remains_stops_the_run_before_terraform(tmp_path: Path) -> None:
+    result, calls = _run(tmp_path, CNI_WAIT_STUCK="1", ENI_VOLUME_WAIT_SECONDS="2")
+    assert result.returncode == 1
+    assert not any("terraform" in c for c in calls)
+    wait = [c for c in _aws(calls, "describe-network-interfaces") if "vpc-id" not in c]
+    assert any(
+        "tag:eks:eni:owner,Values=amazon-vpc-cni" in c
+        and "tag:cluster.k8s.amazonaws.com/name,Values=ticketscope-env" in c
+        # The nodes are still up at this wait: only detached interfaces may stop it.
+        and "status,Values=available" in c
+        for c in wait
+    )
+
+
+@pytest.mark.criterion("ticketscope--bug-5-14--AC-4")
+def test_an_unreadable_interface_listing_is_never_read_as_clean(tmp_path: Path) -> None:
+    result, calls = _run(tmp_path, ENI_LIST_ERROR="1", ENI_VOLUME_WAIT_SECONDS="2")
+    assert result.returncode == 1
+    assert not any("terraform" in c for c in calls)

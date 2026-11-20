@@ -8,7 +8,9 @@
 Each FILE is the JSON of one read-only AWS listing: `aws resourcegroupstaggingapi get-resources`
 (key `ResourceTagMappingList`) or `aws ec2 describe-network-interfaces` (key `NetworkInterfaces`).
 A resource is a leftover when its `environment` tag is the environment's (or the load balancer
-controller's `elbv2.k8s.aws/cluster` tag is the cluster's) and it is not `stack=bootstrap`.
+controller's `elbv2.k8s.aws/cluster` tag is the cluster's, or it is a VPC CNI interface: tagged
+`eks:eni:owner=amazon-vpc-cni` and `cluster.k8s.amazonaws.com/name` of the cluster) and it is not
+`stack=bootstrap`.
 
 Exit 0 when nothing is left, 1 when something is (each is named), 2 when a listing cannot be
 trusted: unreadable, malformed, missing its key or empty. An unreadable listing never reads as
@@ -32,6 +34,8 @@ from pathlib import Path
 
 ENV_TAG = "environment"
 CLUSTER_TAG = "elbv2.k8s.aws/cluster"
+CNI_OWNER_TAG = ("eks:eni:owner", "amazon-vpc-cni")
+CNI_CLUSTER_TAG = "cluster.k8s.amazonaws.com/name"
 BOOTSTRAP_TAG = ("stack", "bootstrap")
 ENI_PREFIX = "ec2:network-interface/"
 DRY_RUN_ARN = "arn:aws:elasticloadbalancing:us-east-1:000000000000:loadbalancer/app/dry-run/0"
@@ -105,7 +109,11 @@ def leftovers(rows: list[Row], environment: str, cluster: str) -> list[tuple[str
     for ident, tags in rows:
         if tags.get(BOOTSTRAP_TAG[0]) == BOOTSTRAP_TAG[1]:
             continue
-        if tags.get(ENV_TAG) == environment or tags.get(CLUSTER_TAG) == cluster:
+        # A network interface made by the VPC CNI carries neither of the two tags above (bug 5.14);
+        # its owner tag and the cluster's name tag name it.
+        owner_key, owner_value = CNI_OWNER_TAG
+        cni = tags.get(owner_key) == owner_value and tags.get(CNI_CLUSTER_TAG) == cluster
+        if tags.get(ENV_TAG) == environment or tags.get(CLUSTER_TAG) == cluster or cni:
             found.add((classify(ident), ident))
     return sorted(found)
 

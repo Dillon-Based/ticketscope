@@ -157,6 +157,22 @@ def test_deploy_role_may_only_delete_the_hostnames_a_and_aaaa_records_in_the_zon
     assert "${zone_id}" in text and "${hostname}" in text
 
 
+@pytest.mark.criterion("ticketscope--bug-5-14--AC-3")
+def test_deploy_role_may_only_delete_network_interfaces_the_vpc_cni_made() -> None:
+    policy = render("deploy-permissions.json.tftpl")
+    granting = [
+        s for s in statements(policy) if "ec2:DeleteNetworkInterface" in as_list(s["Action"])
+    ]
+    (stmt,) = granting
+    assert stmt["Effect"] == "Allow"
+    assert as_list(stmt["Action"]) == ["ec2:DeleteNetworkInterface"]
+    assert as_list(stmt["Resource"]) == [
+        f"arn:aws:ec2:{VARS['region']}:{VARS['account_id']}:network-interface/*"
+    ]
+    tag = {"aws:ResourceTag/eks:eni:owner": "amazon-vpc-cni"}
+    assert stmt["Condition"] == {"StringEquals": tag}
+
+
 @pytest.mark.criterion("ticketscope--e5-s1--AC-1")
 def test_readonly_extras_allow_only_reads() -> None:
     policy = render("readonly-extras.json.tftpl")

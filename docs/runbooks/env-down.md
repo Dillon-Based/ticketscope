@@ -46,8 +46,18 @@ under the read-only profile.
    namespace), the LoadBalancerConfigurations (`platform` namespace), then the GatewayClass
    (`GATEWAY_CLASS`, default `alb`)
 5. `helm uninstall platform`
-6. wait until tagged ENIs and volumes are gone (10 min, `ENI_VOLUME_WAIT_SECONDS`)
-7. `terraform destroy` of `infra/env`
+6. delete the detached VPC CNI network interfaces of the environment's VPC (status `available`,
+   tag `eks:eni:owner=amazon-vpc-cni`, nothing else), then wait until tagged ENIs (the CNI's own
+   named by that tag and the cluster's `cluster.k8s.amazonaws.com/name`) and volumes are gone
+   (10 min, `ENI_VOLUME_WAIT_SECONDS`)
+7. `terraform destroy` of `infra/env`, with the same CNI sweep looping beside it: the CNI leaves
+   its interface behind only when the destroy terminates the nodes (bug 5.14, run 44619309245),
+   and it would otherwise block the subnet and the node security group with `DependencyViolation`.
+   The deploy role's statement `DeleteVpcCniNetworkInterfaces` allows only
+   `ec2:DeleteNetworkInterface` on interfaces tagged `eks:eni:owner=amazon-vpc-cni`. It needs a
+   person to re-apply bootstrap first (run `scripts/bootstrap-drift.sh`); until then the delete is
+   denied (warned in the log) and the destroy can fail as before. A VPC lookup or interface
+   listing that errors fails the job.
 8. the DNS step: delete the hostname's A and AAAA records from the zone, then list again; none may
    be left
 9. `scripts/leftover-check.sh`

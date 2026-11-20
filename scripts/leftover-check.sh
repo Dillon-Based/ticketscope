@@ -74,9 +74,13 @@ fetch "$work/enis-environment.json" ec2 describe-network-interfaces \
   --filters "Name=tag:environment,Values=$ENVIRONMENT_TAG"
 fetch "$work/enis-cluster.json" ec2 describe-network-interfaces \
   --filters "Name=tag:elbv2.k8s.aws/cluster,Values=$CLUSTER_NAME"
+# The VPC CNI's own interfaces carry neither tag above (bug 5.14), only its owner and cluster tags.
+fetch "$work/enis-cni.json" ec2 describe-network-interfaces \
+  --filters "Name=tag:eks:eni:owner,Values=amazon-vpc-cni" \
+  "Name=tag:cluster.k8s.amazonaws.com/name,Values=$CLUSTER_NAME"
 
 listings=("$work/by-environment.json" "$work/by-cluster.json" "$work/enis-environment.json"
-  "$work/enis-cluster.json")
+  "$work/enis-cluster.json" "$work/enis-cni.json")
 # --list is the positive control: it shows what the tagging API returns, unconfirmed.
 if [[ " ${mode[*]-} " == *" --list "* ]]; then check "${listings[@]}"; exit $?; fi
 

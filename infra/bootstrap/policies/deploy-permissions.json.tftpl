@@ -130,6 +130,17 @@
       ]
     },
     {
+      "Sid": "DeleteVpcCniNetworkInterfaces",
+      "Effect": "Allow",
+      "Action": "ec2:DeleteNetworkInterface",
+      "Resource": "arn:aws:ec2:${region}:${account_id}:network-interface/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:ResourceTag/eks:eni:owner": "amazon-vpc-cni"
+        }
+      }
+    },
+    {
       "Sid": "TicketscopeEcr",
       "Effect": "Allow",
       "Action": [

@@ -24,7 +24,7 @@ dependencies:
   # operator, which finds plugins by Service in its own namespace.
   - name: plugin-barman-cloud
     alias: barman-cloud
-    version: 0.8.1
+    version: 0.9.0
     repository: https://cloudnative-pg.github.io/charts
     condition: barman-cloud.enabled
   # EKS only (AD-13): the GatewayClass implementation and the DNS writer, off by default;

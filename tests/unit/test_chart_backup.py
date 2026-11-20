@@ -194,6 +194,8 @@ def test_ticketscope_iam_role_credentials_need_no_secret() -> None:
         "backup.destinationPath=s3://bucket/",
         "--set",
         "backup.credentials.inheritFromIAMRole=true",
+        "--set-string",
+        "database.serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn=arn:aws:iam::0:role/r",
     )
     [store] = _docs(docs, "ObjectStore", "ticketscope-backup")
     assert "inheritFromIAMRole: true" in store

@@ -7,7 +7,7 @@ dependencies:
   version: 0.29.1
 - name: plugin-barman-cloud
   repository: https://cloudnative-pg.github.io/charts
-  version: 0.8.1
+  version: 0.9.0
 - name: aws-load-balancer-controller
   repository: https://aws.github.io/eks-charts
   version: 3.6.3
@@ -26,5 +26,5 @@ dependencies:
 - name: grafana
   repository: https://grafana-community.github.io/helm-charts
   version: 14.4.0
-digest: sha256:da6eb906b14c02c45d55c916053a8705284463b5c9f37d8f33b89146df75b6bf
-generated: "2026-11-17T16:01:31.105456-05:00"
+digest: sha256:5a38d18ef1c81b3c71b418b5be47aa36cccebcce45ee8f53343d3907fe68b77d
+generated: "2026-11-20T13:38:53.398676-05:00"

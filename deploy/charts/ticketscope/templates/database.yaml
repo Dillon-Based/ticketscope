@@ -54,6 +54,14 @@ spec:
         comment: read-only role for api and eval (AD-7)
         passwordSecret:
           name: {{ $secretName }}
+  {{- with .Values.database.serviceAccount.annotations }}
+  # EKS: the IRSA role annotation (AD-25). No service account is named here, so the
+  # operator creates the one named after the Cluster and applies this template.
+  serviceAccountTemplate:
+    metadata:
+      annotations:
+        {{- toYaml . | nindent 8 }}
+  {{- end }}
   {{- if .Values.backup.enabled }}
   # WAL archiving through the Barman Cloud Plugin (AD-18): a plugin Backup
   # completes only once its end WAL is archived.
@@ -62,6 +70,9 @@ spec:
       isWALArchiver: true
       parameters:
         barmanObjectName: {{ .Values.backup.objectStoreName }}
+        {{- with .Values.backup.serverName }}
+        serverName: {{ . | quote }}
+        {{- end }}
   {{- end }}
   storage:
     size: {{ .Values.database.storage.size }}

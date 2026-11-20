@@ -129,6 +129,10 @@ eval:
 
 database:
   instances: 2
+  # EKS: the IRSA role annotation (eks.amazonaws.com/role-arn), an environment fact set by
+  # scripts/eks-deploy.sh (AD-25).
+  serviceAccount:
+    annotations: {}
   storage:
     size: 1Gi
     storageClass: ""
@@ -150,6 +154,14 @@ backup:
   # Empty for AWS S3; the S3-compatible endpoint otherwise (SeaweedFS on kind).
   endpointURL: ""
   retentionPolicy: "7d"
+  # The plugin's serverName: the folder under destinationPath this incarnation archives to.
+  # Empty keeps the Cluster's name (kind); env-up sets one per incarnation (R11).
+  serverName: ""
+  # A ScheduledBackup (six-field cron, seconds first).
+  # Off by default so kind renders as before; values-eks.yaml turns it on.
+  scheduled:
+    enabled: false
+    schedule: "0 0 3 * * *"
   wal:
     compression: gzip
   credentials:

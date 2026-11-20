@@ -162,3 +162,28 @@ to record:
 
 Not settled: the Gateway being Programmed before any route exists (routes already existed when
 the ALB was first created).
+
+## 8. Backups (story 5.6, R6, R8)
+
+`env-up` passes the incarnation (`inc-<run id>-<attempt>`), the bootstrap bucket and the backup role's ARN to the
+release, and runs `scripts/eks-backup.sh` after the smoke check (outside the clock). Backups land under
+`backups/<incarnation>/` in the bootstrap bucket. A hand deploy takes `--incarnation <id>` too.
+
+Check, with the read-only kubeconfig and profile:
+
+```bash
+kubectl -n ticketscope get backups.postgresql.cnpg.io,scheduledbackups.postgresql.cnpg.io   # one Backup `completed`
+kubectl -n ticketscope get cluster ticketscope-db -o jsonpath='{.spec.serviceAccountName}'   # empty
+kubectl -n ticketscope get secrets; kubectl -n ticketscope get role,rolebinding -o yaml       # record the names and rules
+BUCKET="ticketscope-$(aws sts get-caller-identity --query Account --output text --profile ticketscope-readonly)"
+INC=$(kubectl -n ticketscope get cluster ticketscope-db -o jsonpath='{.spec.plugins[0].parameters.serverName}')
+aws s3 ls "s3://$BUCKET/backups/$INC/" --recursive --profile ticketscope-readonly | head
+ROLE=$(aws iam get-role --role-name ticketscope-env-cnpg-backup --query Role.Arn --output text --profile ticketscope-readonly)
+aws iam simulate-principal-policy --policy-source-arn "$ROLE" --profile ticketscope-readonly \
+  --action-names s3:GetObject --resource-arns "arn:aws:s3:::$BUCKET/env/terraform.tfstate"   # implicitDeny
+aws iam simulate-principal-policy --policy-source-arn "$ROLE" --profile ticketscope-readonly \
+  --action-names s3:PutObject s3:GetObject s3:DeleteObject --resource-arns "arn:aws:s3:::$BUCKET/backups/x"   # allowed
+```
+
+Tighten the policy in `infra/env/irsa.tf` against what a backup, a restore read and a retention delete actually needed,
+and record that set in the plan's Implementation Notes. Pod Identity is the fallback only if IRSA fails on the first recreate.

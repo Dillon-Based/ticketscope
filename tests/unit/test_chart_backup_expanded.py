@@ -291,7 +291,7 @@ def test_enabling_backup_leaves_the_rest_of_the_cluster_spec_unchanged() -> None
 
 
 @needs_helm
-def test_no_in_tree_barman_object_store_and_no_scheduled_backup() -> None:
+def test_no_in_tree_barman_object_store_and_no_scheduled_backup_on_kind() -> None:
     docs = _render(TICKETSCOPE, *_IMAGE_TAGS, "-f", str(TICKETSCOPE_KIND))
     joined = "\n".join(docs)
     assert "barmanObjectStore" not in joined
@@ -385,7 +385,7 @@ def test_chart_lock_pins_every_chart_yaml_dependency() -> None:
     lock = (PLATFORM / "Chart.lock").read_text("utf-8")
     wanted = set(re.findall(r"- name: (\S+)\n(?:\s+alias: \S+\n)?\s+version: (\S+)", chart))
     locked = set(re.findall(r"- name: (\S+)\n\s+repository: \S+\n\s+version: (\S+)", lock))
-    assert ("plugin-barman-cloud", "0.8.1") in wanted
+    assert ("plugin-barman-cloud", "0.9.0") in wanted
     assert ("seaweedfs", "4.52.0") in wanted
     assert wanted == locked
 

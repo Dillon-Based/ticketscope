@@ -37,14 +37,16 @@ PLATFORM_ENV_KEYS = {
     "readonly.group",
 }
 PLATFORM_ENV_PREFIXES = ("aws-load-balancer-controller.", "external-dns.")
-# AD-25 names the IRSA role annotation and the instance placement rule as environment facts. No
-# committed value sets them yet (the backup and placement stories do), so the names are reserved.
+# AD-25 names the IRSA role annotation and the instance placement rule as environment facts.
+# eks-deploy.sh sets the annotation (it carries the account id); the placement rule is reserved.
 RESERVED_ENV_KEYS = {"database.serviceAccount.annotations", "database.instancePlacement"}
 TICKETSCOPE_ENV_KEYS = {
     "api.replicas",
     "mcp.replicas",
     "database.storage.storageClass",
     "backup.enabled",
+    "backup.credentials.inheritFromIAMRole",
+    "backup.scheduled.enabled",
 } | RESERVED_ENV_KEYS
 
 
@@ -80,8 +82,21 @@ def _platform_eks(*args: str) -> list[str]:
     )
 
 
+# What eks-deploy.sh adds to values-eks.yaml: the bucket path, the incarnation, the role ARN.
+BACKUP_FACTS = [
+    "--set-string",
+    "backup.destinationPath=s3://ticketscope-bucket/backups/",
+    "--set-string",
+    "backup.serverName=inc-1-1",
+    "--set-string",
+    "database.serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn=arn:aws:iam::0:role/r",
+]
+
+
 def _ticketscope_eks(*args: str) -> list[str]:
-    return _render(TICKETSCOPE, "-f", str(TICKETSCOPE / "values-eks.yaml"), *_IMAGE_TAGS, *args)
+    return _render(
+        TICKETSCOPE, "-f", str(TICKETSCOPE / "values-eks.yaml"), *_IMAGE_TAGS, *BACKUP_FACTS, *args
+    )
 
 
 @pytest.mark.criterion("ticketscope--e5-s2--AC-3")
@@ -144,13 +159,13 @@ def test_eks_values_commit_no_account_id_hostname_or_arn() -> None:
 
 
 @pytest.mark.criterion("ticketscope--e5-s2--AC-3")
-def test_ticketscope_renders_on_eks_with_gp3_and_no_backup() -> None:
+def test_ticketscope_renders_on_eks_with_gp3_and_irsa_backup() -> None:
     docs = _ticketscope_eks()
     [cluster] = _docs(docs, "Cluster", "ticketscope-db")
     assert "storageClass: gp3" in cluster
     assert "instances: 2" in cluster
-    assert not _docs(docs, "ObjectStore")
-    assert "plugins:" not in cluster
+    assert "inheritFromIAMRole: true" in "\n".join(_docs(docs, "ObjectStore"))
+    assert "plugins:" in cluster
     # The pin is the product default's.
     assert not _docs(docs, "Job", "ticketscope-eval")
 
@@ -272,7 +287,7 @@ def _ticketscope_render(environment: str) -> list[str]:
     live-style host is passed the way eks-deploy.sh passes it; kind keeps its own."""
     args = ["-f", str(TICKETSCOPE / f"values-{environment}.yaml"), *_IMAGE_TAGS[:4]]
     if environment == "eks":
-        args += ["--set-string", f"hostname={HOST}"]
+        args += ["--set-string", f"hostname={HOST}", *BACKUP_FACTS]
     return _render(TICKETSCOPE, *args)
 
 

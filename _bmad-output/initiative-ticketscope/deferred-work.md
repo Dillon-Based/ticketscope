@@ -101,6 +101,7 @@ carried_to: epic-eks-environment (5), where corpus reloads first run under live 
 - source_plan: `_bmad-output/initiative-ticketscope/tickets/epic-eks-environment/tickets/story-env-down-tears-down-in-order-finds-nothing-left-and-expires-plan.md`
   summary: Confirm that the ALB's and the CNI's ENIs carry the `environment` or `elbv2.k8s.aws/cluster` tag, so the ENI wait and the ENI leg of the leftover check are not vacuous (unverified, medium if true).
   evidence: `scripts/leftover-check.sh` and `scripts/eks-teardown.sh` list ENIs by those tags only; no recorded listing shows ENI tags. The live `--list` run in story 5.4's manual checks should print the ENIs of the Gateway's ALB; if none appear, filter by VPC id instead. `terraform destroy` fails on a leftover ENI, so a leak is loud rather than silent.
+  resolution: bug 5.14 added the CNI's own tags (`eks:eni:owner=amazon-vpc-cni` with `cluster.k8s.amazonaws.com/name`) to the ENI wait and the leftover check, and a sweep of detached CNI interfaces in the environment's VPC. Whether the ALB's interfaces carry the `elbv2.k8s.aws/cluster` tag stays unverified, but a leak of them still fails `terraform destroy` loudly.
 
 - source_plan: `_bmad-output/initiative-ticketscope/tickets/epic-eks-environment/tickets/story-env-down-tears-down-in-order-finds-nothing-left-and-expires-plan.md`
   summary: external-dns writes no TXT ownership records, so policy `sync` never deletes the hostname's A and AAAA records (open since story 5.2; env-down now fails loudly on them).

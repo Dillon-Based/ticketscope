@@ -3,7 +3,7 @@ title: "env-down fails at terraform destroy because a VPC CNI network interface 
 type: 'bugfix'
 ticket: '14'
 created: '2026-11-20'
-status: 'draft'
+status: 'built'
 baseline_revision: 'f0f247a981ca86bc2d43de908d2d2da5e73cb14d'
 route: 'full'
 route_source: 'auto'
@@ -73,6 +73,8 @@ context:
 ## Plan Change Log
 
 ## Review Triage Log
+
+- high, patch (found by the orchestrator reading the diff; no separate review subagent ran): the new CNI leg of the ENI wait had no `status=available` filter, so at the wait, with nodes still up, attached CNI ENIs would stall every `env-down` for 10 minutes. Added the filter in `eks-teardown.sh` and asserted it in `test_a_cni_interface_that_remains_stops_the_run_before_terraform`.
 
 ## Design Notes
 

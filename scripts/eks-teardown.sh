@@ -18,8 +18,11 @@
 #      (platform namespace), then the GatewayClass. They belong to the `platform` release, carry
 #      the controller's finalizers, and helm would delete them together with the controller.
 #   5. helm uninstall platform
-#   6. wait until tagged ENIs and volumes are gone
-#   7. terraform destroy of infra/env (the caller has run `terraform init`; TF_VAR_* are set)
+#   6. delete the detached VPC CNI interfaces of the environment's VPC, then wait until tagged ENIs
+#      (the CNI's own included, named by its tags) and volumes are gone
+#   7. terraform destroy of infra/env (the caller has run `terraform init`; TF_VAR_* are set), with
+#      the same sweep looping beside it: the nodes only go during the destroy, and the CNI leaves
+#      its interface behind then (bug 5.14)
 #   8. delete the hostname's A and AAAA records from the zone (external-dns leaves them), then
 #      list again: the zone must hold none
 #
@@ -168,10 +171,62 @@ eni_volume_gone() {
     --filters "Name=tag:elbv2.k8s.aws/cluster,Values=$CLUSTER_NAME" \
     --query 'NetworkInterfaces[].NetworkInterfaceId' --output text)" || return 1
   [[ -z "$out" || "$out" == None ]] || return 1
+  out="$(aws ec2 describe-network-interfaces --region "$REGION" \
+    --filters "$CNI_OWNER_FILTER" "Name=tag:cluster.k8s.amazonaws.com/name,Values=$CLUSTER_NAME" \
+    "Name=status,Values=available" \
+    --query 'NetworkInterfaces[].NetworkInterfaceId' --output text)" || return 1
+  [[ -z "$out" || "$out" == None ]] || return 1
   out="$(aws ec2 describe-volumes --region "$REGION" \
     --filters "Name=tag:environment,Values=$ENVIRONMENT_TAG" \
     --query 'Volumes[].VolumeId' --output text)" || return 1
   [[ -z "$out" || "$out" == None ]]
+}
+
+# The VPC CNI leaves a detached interface behind when its node is terminated (bug 5.14). It carries
+# neither the `environment` tag nor the controller's, only `eks:eni:owner=amazon-vpc-cni` and the
+# cluster's name tag, so it is named by those. The sweep removes only `available` (detached)
+# interfaces with the CNI owner tag in the environment's VPC; EC2 refuses to remove an attached one.
+CNI_OWNER_FILTER="Name=tag:eks:eni:owner,Values=amazon-vpc-cni"
+
+# vpc_id: prints the environment's VPC id, or nothing when there is none. Fails when the lookup errors.
+vpc_id() {
+  aws ec2 describe-vpcs --region "$REGION" --filters "Name=tag:environment,Values=$ENVIRONMENT_TAG" \
+    --query 'Vpcs[].VpcId' --output text
+}
+
+# cni_orphans <vpc id>: prints the ids of the detached CNI interfaces of that VPC. Fails on an error.
+cni_orphans() {
+  aws ec2 describe-network-interfaces --region "$REGION" \
+    --filters "Name=vpc-id,Values=$1" "Name=status,Values=available" "$CNI_OWNER_FILTER" \
+    --query 'NetworkInterfaces[].NetworkInterfaceId' --output text
+}
+
+# sweep_cni_enis [quiet]: removes the detached CNI interfaces of the environment's VPC. Returns 1
+# when the VPC lookup or the listing errors (never read as clean); a failed removal is only warned
+# about, because the wait or the destroy then judges what is left.
+sweep_cni_enis() {
+  local vpc ids id
+  vpc="$(vpc_id)" || { echo "eks-teardown: the VPC lookup failed; the CNI sweep did not run" >&2; return 1; }
+  if [[ -z "$vpc" || "$vpc" == None ]]; then
+    [[ "${1:-}" == quiet ]] || log "no VPC found for environment ${ENVIRONMENT_TAG}; the CNI interface sweep is skipped"
+    return 0
+  fi
+  ids="$(cni_orphans "$vpc")" || { echo "eks-teardown: could not list the interfaces of $vpc" >&2; return 1; }
+  if [[ -z "$ids" || "$ids" == None ]]; then return 0; fi
+  for id in $ids; do
+    log "deleting detached VPC CNI interface $id of $vpc"
+    aws ec2 delete-network-interface --region "$REGION" --network-interface-id "$id" \
+      || echo "eks-teardown: could not remove $id; it is left to the wait or the destroy" >&2
+  done
+}
+
+# sweep_loop: sweeps until killed, for as long as terraform destroy runs. Errors are not fatal here;
+# the destroy's own result decides.
+sweep_loop() {
+  while true; do
+    sweep_cni_enis quiet || true
+    sleep "$POLL_SECONDS"
+  done
 }
 
 # wait_for <seconds> <command...>: polls until the command succeeds or the time is up.
@@ -322,6 +377,7 @@ if ((SKIP_CLUSTER == 0)); then
   helm uninstall platform --namespace "$PLATFORM_NS" --ignore-not-found --wait --timeout 10m
 
   stage "enis-and-volumes"
+  sweep_cni_enis || exit 1
   log "waiting up to ${ENI_VOLUME_WAIT_SECONDS}s for tagged ENIs and volumes to go"
   if ! wait_for "$ENI_VOLUME_WAIT_SECONDS" eni_volume_gone; then
     echo "eks-teardown: tagged ENIs or volumes are still listed after ${ENI_VOLUME_WAIT_SECONDS}s" >&2
@@ -329,10 +385,17 @@ if ((SKIP_CLUSTER == 0)); then
   fi
 else
   log "no cluster: skipping the Kubernetes steps"
+  sweep_cni_enis || exit 1
 fi
 
 stage "terraform-destroy"
-terraform -chdir=infra/env destroy -auto-approve -input=false
+sweep_loop &
+SWEEPER=$!
+destroy_rc=0
+terraform -chdir=infra/env destroy -auto-approve -input=false || destroy_rc=$?
+kill "$SWEEPER" 2>/dev/null || true
+wait "$SWEEPER" 2>/dev/null || true
+if ((destroy_rc != 0)); then exit "$destroy_rc"; fi
 
 stage "dns-records"
 dns_clean=1

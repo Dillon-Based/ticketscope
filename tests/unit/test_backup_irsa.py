@@ -99,6 +99,12 @@ def test_the_backup_policy_reaches_only_the_backups_prefix() -> None:
     # Never the Terraform state prefix, never a wildcard action or resource.
     policy = IRSA[IRSA.index('data "aws_iam_policy_document" "cnpg_backup"') :]
     assert "env/" not in policy and '"s3:*"' not in policy and '"*"' not in policy
+    # HeadBucket carries no s3:prefix key, so barman's bucket check needs its own ListBucket
+    # statement; it is the Null condition, never an unconditional ListBucket (run 44802980572).
+    reachable = re.search(r'sid\s*=\s*"BackupBucketReachable"(.*?)\n  }\n', IRSA, re.S)
+    assert reachable and 'test     = "Null"' in reachable.group(1)
+    assert 'variable = "s3:prefix"' in reachable.group(1) and '["true"]' in reachable.group(1)
+    assert len(re.findall(r'"s3:ListBucket"', policy)) == 2
     for action in ("PutObject", "GetObject", "DeleteObject", "AbortMultipartUpload"):
         assert f"s3:{action}" in policy
 

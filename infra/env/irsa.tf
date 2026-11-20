@@ -77,6 +77,21 @@ data "aws_iam_policy_document" "cnpg_backup" {
     }
   }
 
+  # barman-cloud-check-wal-archive opens the bucket with HeadBucket, which IAM checks as
+  # s3:ListBucket with no s3:prefix key; the prefix condition above never matches it (live run
+  # 44802980572: "Permission denied when accessing bucket"). Null matches only that case.
+  statement {
+    sid       = "BackupBucketReachable"
+    actions   = ["s3:ListBucket"]
+    resources = ["arn:aws:s3:::${local.backup_bucket}"]
+
+    condition {
+      test     = "Null"
+      variable = "s3:prefix"
+      values   = ["true"]
+    }
+  }
+
   statement {
     sid       = "BackupMultipartListing"
     actions   = ["s3:ListBucketMultipartUploads"]

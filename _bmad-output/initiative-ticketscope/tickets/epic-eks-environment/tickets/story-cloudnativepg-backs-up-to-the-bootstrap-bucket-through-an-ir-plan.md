@@ -76,7 +76,12 @@ context:
 - Decision: the IRSA-without-ARN failure is checked in `backup.yaml` (needs `database.serviceAccount.annotations["eks.amazonaws.com/role-arn"]`).
 - Plugin chart `plugin-barman-cloud` 0.8.1 to 0.9.0 (appVersion v0.16.0); `Chart.lock` refreshed with `helm dependency update`.
 - Policy as committed is the candidate set, untested live: object Put/Get/Delete/AbortMultipartUpload/ListMultipartUploadParts on `backups/*`; ListBucket with prefix `backups/*`; ListBucketMultipartUploads. The needed set, Secret names and plugin Role rules are still to be recorded by the live run (runbook section 8).
-- Not done here (a person runs it): live `env-up`, the completed Backup, objects in the bucket, the policy simulation, a restore read and a retention delete.
+- Not done here (a person runs it): live `env-up`, the completed Backup, objects in the bucket, the policy simulation.
+- Decision (user, 2026-11-20): for the November window the restore read and the retention delete are shown by `iam simulate-principal-policy` only (`s3:GetObject`, `s3:DeleteObject` allowed on `backups/*`). The real restore and the real retention delete are done in the December drills (stories 5.7 and 5.8), which then confirm or tighten the policy set.
+
+- Live finding, run 44802980572 (2026-11-20): apply, deploy and smoke passed; the on-demand Backup stayed `started` for 900 s and the step failed. The plugin sidecar's `barman-cloud-check-wal-archive` failed on every attempt with "Permission denied when accessing bucket ... Forbidden". Cause: its bucket check is `HeadBucket`, which IAM evaluates as `s3:ListBucket` with no `s3:prefix` key, so the prefix-conditioned statement never matched. Only a `backup.info` was written (Put works). Fix: a second `s3:ListBucket` statement `BackupBucketReachable` with `Null s3:prefix = true` (infra/env/irsa.tf). Whether `GetBucketLocation` or another action is also needed is settled by the re-run.
+- `iam simulate-principal-policy` returned `explicitDeny` for every action on this role (`AllowedByOrganizations: false`, no matched statement), including ones the plugin actually performed. `simulate-custom-policy` on the policy document is the usable check: `env/*` implicitDeny, `backups/*` Put/Get/Delete allowed.
+- The read-only role's EKS view access does not cover the CNPG custom resources; pod logs are readable.
 
 ## Plan Change Log
 

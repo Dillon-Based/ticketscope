@@ -169,7 +169,9 @@ the ALB was first created).
 release, and runs `scripts/eks-backup.sh` after the smoke check (outside the clock). Backups land under
 `backups/<incarnation>/` in the bootstrap bucket. A hand deploy takes `--incarnation <id>` too.
 
-Check, with the read-only kubeconfig and profile:
+Check with the read-only profile. The read-only kubeconfig's EKS view access does not cover the CNPG
+custom resources (`backups`, `clusters`, `scheduledbackups` are Forbidden), so run the first three `kubectl`
+lines with the admin kubeconfig from `eks-env.sh`; pod logs (`kubectl logs ticketscope-db-1 -c plugin-barman-cloud`) work read-only.
 
 ```bash
 kubectl -n ticketscope get backups.postgresql.cnpg.io,scheduledbackups.postgresql.cnpg.io   # one Backup `completed`
@@ -178,11 +180,15 @@ kubectl -n ticketscope get secrets; kubectl -n ticketscope get role,rolebinding 
 BUCKET="ticketscope-$(aws sts get-caller-identity --query Account --output text --profile ticketscope-readonly)"
 INC=$(kubectl -n ticketscope get cluster ticketscope-db -o jsonpath='{.spec.plugins[0].parameters.serverName}')
 aws s3 ls "s3://$BUCKET/backups/$INC/" --recursive --profile ticketscope-readonly | head
-ROLE=$(aws iam get-role --role-name ticketscope-env-cnpg-backup --query Role.Arn --output text --profile ticketscope-readonly)
-aws iam simulate-principal-policy --policy-source-arn "$ROLE" --profile ticketscope-readonly \
-  --action-names s3:GetObject --resource-arns "arn:aws:s3:::$BUCKET/env/terraform.tfstate"   # implicitDeny
-aws iam simulate-principal-policy --policy-source-arn "$ROLE" --profile ticketscope-readonly \
-  --action-names s3:PutObject s3:GetObject s3:DeleteObject --resource-arns "arn:aws:s3:::$BUCKET/backups/x"   # allowed
+# simulate-principal-policy reported explicitDeny for every action in this account (AllowedByOrganizations
+# false, no matched statement), so simulate the policy document itself:
+PARN=arn:aws:iam::$(aws sts get-caller-identity --query Account --output text --profile ticketscope-readonly):policy/ticketscope-env-cnpg-backup
+V=$(aws iam get-policy --policy-arn "$PARN" --query Policy.DefaultVersionId --output text --profile ticketscope-readonly)
+aws iam get-policy-version --policy-arn "$PARN" --version-id "$V" --query PolicyVersion.Document --profile ticketscope-readonly > policy.json
+aws iam simulate-custom-policy --policy-input-list "$(cat policy.json)" --profile ticketscope-readonly \
+  --action-names s3:GetObject --resource-arns "arn:aws:s3:::$BUCKET/env/terraform.tfstate" --query 'EvaluationResults[0].EvalDecision'   # implicitDeny
+aws iam simulate-custom-policy --policy-input-list "$(cat policy.json)" --profile ticketscope-readonly \
+  --action-names s3:PutObject s3:GetObject s3:DeleteObject --resource-arns "arn:aws:s3:::$BUCKET/backups/x" --query 'EvaluationResults[].EvalDecision'   # allowed
 ```
 
 Tighten the policy in `infra/env/irsa.tf` against what a backup, a restore read and a retention delete actually needed,

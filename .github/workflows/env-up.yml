@@ -292,6 +292,8 @@ jobs:
             echo "ECR_REGISTRY=$account.dkr.ecr.$AWS_REGION.amazonaws.com"
             echo "KUBECONFIG=$RUNNER_TEMP/eks.kubeconfig"
             echo "EXPIRES_AT=$expires_at"
+            # Names this environment's backup folder (the plugin's serverName, R11).
+            echo "INCARNATION=inc-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           } >> "$GITHUB_ENV"
           echo "expires_at=$expires_at" >> "$GITHUB_OUTPUT"
       - name: terraform init
@@ -326,7 +328,7 @@ jobs:
           # The log stays on the runner: only the stage times leave it, as the summary and artifact.
           scripts/eks-deploy.sh --kubeconfig "$KUBECONFIG" --tag "$IMAGE_TAG" \
             --hostname "$TICKETSCOPE_HOSTNAME" --certificate-arn "$CERTIFICATE_ARN" \
-            --ecr-registry "$ECR_REGISTRY" 2>&1 | tee "$RUNNER_TEMP/deploy.log"
+            --ecr-registry "$ECR_REGISTRY" --incarnation "$INCARNATION" 2>&1 | tee "$RUNNER_TEMP/deploy.log"
       - name: Record the deploy stage times
         if: ${{ always() && !inputs.plan_only }}
         run: |
@@ -347,6 +349,9 @@ jobs:
           printf 'smoke\t%s\n' "$(($(date +%s) - t0))" >> "$STAGES"
           if ((rc == 0)); then date +%s > "$RUNNER_TEMP/clock-end"; fi
           exit "$rc"
+      - name: On-demand backup (story 5.6; after the clock has stopped, so R1 is unaffected)
+        if: ${{ !inputs.plan_only }}
+        run: scripts/eks-backup.sh --kubeconfig "$KUBECONFIG" --incarnation "$INCARNATION"
       - name: Job summary and stage-time artifact
         if: ${{ always() && !inputs.plan_only }}
         env:

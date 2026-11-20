@@ -18,6 +18,14 @@ output "external_dns_role_arn" {
   value = module.external_dns_irsa.arn
 }
 
+output "cnpg_backup_role_arn" {
+  value = module.cnpg_backup_irsa.arn
+}
+
+output "backup_bucket" {
+  value = local.backup_bucket
+}
+
 output "environment" {
   value = var.environment
 }

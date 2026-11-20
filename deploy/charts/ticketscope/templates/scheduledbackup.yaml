@@ -1,0 +1,21 @@
+{{- /*
+Scheduled backups through the Barman Cloud Plugin (AD-18, story 5.6). The on-demand Backup
+that proves the path is made by scripts/eks-backup.sh, not by the chart.
+*/ -}}
+{{- if and .Values.backup.enabled .Values.backup.scheduled.enabled }}
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: {{ include "ticketscope.dbCluster" . }}-scheduled
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ticketscope.labels" . | nindent 4 }}
+spec:
+  schedule: {{ .Values.backup.scheduled.schedule | quote }}
+  backupOwnerReference: self
+  method: plugin
+  cluster:
+    name: {{ include "ticketscope.dbCluster" . }}
+  pluginConfiguration:
+    name: barman-cloud.cloudnative-pg.io
+{{- end }}

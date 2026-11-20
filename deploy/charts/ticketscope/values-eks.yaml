@@ -12,6 +12,12 @@ database:
   storage:
     storageClass: gp3
 
-# Off until story 5.6 gives backups a bucket path and an IRSA role.
+# Backups use the Cluster's IRSA role, no keys (R6). scripts/eks-deploy.sh sets what carries an
+# account id or an incarnation: backup.destinationPath, backup.serverName and
+# database.serviceAccount.annotations (the role ARN).
 backup:
-  enabled: false
+  enabled: true
+  credentials:
+    inheritFromIAMRole: true
+  scheduled:
+    enabled: true

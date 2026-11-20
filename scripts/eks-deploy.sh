@@ -30,7 +30,8 @@ usage() {
   cat >&2 <<'EOF'
 usage: scripts/eks-deploy.sh --kubeconfig <file> --tag <image tag> --hostname <host>
                              --certificate-arn <arn> --ecr-registry <registry host>
-All five are required. Nothing is installed when one is missing.
+                             --incarnation <id>
+All six are required (the incarnation names this environment's backup folder). Nothing is installed when one is missing.
 EOF
   exit 2
 }
@@ -41,6 +42,7 @@ TAG=""
 HOSTNAME_VALUE=""
 CERTIFICATE_ARN=""
 ECR_REGISTRY=""
+INCARNATION=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --kubeconfig) need_value "$#"; KUBECONFIG_FILE="${2:-}"; shift 2 ;;
@@ -48,11 +50,14 @@ while [[ $# -gt 0 ]]; do
     --hostname) need_value "$#"; HOSTNAME_VALUE="${2:-}"; shift 2 ;;
     --certificate-arn) need_value "$#"; CERTIFICATE_ARN="${2:-}"; shift 2 ;;
     --ecr-registry) need_value "$#"; ECR_REGISTRY="${2:-}"; shift 2 ;;
+    --incarnation) need_value "$#"; INCARNATION="${2:-}"; shift 2 ;;
     -h | --help) usage ;;
     *) echo "eks-deploy: unknown argument $1" >&2; usage ;;
   esac
 done
-[[ -n "$KUBECONFIG_FILE" && -n "$TAG" && -n "$HOSTNAME_VALUE" && -n "$CERTIFICATE_ARN" && -n "$ECR_REGISTRY" ]] || usage
+[[ -n "$KUBECONFIG_FILE" && -n "$TAG" && -n "$HOSTNAME_VALUE" && -n "$CERTIFICATE_ARN" && -n "$ECR_REGISTRY" && -n "$INCARNATION" ]] || usage
+# The incarnation becomes the plugin's serverName, a folder name under backups/ (R11).
+[[ "$INCARNATION" =~ ^[a-z0-9][a-z0-9-]{0,62}$ ]] || { echo "eks-deploy: --incarnation must be lowercase letters, digits and dashes" >&2; usage; }
 [[ -f "$KUBECONFIG_FILE" ]] || { echo "eks-deploy: kubeconfig $KUBECONFIG_FILE not found" >&2; usage; }
 
 for tool in kubectl helm jq curl tar dig aws; do
@@ -79,6 +84,8 @@ CLUSTER_NAME="$(out cluster_name)"
 VPC_ID="$(out vpc_id)"
 LBC_ROLE_ARN="$(out lb_controller_role_arn)"
 DNS_ROLE_ARN="$(out external_dns_role_arn)"
+BACKUP_ROLE_ARN="$(out cnpg_backup_role_arn)"
+BACKUP_BUCKET="$(out backup_bucket)"
 
 START_EPOCH=$(date +%s)
 STAGE_EPOCH=$START_EPOCH
@@ -150,6 +157,9 @@ helm upgrade --install ticketscope "$CHARTS/ticketscope" \
   --set-string "image.app.tag=${TAG}" \
   --set-string "image.postgres.repository=${ECR_REGISTRY}/ticketscope-postgres" \
   --set-string "image.postgres.tag=${PG_TAG}" \
+  --set-string "backup.destinationPath=s3://${BACKUP_BUCKET}/backups/" \
+  --set-string "backup.serverName=${INCARNATION}" \
+  --set-string "database.serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn=${BACKUP_ROLE_ARN}" \
   --timeout 25m
 
 stage "api-mcp-ready"

@@ -11,6 +11,9 @@ at render time from the chart-generated Secret named by backup.credentials.copyF
 {{- if and (not $copy.secret) (not $b.credentials.inheritFromIAMRole) }}
 {{- fail "backup.credentials: set copyFrom.secret or inheritFromIAMRole" }}
 {{- end }}
+{{- if and $b.credentials.inheritFromIAMRole (not (index (.Values.database.serviceAccount.annotations | default dict) "eks.amazonaws.com/role-arn")) }}
+{{- fail "backup.credentials.inheritFromIAMRole needs database.serviceAccount.annotations to set eks.amazonaws.com/role-arn" }}
+{{- end }}
 {{- if $copy.secret }}
 {{- $source := lookup "v1" "Secret" $copy.namespace $copy.secret }}
 {{- if and $source $source.data }}

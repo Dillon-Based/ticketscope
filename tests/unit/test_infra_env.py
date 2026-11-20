@@ -105,7 +105,7 @@ def test_vpc_has_two_public_subnets_and_no_nat() -> None:
 def test_irsa_roles_use_the_prefix_the_deploy_role_manages() -> None:
     irsa = _code(_tf("irsa.tf"))
     names = re.findall(r'^\s*(?:name|policy_name)\s*=\s*"([^"]+)"', irsa, re.MULTILINE)
-    assert len(names) == 6
+    assert len(names) == 8
     assert all(n.startswith("ticketscope-env-") for n in names)
     assert "attach_load_balancer_controller_policy = true" in irsa
     assert "attach_external_dns_policy" in irsa
@@ -120,7 +120,14 @@ def test_irsa_roles_use_the_prefix_the_deploy_role_manages() -> None:
 
 def test_outputs_carry_what_the_deploy_script_reads() -> None:
     outputs = _tf("outputs.tf")
-    for name in ("cluster_name", "vpc_id", "lb_controller_role_arn", "external_dns_role_arn"):
+    for name in (
+        "cluster_name",
+        "vpc_id",
+        "lb_controller_role_arn",
+        "external_dns_role_arn",
+        "cnpg_backup_role_arn",
+        "backup_bucket",
+    ):
         assert f'output "{name}"' in outputs
     outputs_read = re.findall(r"^out (\w+)|\$\(out (\w+)\)", SCRIPT.read_text(encoding="utf-8"))
     assert outputs_read
@@ -176,6 +183,8 @@ def test_deploy_script_with_a_missing_kubeconfig_exits_non_zero() -> None:
         "arn",
         "--ecr-registry",
         "r",
+        "--incarnation",
+        "inc-1-1",
     )
     assert result.returncode != 0
     assert "not found" in result.stderr

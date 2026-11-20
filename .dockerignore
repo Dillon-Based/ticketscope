@@ -6,3 +6,4 @@
 !migrations/
 !eval/pairs/
 **/__pycache__
+!images/fetch_model.py

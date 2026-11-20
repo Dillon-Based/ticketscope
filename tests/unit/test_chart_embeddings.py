@@ -108,7 +108,7 @@ def test_the_dockerfile_and_values_name_the_same_model() -> None:
 def test_the_image_reads_hugging_face_only_in_a_build_stage_and_runs_offline() -> None:
     dockerfile = (REPO / "images" / "app.Dockerfile").read_text(encoding="utf-8")
     stages = dockerfile.split("\nFROM ")
-    download = [s for s in stages if "TextEmbedding(" in s]
+    download = [s for s in stages if "fetch_model.py" in s]
     assert len(download) == 1 and download[0].startswith("build AS model")
     runtime = stages[-1]
     assert "HF_HUB_OFFLINE=1" in runtime

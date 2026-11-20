@@ -24,9 +24,14 @@ RUN uv sync --frozen --no-dev --no-editable
 # equal the chart's embeddings.modelId (a unit test pins it).
 FROM build AS model
 ARG EMBEDDING_MODEL_ID=BAAI/bge-small-en-v1.5
+# The Hugging Face commit of Qdrant/bge-small-en-v1.5-onnx-Q (the export fastembed resolves)
+# and the SHA-256 of its model_optimized.onnx. The build fails unless the file matches.
+ARG EMBEDDING_MODEL_REVISION=aa8f8b060edb00e03bfdd08813a2949946c8ba55
+ARG EMBEDDING_MODEL_SHA256=51f1bd0addd6e859e42c2c8021a5e5461385bb676a649f4b269aa445449f2431
 ENV EMBEDDING_MODEL_ID=${EMBEDDING_MODEL_ID}
-RUN /app/.venv/bin/python -c "import os; from fastembed import TextEmbedding; \
-TextEmbedding(model_name=os.environ['EMBEDDING_MODEL_ID'], cache_dir='/models')" \
+COPY images/fetch_model.py /tmp/fetch_model.py
+RUN /app/.venv/bin/python /tmp/fetch_model.py "${EMBEDDING_MODEL_REVISION}" \
+      "${EMBEDDING_MODEL_SHA256}" /models --model-id "${EMBEDDING_MODEL_ID}" \
  && chmod -R a+rX /models
 
 FROM ${PYTHON_IMAGE}

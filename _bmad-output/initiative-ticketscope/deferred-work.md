@@ -110,3 +110,4 @@ carried_to: epic-eks-environment (5), where corpus reloads first run under live 
 - source_plan: `_bmad-output/initiative-ticketscope/tickets/epic-eks-environment/tickets/bug-teardown-leaves-the-hostnames-dns-records-behind-plan.md`
   summary: The deploy role's `route53:ChangeResourceRecordSetsNormalizedRecordNames` condition may not match the hostname as written, which would deny the record delete (unverified, medium if true).
   evidence: The template compares to the bare lowercase hostname; whether AWS normalises with or without the trailing dot is not tested. After the bootstrap re-apply, a live `env-down` that exits 3 with AccessDenied on `change-resource-record-sets` settles it; the fix is the other form of the name in the condition.
+  resolution: settled 2026-11-20 by a live `env-down` (run 44774843987): the delete succeeded with the bare lowercase hostname in the condition, so AWS normalises without the trailing dot; no change needed

@@ -3,7 +3,7 @@ title: "env-down ends red and leaves the hostname's A and AAAA records pointing 
 type: 'bugfix'
 ticket: '12'
 created: '2026-11-19'
-status: 'built'
+status: done
 baseline_revision: '08da3a4304f4a098a61bf3d277b43e653035a822'
 route: 'full'
 route_source: 'auto'
@@ -86,3 +86,9 @@ context:
 **Manual checks (after merge and a person's bootstrap re-apply; run `scripts/bootstrap-drift.sh` first):**
 - The agent dispatches `env-up` (4 h expiry) then `env-down` and reads the run with `scripts/run-summary.sh`: green, `dns-records` stage clean; read the zone under `ticketscope-readonly`: NS, SOA and the certificate CNAME only.
 - Dispatch `env-up` again: DNS stage passes with no hand step.
+
+Live record (2026-11-20, after PR #82):
+
+- Run 44647668634 (`env-down`, 2026-11-20) was denied on `ChangeResourceRecordSets` and exited 3. The live deploy role had no `DeleteHostnameAddressRecords` statement: the first "matches the template" drift result ran before the new template reached the checkout. After the bootstrap re-apply, `iam simulate-principal-policy` allowed the delete for the bare hostname and denied the trailing-dot form and any other name.
+- Run 44774843987 (`env-down`, no environment up) was green in 5 seconds: the A and AAAA records were deleted, the zone then held only NS, SOA and the certificate CNAME, and the leftover check was clean. Criterion 1 and 3 are met live, and the IAM condition key's trailing-dot question is settled (bare name).
+- Criterion 2 (the next `env-up` passes its DNS stage with no hand step) is observed on the next `env-up`, not run separately (user, 2026-11-20).

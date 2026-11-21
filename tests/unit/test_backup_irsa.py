@@ -92,7 +92,8 @@ def test_the_eks_values_hold_no_arn_bucket_or_incarnation() -> None:
 
 
 def test_the_backup_policy_reaches_only_the_backups_prefix() -> None:
-    assert 'namespace_service_accounts = ["ticketscope:ticketscope-db"]' in IRSA
+    accounts = '"ticketscope:ticketscope-db", "ticketscope:ticketscope-restore"'
+    assert f"namespace_service_accounts = [{accounts}]" in IRSA
     objects = re.search(r'sid\s*=\s*"BackupObjects".*?resources\s*=\s*\[(.*?)\]', IRSA, re.S)
     assert objects and objects.group(1).strip() == '"arn:aws:s3:::${local.backup_bucket}/backups/*"'
     assert 'values   = ["backups/*"]' in IRSA

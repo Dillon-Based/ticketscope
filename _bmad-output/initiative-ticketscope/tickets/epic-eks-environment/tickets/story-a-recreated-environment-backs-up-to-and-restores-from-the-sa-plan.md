@@ -75,6 +75,12 @@ context:
 
 ## Implementation Notes
 
+- Built by a subagent from this plan; the incarnation check sits in the `plan` job, not `env`, because `build` runs before `env` and the check must precede any build. The parent added the smoke change (a restored environment has no load Job, so the smoke reads the database count) and, after the first live run, printed the corpus facts to the run log, since a step summary cannot be read through the API.
+- Live drill, 2026-11-23 (record: `docs/drills/recreate-drill.md`): env-up 45260100245, env-down with `backup_first` 45266017998, env-up with `restore_from` 45268386170, env-down 45272176321. The second environment's `corpus_meta` (including `loaded_at`), issue count, digest, hostname and certificate fingerprint equal the first's; it archived under `backups/inc-45268386170-1/` with no "Expected empty archive"; the first folder's 29 objects were identical by key, size and ETag before and after.
+- Not run: the control recreate without the `serverName` change (a third environment; November's hour budget). Whether plugin issue 767 reproduces on current versions stays unknown.
+- Found, deferred: the leftover check cannot confirm deleted subnets, so both `env-down` runs ended red after a complete destroy (deferred-work.md).
+- The ScheduledBackup (03:00 UTC) did not fire in either window; the deferred item from story 5.6 stays open.
+
 ## Plan Change Log
 
 ## Review Triage Log

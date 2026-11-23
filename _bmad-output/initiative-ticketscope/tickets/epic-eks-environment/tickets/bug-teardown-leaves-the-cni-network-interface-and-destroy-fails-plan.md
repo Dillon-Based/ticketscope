@@ -3,7 +3,7 @@ title: "env-down fails at terraform destroy because a VPC CNI network interface 
 type: 'bugfix'
 ticket: '14'
 created: '2026-11-20'
-status: 'built'
+status: done
 baseline_revision: 'f0f247a981ca86bc2d43de908d2d2da5e73cb14d'
 route: 'full'
 route_source: 'auto'
@@ -69,6 +69,13 @@ context:
 - Given `scripts/check.sh`, then it passes. Live (AC 1): after a bootstrap re-apply, a dispatched `env-up`/`env-down` ends green with no ENI left; not run here.
 
 ## Implementation Notes
+
+Live record (accepted done by the user, 2026-11-23, with the gap below carried in `deferred-work.md`):
+
+- `env-down` run 44817016258 (2026-11-20) ran the sweep before the bootstrap re-apply: every delete was refused (`UnauthorizedOperation`, no statement), the interfaces went with the nodes, and the destroy and the leftover check were still green.
+- After the re-apply, `scripts/bootstrap-drift.sh` reports a match and the live role carries `DeleteVpcCniNetworkInterfaces`. `iam simulate-custom-policy` on that statement allows `ec2:DeleteNetworkInterface` for `aws:ResourceTag/eks:eni:owner=amazon-vpc-cni` and denies another value or no tag (AC 3).
+- `env-up` run 45219791550 then `env-down` run 45227025415 (2026-11-23, `main` at e0d1278): green; `terraform-destroy` 637 s; leftover check clean; no CNI-tagged interface listed afterwards (AC 1). CloudTrail shows the role's three deletes all hit interfaces that were already going: two `InvalidNetworkInterfaceID.NotFound` (the node's CNI deleted them in the same second) and one `UnauthorizedOperation` on a node's primary interface (made by `RunInstances`, tagged later by the CNI) while EC2 removed it with its instance, most likely after its tags were gone. The script logs each and leaves it to the wait or the destroy, as designed.
+- Not seen: the leak of run 44619309245 has not recurred, so no live delete has succeeded yet.
 
 ## Plan Change Log
 

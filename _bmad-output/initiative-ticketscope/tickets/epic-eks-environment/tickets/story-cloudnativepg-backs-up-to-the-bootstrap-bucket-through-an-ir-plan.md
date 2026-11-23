@@ -3,7 +3,7 @@ title: 'CloudNativePG backs up to the bootstrap bucket through an IRSA role'
 type: 'feature'
 ticket: '6'
 created: '2026-11-20'
-status: 'built'
+status: done
 baseline_revision: '11aa8426e55c582bce6430a0ea6349931c7552ee'
 route: 'full'
 route_source: 'auto'
@@ -92,6 +92,8 @@ context:
   - Not yet seen: the ScheduledBackup has not fired (its `0 0 3 * * *` schedule is never reached in a short-lived environment). Its render is tested; a fire is observed in a longer window.
   - The ObjectStore status update logged "object has been modified" once (a harmless conflict; the plugin skips and carries on).
   - The IAM-policy denied-actions summary and the deploy role needed no change: no `iam` denial occurred on the new role or policy.
+- Live result, `env-up` run 45219791550 from `main` at e0d1278, incarnation `inc-45219791550-1` (2026-11-23), with no hand step: the policy now carries `BackupBucketReachable` from `infra/env/irsa.tf`. The on-demand Backup `ticketscope-db-ondemand-inc-45219791550-1` is `completed` inside the step's timeout. Read under `ticketscope-readonly`, the bucket holds `backups/inc-45219791550-1/base/20261123T170656/{backup.info,data.tar}` (186 MB) and the WAL archive (26 objects in all). The same window's restore drill (story 5.7) read the base backup and WALs back through the role, so `GetObject` and the listings are now live-proven for a restore.
+- Accepted as done (user, 2026-11-23, live window moved up from December): the ScheduledBackup fire and the retention delete (`DeleteObject` on prune) are still unobserved. Both are carried in `deferred-work.md`.
 
 ## Plan Change Log
 

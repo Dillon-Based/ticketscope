@@ -3,7 +3,7 @@ title: 'A backup is restored into a new cluster and the drill is recorded'
 type: 'feature'
 ticket: '7'
 created: '2026-11-20'
-status: 'built'
+status: done
 baseline_revision: '84ac56a3cc4cd87a7cfcfb5ddfbf69f80da6013b'
 route: 'full'
 route_source: 'auto'
@@ -77,6 +77,8 @@ context:
 - `docs/drills/restore-drill.md` is a committed skeleton ("not yet run"); the grep test covers every file in `docs/drills/`. The live run replaces it with the rendered record.
 - Unknown, settled by the live run: whether the plugin reconciles an ObjectStore Role for a recovery Cluster that only names the plugin under `externalClusters` (0.16.0 binds its Role to the Cluster's account name). If the recovery job is Forbidden on the ObjectStore, the fix is a Role and RoleBinding for `ticketscope-restore`, recorded here.
 - Not exercised yet: the live restore, the real `expected-issues` fetch from GitHub, and (per 5.6's decision) the retention delete. The restore exercises `GetObject` and `ListBucket` for real.
+- Live run, 2026-11-23, on `env-up` run 45219791550 (`main` at e0d1278), person-run with the admin kubeconfig: `restore drill: OK`. Stages: backup 13 s, restore 75 s, compare 3 s. Source and restored Cluster match on `corpus_meta` (snapshot `2026.11.1`), the issue count (32153, equal to the pinned Release's `Issues:` count fetched live from GitHub) and the ordered digest of issue numbers. The rendered, masked record replaces the skeleton in `docs/drills/restore-drill.md`; `test_restore_drill.py` passes on it.
+- Settled: the plugin reconciled access for the recovery Cluster with no extra Role or RoleBinding (no Forbidden on the ObjectStore), and the `ticketscope-restore` trust entry let it assume the backup role. The recovery Cluster was deleted on exit.
 
 ## Plan Change Log
 

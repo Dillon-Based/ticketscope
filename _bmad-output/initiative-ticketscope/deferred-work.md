@@ -118,3 +118,11 @@ carried_to: epic-eks-environment (5), where corpus reloads first run under live 
 - source_plan: `_bmad-output/initiative-ticketscope/tickets/epic-eks-environment/tickets/story-cloudnativepg-backs-up-to-the-bootstrap-bucket-through-an-ir-plan.md`
   summary: Barman Cloud Plugin issue 892: with `inheritFromIAMRole` on, the plugin's Role can read every Secret in the namespace.
   evidence: Accepted for the single-purpose `ticketscope` namespace (story 5.6, epic Notes); the live run records the Secret names and the plugin Role's rules. Not fixed here.
+
+- source_plan: `_bmad-output/initiative-ticketscope/tickets/epic-eks-environment/tickets/story-cloudnativepg-backs-up-to-the-bootstrap-bucket-through-an-ir-plan.md`
+  summary: The ScheduledBackup (`0 0 3 * * *`) has never fired on EKS, and no retention prune has run, so `DeleteObject` on `backups/*` is granted but unexercised.
+  evidence: Every environment so far lived under 4 hours and none spanned 03:00 UTC; the render is unit-tested and the on-demand Backup and the restore drill (run 45219791550, 2026-11-23) are live-proven. Story 5.9's longer recreate window, or an `env-up` dispatched before 03:00 UTC, shows the fire; a prune past the retention window shows the delete, or the action is dropped from the policy.
+
+- source_plan: `_bmad-output/initiative-ticketscope/tickets/epic-eks-environment/tickets/bug-teardown-leaves-the-cni-network-interface-and-destroy-fails-plan.md`
+  summary: No live `env-down` has yet deleted a leaked CNI interface through the deploy role; the one live denial was on a node's primary interface mid-deletion, read as a race but not decoded.
+  evidence: Runs 45219791550/45227025415 (2026-11-23): the leak of run 44619309245 did not recur and the role's three deletes hit interfaces that were already going (two NotFound, one UnauthorizedOperation). The statement simulates as allowed for the CNI tag. The read-only role lacks `sts:DecodeAuthorizationMessage`, so the denial was not decoded; a person can decode it from that run's log. A recurrence shows in the teardown log as `could not remove` followed by a failed destroy.

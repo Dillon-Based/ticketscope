@@ -3,7 +3,7 @@ title: 'The embedding model is pinned and its vectors are checked against refere
 type: 'feature'
 ticket: '13'
 created: '2026-11-19'
-status: 'built'
+status: done
 baseline_revision: '92ccda2be9a048b25118223bb6c60d8f8ddfd33f'
 route: 'full'
 route_source: 'auto'

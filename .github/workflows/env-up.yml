@@ -4,7 +4,10 @@
 # is stored in the repo, and the only AWS-related value is the role ARN (vars.AWS_ROLE_ARN on
 # the `eks` environment, an identifier and not a credential).
 #
-#   plan    validates the inputs before any AWS call, and checks ECR for the SHA's two images.
+#   plan    validates the inputs before any AWS call, checks the backup folders (an incarnation
+#           whose folder already exists, or a restore_from with no base backup, is refused:
+#           scripts/incarnation_check.py), and checks ECR for the SHA's two images. All of it
+#           runs before any image build and before terraform apply.
 #   build   (skipped when both images exist) one native runner per architecture, pushed by digest.
 #   images  (skipped with build) joins the two digests into one multi-arch tag per image.
 #           With plan_only, only `terraform plan` runs: no build, no apply, nothing billed.
@@ -40,6 +43,14 @@ on:
         description: >-
           Minutes until the environment's expiry tag (5 to 240); overrides expiry_hours when set.
           A short expiry lets the scheduled env-down sweep be watched.
+        required: false
+        default: ""
+        type: string
+      restore_from:
+        description: >-
+          The previous incarnation (inc-<run id>-<attempt>) whose backup folder this environment
+          recovers from instead of loading the corpus (R11). Empty starts fresh. The plan job
+          refuses a folder with no base backup before anything is built or applied.
         required: false
         default: ""
         type: string
@@ -82,7 +93,12 @@ jobs:
           INPUT_SHA: ${{ inputs.sha }}
           INPUT_HOURS: ${{ inputs.expiry_hours }}
           INPUT_MINUTES: ${{ inputs.expiry_minutes }}
+          INPUT_RESTORE_FROM: ${{ inputs.restore_from }}
         run: |
+          if [[ -n "$INPUT_RESTORE_FROM" && ! "$INPUT_RESTORE_FROM" =~ ^[a-z0-9][a-z0-9-]{0,62}$ ]]; then
+            echo "::error::input restore_from must be empty or lowercase letters, numbers and dashes (at most 63)"
+            exit 1
+          fi
           if [[ ! "$INPUT_SHA" =~ ^[0-9a-f]{40}$ ]]; then
             echo "::error::input sha must be 40 lowercase hex characters"
             exit 1
@@ -100,6 +116,30 @@ jobs:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
           mask-aws-account-id: true
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.sha }}
+      - name: Check the incarnation against the backup bucket (before any build or apply)
+        env:
+          RESTORE_FROM: ${{ inputs.restore_from }}
+        run: |
+          # The folder names under backups/ and, for a restore, the source's base backups. A
+          # listing that fails stops the job here; it never reads as an empty bucket.
+          account="$(aws sts get-caller-identity --query Account --output text)"
+          echo "::add-mask::$account"
+          bucket="ticketscope-$account"
+          incarnation="inc-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          list() {
+            aws s3api list-objects-v2 --bucket "$bucket" --prefix "$1" --delimiter / \
+              --query '{CommonPrefixes: CommonPrefixes}' --output json > "$2"
+          }
+          list backups/ "$RUNNER_TEMP/prefixes.json"
+          args=(--incarnation "$incarnation" --listing "$RUNNER_TEMP/prefixes.json")
+          if [[ -n "$RESTORE_FROM" ]]; then
+            list "backups/$RESTORE_FROM/base/" "$RUNNER_TEMP/base.json"
+            args+=(--restore-from "$RESTORE_FROM" --base-listing "$RUNNER_TEMP/base.json")
+          fi
+          python3 scripts/incarnation_check.py "${args[@]}" | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Are both images already in ECR for this SHA
         id: present
         env:
@@ -323,12 +363,16 @@ jobs:
         if: ${{ !inputs.plan_only }}
         env:
           IMAGE_TAG: ${{ inputs.sha }}
+          RESTORE_FROM: ${{ inputs.restore_from }}
         run: |
           set -o pipefail
+          restore=()
+          if [[ -n "$RESTORE_FROM" ]]; then restore=(--restore-from "$RESTORE_FROM"); fi
           # The log stays on the runner: only the stage times leave it, as the summary and artifact.
           scripts/eks-deploy.sh --kubeconfig "$KUBECONFIG" --tag "$IMAGE_TAG" \
             --hostname "$TICKETSCOPE_HOSTNAME" --certificate-arn "$CERTIFICATE_ARN" \
-            --ecr-registry "$ECR_REGISTRY" --incarnation "$INCARNATION" 2>&1 | tee "$RUNNER_TEMP/deploy.log"
+            --ecr-registry "$ECR_REGISTRY" --incarnation "$INCARNATION" \
+            "${restore[@]}" 2>&1 | tee "$RUNNER_TEMP/deploy.log"
       - name: Record the deploy stage times
         if: ${{ always() && !inputs.plan_only }}
         run: |
@@ -341,6 +385,8 @@ jobs:
         if: ${{ !inputs.plan_only }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          # A recreate renders no load Job; the smoke reads the issue count from the database.
+          TICKETSCOPE_RESTORED_FROM: ${{ inputs.restore_from }}
         run: |
           export TICKETSCOPE_PUBLIC_URL="https://$TICKETSCOPE_HOSTNAME"
           t0=$(date +%s)
@@ -352,6 +398,28 @@ jobs:
       - name: On-demand backup (story 5.6; after the clock has stopped, so R1 is unaffected)
         if: ${{ !inputs.plan_only }}
         run: scripts/eks-backup.sh --kubeconfig "$KUBECONFIG" --incarnation "$INCARNATION"
+      - name: Corpus facts for the job summary (story 5.9; after the clock has stopped)
+        # After the backup, so a failure in this report never skips the backup a later restore needs.
+        if: ${{ !inputs.plan_only }}
+        env:
+          RESTORE_FROM: ${{ inputs.restore_from }}
+        run: |
+          # What the recreate drill compares (scripts/recreate_drill.py): corpus_meta, the issue
+          # count and the digest, plus the hostname and certificate the public hostname serves,
+          # all in the one JSON block so `compare` sees both keys.
+          facts="$(scripts/eks-corpus-facts.sh --kubeconfig "$KUBECONFIG")"
+          certificate="$(openssl s_client -connect "$TICKETSCOPE_HOSTNAME:443" -servername "$TICKETSCOPE_HOSTNAME" </dev/null 2>/dev/null |
+            openssl x509 -noout -fingerprint -sha256 | cut -d= -f2 || true)"
+          {
+            echo "## corpus facts"
+            echo
+            echo "Incarnation: $INCARNATION. Restored from: ${RESTORE_FROM:-nothing (fresh load)}."
+            echo
+            echo '```json'
+            jq -S --arg hostname "$TICKETSCOPE_HOSTNAME" --arg certificate "${certificate:-unavailable}" \
+              '. + {hostname: $hostname, certificate: $certificate}' <<<"$facts"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
       - name: Job summary and stage-time artifact
         if: ${{ always() && !inputs.plan_only }}
         env:

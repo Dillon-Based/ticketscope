@@ -55,6 +55,7 @@ run scripts/tf-plan-check.sh
 run actionlint -ignore 'SC2016:info'
 run shellcheck scripts/eks-deploy.sh
 run shellcheck scripts/eks-backup.sh
+run shellcheck scripts/eks-corpus-facts.sh
 run shellcheck scripts/restore-drill.sh
 run shellcheck scripts/denied-actions.sh
 run shellcheck scripts/eks-teardown.sh

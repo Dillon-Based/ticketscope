@@ -5,6 +5,7 @@ import json
 import re
 import subprocess
 import tomllib
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -58,7 +59,7 @@ def test_no_aws_credential_is_stored_and_every_aws_job_assumes_the_role_through_
 def test_it_is_dispatch_only_and_takes_a_sha_and_expiry_hours_defaulting_to_four() -> None:
     assert set(TRIGGERS) == {"workflow_dispatch"}
     inputs = TRIGGERS["workflow_dispatch"]["inputs"]
-    assert set(inputs) == {"sha", "expiry_hours", "expiry_minutes", "plan_only"}
+    assert set(inputs) == {"sha", "expiry_hours", "expiry_minutes", "plan_only", "restore_from"}
     assert inputs["sha"]["required"] is True
     assert inputs["expiry_hours"]["default"] == "4"
     minutes = inputs["expiry_minutes"]
@@ -322,3 +323,110 @@ def test_the_expire_job_waits_for_the_expiry_then_dispatches_env_down_only_if_ex
     assert "--ref main" in dispatch["run"] and "-f only_if_expired=true" in dispatch["run"]
     for step in expire["steps"]:
         assert "${{" not in step["run"]
+
+
+# --- story 5.9: restore_from, the incarnation check, the corpus facts -------------------------
+
+
+@pytest.mark.criterion("ticketscope--e5-s9--AC-1")
+def test_restore_from_is_an_optional_string_validated_before_any_aws_call() -> None:
+    inputs = TRIGGERS["workflow_dispatch"]["inputs"]
+    restore = inputs["restore_from"]
+    assert restore["type"] == "string" and restore["required"] is False and restore["default"] == ""
+    validate = _step("plan", "Validate the inputs")
+    assert validate["env"]["INPUT_RESTORE_FROM"] == "${{ inputs.restore_from }}"
+    assert "^[a-z0-9][a-z0-9-]{0,62}$" in validate["run"]
+    assert "input restore_from" in validate["run"] and "${{" not in validate["run"]
+
+
+@pytest.mark.criterion("ticketscope--e5-s9--AC-1")
+def test_the_incarnation_check_runs_before_any_build_and_before_terraform_apply() -> None:
+    # In `plan`, which `build`, `images` and `env` all need: so before any image build and apply.
+    for name in ("build", "images", "env"):
+        assert "plan" in JOBS[name]["needs"]
+    steps = _steps("plan")
+    check = _index("plan", "Check the incarnation")
+    assert _index("plan", "Validate the inputs") < check < _index("plan", "Are both images")
+    run = steps[check]["run"]
+    assert "scripts/incarnation_check.py" in run and "${{" not in run
+    assert steps[check]["env"] == {"RESTORE_FROM": "${{ inputs.restore_from }}"}
+    # The listings are written to files, so a failing `aws` stops the step (never read as empty).
+    assert "list-objects-v2" in run and "--prefix" in run and "--delimiter /" in run
+    assert '> "$2"' in run and "backups/$RESTORE_FROM/base/" in run
+    assert "--base-listing" in run and "--restore-from" in run
+    # The same name the env job gives the environment.
+    assert 'incarnation="inc-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"' in run
+    facts = str(_step("env", "bootstrap facts")["run"])
+    assert "INCARNATION=inc-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" in facts
+    checkout = steps[check - 1]
+    assert checkout["uses"].startswith("actions/checkout@")
+    assert checkout["with"]["ref"] == "${{ inputs.sha }}"
+
+
+@pytest.mark.criterion("ticketscope--e5-s9--AC-2")
+def test_the_deploy_passes_restore_from_only_when_set_and_through_env() -> None:
+    step = _step("env", "Deploy the releases")
+    assert step["env"]["RESTORE_FROM"] == "${{ inputs.restore_from }}"
+    run = step["run"]
+    assert '--restore-from "$RESTORE_FROM"' in run and '[[ -n "$RESTORE_FROM" ]]' in run
+    assert "${{" not in run
+
+
+@pytest.mark.criterion("ticketscope--e5-s9--AC-2")
+def test_the_corpus_facts_reach_the_summary_after_the_smoke_without_touching_the_clock() -> None:
+    smoke = _index("env", "Smoke check")
+    facts = _index("env", "Corpus facts")
+    assert smoke < facts < _index("env", "Job summary")
+    step = _steps("env")[facts]
+    assert "scripts/eks-corpus-facts.sh" in step["run"] and "GITHUB_STEP_SUMMARY" in step["run"]
+    assert "clock-" not in step["run"] and "STAGES" not in step["run"]
+    assert step["if"] == "${{ !inputs.plan_only }}"
+    assert "${{" not in step["run"]
+    assert "clock-end" in _steps("env")[smoke]["run"]
+
+
+def test_no_archive_check_skip_anywhere() -> None:
+    assert "skipEmptyWalArchiveCheck" not in TEXT
+
+
+def test_the_new_scripts_pass_a_syntax_check_and_are_in_ci() -> None:
+    for script in ("eks-corpus-facts.sh", "eks-deploy.sh"):
+        result = subprocess.run(
+            ["bash", "-n", str(REPO / "scripts" / script)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert result.returncode == 0, result.stderr
+    assert "shellcheck scripts/eks-corpus-facts.sh" in CI
+
+
+def test_the_deploy_script_refuses_a_bad_or_equal_restore_from(tmp_path: Path) -> None:
+    kubeconfig = tmp_path / "kubeconfig"
+    kubeconfig.write_text("", encoding="utf-8")
+    base = [
+        str(REPO / "scripts" / "eks-deploy.sh"),
+        *["--kubeconfig", str(kubeconfig), "--tag", "t", "--hostname", "h"],
+        *["--certificate-arn", "a", "--ecr-registry", "r", "--incarnation", "inc-2-1"],
+    ]
+    for bad in ("Inc-1", "inc_1", "inc-2-1", "-x"):
+        result = subprocess.run(
+            [*base, "--restore-from", bad], capture_output=True, text=True, check=False
+        )
+        assert result.returncode == 2 and "--restore-from" in result.stderr, bad
+
+
+def test_the_smoke_reads_the_count_from_the_database_when_the_environment_is_restored() -> None:
+    # A restore renders no load Job, so the load-report line the smoke reads does not exist.
+    smoke = _step("env", "Smoke check")
+    assert smoke["env"]["TICKETSCOPE_RESTORED_FROM"] == "${{ inputs.restore_from }}"
+    source = (REPO / "tests" / "eks" / "test_public_smoke.py").read_text(encoding="utf-8")
+    assert "TICKETSCOPE_RESTORED_FROM" in source and "eks-corpus-facts.sh" in source
+
+
+def test_the_corpus_facts_follow_the_backup_and_carry_the_hostname_and_certificate() -> None:
+    # A failing report must never skip the backup a restore needs, and `compare` needs both
+    # keys in the one JSON block to check R2.
+    assert _index("env", "On-demand backup") < _index("env", "Corpus facts")
+    run = _step("env", "Corpus facts")["run"]
+    assert "hostname: $hostname, certificate: $certificate" in run

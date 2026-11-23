@@ -13,7 +13,8 @@
 #             dispatch from an old env-up run never destroys a newer environment), an expired one
 #             is torn down, and no environment at all means the leftover check runs on its own (a
 #             tagged leftover with no environment fails the run).
-#   teardown  scripts/eks-teardown.sh (AD-24 order, then deletes the hostname's A and AAAA records), then
+#   teardown  with backup_first, one last on-demand backup (scripts/eks-backup.sh, suffix pre-down)
+#             before anything is removed; then scripts/eks-teardown.sh (AD-24 order, then deletes the hostname's A and AAAA records), then
 #             scripts/leftover-check.sh, then the stage times in the job summary.
 #
 # Only the `env` stack is destroyed: nothing here reads or names a bootstrap resource. A stuck
@@ -30,6 +31,14 @@ on:
         description: >-
           Tear down only when the environment's expires_at has passed, like the schedule
           (env-up's expire job sets this). Leave false to tear down now.
+        required: false
+        default: false
+        type: boolean
+      backup_first:
+        description: >-
+          Take one last on-demand backup of the database before tearing down, so a later env-up
+          can recover from it with restore_from (R11). A failed backup fails the job before the
+          teardown, and the environment stays up. Ignored when no cluster exists.
         required: false
         default: false
         type: boolean
@@ -179,6 +188,30 @@ jobs:
       - name: Write the kubeconfig
         if: steps.cluster.outputs.present == 'true'
         run: aws eks update-kubeconfig --name "$CLUSTER_NAME" --kubeconfig "$KUBECONFIG"
+      - name: Last backup before teardown (backup_first)
+        if: ${{ inputs.backup_first }}
+        env:
+          CLUSTER_PRESENT: ${{ steps.cluster.outputs.present }}
+        run: |
+          if [[ "$CLUSTER_PRESENT" != "true" ]]; then
+            echo "backup_first: no cluster exists, so no backup was taken." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          # The Cluster's own serverName names the folder the backup lands in (backups/<serverName>/).
+          server="$(kubectl -n ticketscope get cluster.postgresql.cnpg.io ticketscope-db \
+            -o 'jsonpath={.spec.plugins[0].parameters.serverName}' --ignore-not-found 2>/dev/null || true)"
+          if [[ -z "$server" ]] && ! kubectl -n ticketscope get cluster.postgresql.cnpg.io ticketscope-db >/dev/null 2>&1; then
+            # A half-built environment (the chart never installed) has nothing to back up; the
+            # teardown must still run or the environment stays up and bills.
+            echo "backup_first: no database Cluster exists, so no backup was taken." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if [[ ! "$server" =~ ^[a-z0-9][a-z0-9-]{0,62}$ ]]; then
+            echo "::error::the Cluster has no usable plugin serverName; nothing was backed up or torn down"
+            exit 1
+          fi
+          scripts/eks-backup.sh --kubeconfig "$KUBECONFIG" --incarnation "$server" --name-suffix pre-down
+          echo "backup_first: backed up to backups/$server/ before the teardown. Restore with env-up restore_from=$server." >> "$GITHUB_STEP_SUMMARY"
       - name: Tear down in AD-24 order (scripts/eks-teardown.sh)
         id: teardown
         env:

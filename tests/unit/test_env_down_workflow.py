@@ -44,7 +44,7 @@ def test_it_shares_env_ups_concurrency_group_without_cancelling() -> None:
 
 def test_a_dispatch_can_ask_to_tear_down_only_an_expired_environment() -> None:
     inputs = TRIGGERS["workflow_dispatch"]["inputs"]
-    assert set(inputs) == {"only_if_expired"}
+    assert set(inputs) == {"only_if_expired", "backup_first"}
     only = inputs["only_if_expired"]
     assert only["type"] == "boolean" and only["default"] is False and only["required"] is False
     decide = _step("find", "Decide")
@@ -236,3 +236,44 @@ def test_an_expire_dispatch_with_no_environment_runs_only_the_leftover_check(
     decided = _decide(tmp_path, "workflow_dispatch", "true", json.dumps({"Vpcs": []}))
     assert decided["teardown"] == "teardown=false"
     assert "nothing tagged is left" in decided["summary"]
+
+
+# --- story 5.9: backup_first --------------------------------------------------------------
+
+
+def test_backup_first_is_a_boolean_off_by_default() -> None:
+    first = TRIGGERS["workflow_dispatch"]["inputs"]["backup_first"]
+    assert first["type"] == "boolean" and first["default"] is False and first["required"] is False
+
+
+def test_the_last_backup_runs_after_the_kubeconfig_and_before_anything_is_torn_down() -> None:
+    names = [str(s.get("name", s.get("uses", ""))) for s in JOBS["teardown"]["steps"]]
+    order = [
+        next(i for i, n in enumerate(names) if fragment in n)
+        for fragment in ("Write the kubeconfig", "Last backup", "Tear down in AD-24 order")
+    ]
+    assert order == sorted(order) and len(set(order)) == 3
+    step = _step("teardown", "Last backup")
+    assert step["if"] == "${{ inputs.backup_first }}"
+    run = step["run"]
+    assert "scripts/eks-backup.sh" in run and "--name-suffix pre-down" in run
+    assert "${{" not in run
+    # Cluster absent: nothing to back up, said in the summary.
+    assert step["env"]["CLUSTER_PRESENT"] == "${{ steps.cluster.outputs.present }}"
+    assert 'CLUSTER_PRESENT" != "true"' in run
+    # The folder is the Cluster's own serverName, checked against the incarnation pattern, and
+    # a failed backup (bash -eo pipefail) stops the job before the teardown step.
+    assert "plugins[0].parameters.serverName" in run and "^[a-z0-9][a-z0-9-]{0,62}$" in run
+    backup_line = next(line for line in run.splitlines() if "scripts/eks-backup.sh" in line)
+    assert "|| true" not in backup_line
+    # A half-built environment has no Cluster resource: nothing to back up, and the teardown
+    # still runs (the lookup is tolerant; a Cluster with an unusable serverName still fails).
+    assert "--ignore-not-found" in run and "no database Cluster exists" in run
+    assert not _step("teardown", "Tear down").get("continue-on-error")
+    assert not step.get("continue-on-error")
+
+
+def test_the_schedule_and_the_sweep_never_take_the_last_backup() -> None:
+    # `inputs.backup_first` is empty on a schedule and false by default: the step is skipped, and
+    # the sweep decision does not read it.
+    assert "backup_first" not in str(_step("find", "Decide"))

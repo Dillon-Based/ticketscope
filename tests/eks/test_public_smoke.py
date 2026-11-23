@@ -7,6 +7,7 @@ and, for the issue count, `kubectl` on a kubeconfig that reads the `ticketscope`
 """
 
 import asyncio
+import json
 import os
 import re
 import subprocess
@@ -65,8 +66,24 @@ def test_mcp_lists_the_tool_and_answers_a_search_over_https() -> None:
     assert isinstance(results, list) and results, "the MCP search returned no results"
 
 
+def _restored_count() -> int:
+    """The issue count in the database, for an environment that recovered from a backup.
+
+    A restore renders no load Job (R11), so there is no `load report:` line to read.
+    """
+    facts = subprocess.run(
+        ["scripts/eks-corpus-facts.sh", "--kubeconfig", os.environ["KUBECONFIG"]],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    return int(json.loads(facts)["issues"])
+
+
 def _load_report_count() -> int:
     """`issues=N` from the load Job's `load report:` line, read through the kubeconfig."""
+    if os.environ.get("TICKETSCOPE_RESTORED_FROM"):
+        return _restored_count()
     pods = subprocess.run(
         [
             "kubectl",

@@ -18,6 +18,19 @@ with `env-up`'s `env` job, so a destroy and an apply never overlap; a second run
 - `env-up` stamps the tag: `expiry_hours` (1 to 5, default 4) or `expiry_minutes` (5 to 240,
   overrides hours). The agent dispatches only environments expiring within 4 hours, one at a time.
 
+## Last backup: `backup_first` (story 5.9)
+
+A dispatch with `backup_first=true` takes one more on-demand backup (`scripts/eks-backup.sh`, name
+suffix `pre-down`) after the kubeconfig is written and before anything is removed, so a later
+`env-up` can recover from this incarnation with `restore_from`. The folder is the Cluster's own
+`serverName`; the job summary names it. A failed backup fails the job before the teardown, and the
+environment stays up until its expiry. With no cluster the summary says no backup was taken. The
+schedule and the expiry sweep never set it.
+
+```sh
+gh workflow run env-down.yml --ref "$BRANCH" -f backup_first=true
+```
+
 ## Expiry: the expire job, with the schedule as a backstop
 
 The schedule cannot be the guarantee. In the story 5.4 live runs GitHub created runs for about 2

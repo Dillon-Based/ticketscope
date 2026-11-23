@@ -37,6 +37,7 @@ spec:
             {{- include "ticketscope.otlpEnv" . | nindent 12 }}
           resources:
             {{- toYaml .Values.jobs.resources | nindent 12 }}
+{{- if not .Values.backup.restoreFrom }}
 ---
 apiVersion: batch/v1
 kind: Job
@@ -106,6 +107,7 @@ spec:
       volumes:
         - name: snapshots
           emptyDir: {}
+{{- end }}
 {{- if .Values.eval.enabled }}
 ---
 apiVersion: batch/v1

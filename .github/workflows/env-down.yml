@@ -210,6 +210,13 @@ jobs:
             echo "::error::the Cluster has no usable plugin serverName; nothing was backed up or torn down"
             exit 1
           fi
+          # The environment's corpus facts, in the log before anything is removed (the drill compares
+          # them with the next incarnation's; a step summary cannot be read back through the API).
+          certificate="$(openssl s_client -connect "$TICKETSCOPE_HOSTNAME:443" -servername "$TICKETSCOPE_HOSTNAME" </dev/null 2>/dev/null |
+            openssl x509 -noout -fingerprint -sha256 | cut -d= -f2 || true)"
+          scripts/eks-corpus-facts.sh --kubeconfig "$KUBECONFIG" |
+            jq -cS --arg hostname "$TICKETSCOPE_HOSTNAME" --arg certificate "${certificate:-unavailable}" --arg incarnation "$server" \
+              '. + {hostname: $hostname, certificate: $certificate, incarnation: $incarnation}' | sed 's/^/corpus-facts: /'
           scripts/eks-backup.sh --kubeconfig "$KUBECONFIG" --incarnation "$server" --name-suffix pre-down
           echo "backup_first: backed up to backups/$server/ before the teardown. Restore with env-up restore_from=$server." >> "$GITHUB_STEP_SUMMARY"
       - name: Tear down in AD-24 order (scripts/eks-teardown.sh)

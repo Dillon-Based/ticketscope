@@ -420,6 +420,10 @@ jobs:
               '. + {hostname: $hostname, certificate: $certificate}' <<<"$facts"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+          # The same facts in the log: a step summary cannot be read back through the API, and the
+          # drill's record (scripts/recreate_drill.py) is built from them. Nothing here is secret.
+          jq -cS --arg hostname "$TICKETSCOPE_HOSTNAME" --arg certificate "${certificate:-unavailable}" \
+            '. + {hostname: $hostname, certificate: $certificate}' <<<"$facts" | sed 's/^/corpus-facts: /'
       - name: Job summary and stage-time artifact
         if: ${{ always() && !inputs.plan_only }}
         env:

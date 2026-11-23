@@ -70,7 +70,7 @@ stage() {
   if [[ -n "$CURRENT" ]]; then echo "stage: $CURRENT"; fi
 }
 
-# shellcheck disable=SC2329  # called by the EXIT trap
+# shellcheck disable=SC2317,SC2329  # called by the EXIT trap (SC2317 on shellcheck < 0.11)
 cleanup() {
   echo "cleanup: deleting the recovery Cluster $RESTORE"
   kubectl -n "$NS" delete cluster.postgresql.cnpg.io "$RESTORE" --ignore-not-found --wait=false || true

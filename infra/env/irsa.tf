@@ -116,11 +116,12 @@ module "cnpg_backup_irsa" {
   }
 
   # The Cluster's service account is named after the Cluster (ticketscope-db);
-  # spec.serviceAccountName stays unset.
+  # spec.serviceAccountName stays unset. The restore drill's recovery Cluster (story 5.7) is
+  # ticketscope-restore, so its account needs its own entry.
   oidc_providers = {
     main = {
       provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["ticketscope:ticketscope-db"]
+      namespace_service_accounts = ["ticketscope:ticketscope-db", "ticketscope:ticketscope-restore"]
     }
   }
 }

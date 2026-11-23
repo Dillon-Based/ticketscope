@@ -193,3 +193,5 @@ aws iam simulate-custom-policy --policy-input-list "$(cat policy.json)" --profil
 
 Tighten the policy in `infra/env/irsa.tf` against what a backup, a restore read and a retention delete actually needed,
 and record that set in the plan's Implementation Notes. Pod Identity is the fallback only if IRSA fails on the first recreate.
+
+The restore drill (story 5.7) is `scripts/restore-drill.sh`; its record is `docs/drills/restore-drill.md`.

@@ -33,6 +33,15 @@ spec:
   instances: {{ .Values.database.instances }}
   imageName: {{ include "ticketscope.postgresImage" . }}
   imagePullPolicy: {{ .Values.image.pullPolicy }}
+  {{- if not (has .Values.database.instancePlacement (list "" "required")) }}
+  {{- fail "database.instancePlacement must be empty or required" }}
+  {{- end }}
+  {{- if eq .Values.database.instancePlacement "required" }}
+  affinity:
+    enablePodAntiAffinity: true
+    podAntiAffinityType: required
+    topologyKey: kubernetes.io/hostname
+  {{- end }}
   postgresql:
     shared_preload_libraries:
       - pg_textsearch

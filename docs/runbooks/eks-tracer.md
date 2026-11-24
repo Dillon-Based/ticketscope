@@ -195,3 +195,5 @@ Tighten the policy in `infra/env/irsa.tf` against what a backup, a restore read 
 and record that set in the plan's Implementation Notes. Pod Identity is the fallback only if IRSA fails on the first recreate.
 
 The restore drill (story 5.7) is `scripts/restore-drill.sh`; its record is `docs/drills/restore-drill.md`.
+
+The failure drill (story 5.8) is `scripts/failure-drill.sh`, run last in the window with admin AWS credentials and the admin kubeconfig; its record is `docs/drills/failure-drill.md`. It needs the `env-up` that deployed `database.instancePlacement: required`.

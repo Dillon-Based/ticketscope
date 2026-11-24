@@ -9,6 +9,8 @@ mcp:
   replicas: 1
 
 database:
+  # Two instances on two nodes: the failure drill loses a node (R10).
+  instancePlacement: required
   storage:
     storageClass: gp3
 

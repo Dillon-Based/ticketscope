@@ -129,6 +129,9 @@ eval:
 
 database:
   instances: 2
+  # EKS: `required` puts each instance on a different node (hostname anti-affinity), so losing one
+  # node leaves a standby (R10). Empty keeps the operator's default (kind has one node).
+  instancePlacement: ""
   # EKS: the IRSA role annotation (eks.amazonaws.com/role-arn), an environment fact set by
   # scripts/eks-deploy.sh (AD-25).
   serviceAccount:

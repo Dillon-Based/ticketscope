@@ -5,6 +5,7 @@ release renders as before."""
 
 import re
 import shutil
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -386,3 +387,24 @@ def test_kind_renders_no_read_only_rbac() -> None:
     docs = _render(PLATFORM, "-f", str(PLATFORM / "values-kind.yaml"))
     assert not _docs(docs, "ClusterRole", "ticketscope-readonly-gateway")
     assert not _docs(docs, "ClusterRoleBinding", "ticketscope-readonly-gateway")
+
+
+@pytest.mark.criterion("ticketscope--e5-s8--AC-1")
+def test_eks_requires_the_two_instances_on_different_nodes_and_kind_does_not() -> None:
+    [eks] = _docs(_ticketscope_eks(), "Cluster", "ticketscope-db")
+    assert "podAntiAffinityType: required" in eks
+    assert "topologyKey: kubernetes.io/hostname" in eks
+    assert "enablePodAntiAffinity: true" in eks
+    kind = _render(TICKETSCOPE, "-f", str(TICKETSCOPE / "values-kind.yaml"), *_IMAGE_TAGS)
+    [kind_cluster] = _docs(kind, "Cluster", "ticketscope-db")
+    assert "affinity" not in kind_cluster
+
+
+def test_an_unknown_instance_placement_fails_the_render() -> None:
+    result = subprocess.run(
+        ["helm", "template", "t", str(TICKETSCOPE), *_IMAGE_TAGS,
+         "--set", "database.instancePlacement=Required"],
+        capture_output=True, text=True, check=False,
+    )  # fmt: skip
+    assert result.returncode != 0
+    assert "instancePlacement must be empty or required" in result.stderr

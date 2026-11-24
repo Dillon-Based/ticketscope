@@ -157,6 +157,10 @@ backup:
   # The plugin's serverName: the folder under destinationPath this incarnation archives to.
   # Empty keeps the Cluster's name (kind); env-up sets one per incarnation (R11).
   serverName: ""
+  # R11: the folder under destinationPath of the previous incarnation to recover from. Empty
+  # initialises an empty database and loads the corpus; set (env-up's restore_from) the Cluster
+  # recovers from it, no load Job renders, and serverName must be a different folder.
+  restoreFrom: ""
   # A ScheduledBackup (six-field cron, seconds first).
   # Off by default so kind renders as before; values-eks.yaml turns it on.
   scheduled:

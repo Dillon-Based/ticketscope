@@ -57,6 +57,33 @@ when both exist, `build` and `images` are skipped, so a second dispatch on the s
 them. Otherwise the images are built natively on amd64 and arm64 runners, pushed by digest, and
 joined into one multi-arch tag each. That is outside the clock.
 
+### Recreate: `restore_from` (story 5.9, R11)
+
+Each `env-up` archives under its own folder, `backups/inc-<run id>-<attempt>/` (the Cluster's
+`serverName`), which is named in the run's `plan` job. Pass `restore_from` with an earlier
+incarnation to recover the database from that folder instead of loading the corpus:
+
+```sh
+gh workflow run env-up.yml --ref "$BRANCH" -f sha="$SHA" -f expiry_hours=4 -f restore_from="$PREVIOUS"
+```
+
+`PREVIOUS` is the earlier incarnation, for example `inc-45219791550-1`. The load Job is not
+rendered, the new Cluster recovers from the previous folder and archives under its own, and the
+`corpus facts` section of the job summary prints `corpus_meta`, the issue count and the digest.
+Equal `loaded_at` with the first environment's summary shows the second did not load again.
+
+Before anything is built or applied, the `plan` job runs `scripts/incarnation_check.py` against a
+read-only listing of `backups/`. It refuses the run when:
+
+- this incarnation's folder already exists (the plugin would fail at archive time with
+  "Expected empty archive");
+- `restore_from` equals the incarnation, has no folder, or has no base backup under `base/`;
+- either name fails `^[a-z0-9][a-z0-9-]{0,62}$`, or the listing cannot be read (it is never read
+  as "empty").
+
+Take the source's backup on the way down with `env-down` `backup_first` (see
+`docs/runbooks/env-down.md`). Nothing writes to the source folder.
+
 ## Read the result
 
 The `env` job's summary and the `env-up-stages` artifact (`stages.json`, `stages.md`) list every

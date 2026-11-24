@@ -30,8 +30,9 @@ usage() {
   cat >&2 <<'EOF'
 usage: scripts/eks-deploy.sh --kubeconfig <file> --tag <image tag> --hostname <host>
                              --certificate-arn <arn> --ecr-registry <registry host>
-                             --incarnation <id>
-All six are required (the incarnation names this environment's backup folder). Nothing is installed when one is missing.
+                             --incarnation <id> [--restore-from <id>]
+The first six are required (the incarnation names this environment's backup folder). Nothing is installed when one is missing.
+--restore-from names the previous incarnation's folder: the database recovers from it and nothing is loaded (R11).
 EOF
   exit 2
 }
@@ -43,6 +44,7 @@ HOSTNAME_VALUE=""
 CERTIFICATE_ARN=""
 ECR_REGISTRY=""
 INCARNATION=""
+RESTORE_FROM=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --kubeconfig) need_value "$#"; KUBECONFIG_FILE="${2:-}"; shift 2 ;;
@@ -51,6 +53,7 @@ while [[ $# -gt 0 ]]; do
     --certificate-arn) need_value "$#"; CERTIFICATE_ARN="${2:-}"; shift 2 ;;
     --ecr-registry) need_value "$#"; ECR_REGISTRY="${2:-}"; shift 2 ;;
     --incarnation) need_value "$#"; INCARNATION="${2:-}"; shift 2 ;;
+    --restore-from) need_value "$#"; RESTORE_FROM="${2:-}"; shift 2 ;;
     -h | --help) usage ;;
     *) echo "eks-deploy: unknown argument $1" >&2; usage ;;
   esac
@@ -58,6 +61,10 @@ done
 [[ -n "$KUBECONFIG_FILE" && -n "$TAG" && -n "$HOSTNAME_VALUE" && -n "$CERTIFICATE_ARN" && -n "$ECR_REGISTRY" && -n "$INCARNATION" ]] || usage
 # The incarnation becomes the plugin's serverName, a folder name under backups/ (R11).
 [[ "$INCARNATION" =~ ^[a-z0-9][a-z0-9-]{0,62}$ ]] || { echo "eks-deploy: --incarnation must be lowercase letters, digits and dashes" >&2; usage; }
+if [[ -n "$RESTORE_FROM" ]]; then
+  [[ "$RESTORE_FROM" =~ ^[a-z0-9][a-z0-9-]{0,62}$ ]] || { echo "eks-deploy: --restore-from must be lowercase letters, numbers and dashes" >&2; usage; }
+  [[ "$RESTORE_FROM" != "$INCARNATION" ]] || { echo "eks-deploy: --restore-from must differ from --incarnation" >&2; usage; }
+fi
 [[ -f "$KUBECONFIG_FILE" ]] || { echo "eks-deploy: kubeconfig $KUBECONFIG_FILE not found" >&2; usage; }
 
 for tool in kubectl helm jq curl tar dig aws; do
@@ -149,6 +156,9 @@ kubectl -n "$PLATFORM_NS" wait gateway/ticketscope --for=condition=Programmed --
 
 stage "ticketscope"
 # No --wait: Helm's wait would hold the hooks on api readiness, and that needs load.
+# restoreFrom is set only for a recreate: the Cluster recovers and no load Job renders (R11).
+RESTORE_ARGS=()
+if [[ -n "$RESTORE_FROM" ]]; then RESTORE_ARGS=(--set-string "backup.restoreFrom=${RESTORE_FROM}"); fi
 helm upgrade --install ticketscope "$CHARTS/ticketscope" \
   --namespace "$APP_NS" --create-namespace \
   -f "$CHARTS/ticketscope/values-eks.yaml" \
@@ -159,6 +169,7 @@ helm upgrade --install ticketscope "$CHARTS/ticketscope" \
   --set-string "image.postgres.tag=${PG_TAG}" \
   --set-string "backup.destinationPath=s3://${BACKUP_BUCKET}/backups/" \
   --set-string "backup.serverName=${INCARNATION}" \
+  ${RESTORE_ARGS[@]+"${RESTORE_ARGS[@]}"} \
   --set-string "database.serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn=${BACKUP_ROLE_ARN}" \
   --timeout 25m
 

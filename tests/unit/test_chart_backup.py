@@ -201,3 +201,76 @@ def test_ticketscope_iam_role_credentials_need_no_secret() -> None:
     assert "inheritFromIAMRole: true" in store
     assert "endpointURL" not in store
     assert "accessKeyId" not in store
+
+
+# --- restoreFrom (story 5.9, R11) -----------------------------------------------------------
+
+_EKS_RESTORE = [
+    "-f",
+    str(TICKETSCOPE / "values-eks.yaml"),
+    "--set-string",
+    "backup.destinationPath=s3://b/backups/",
+    "--set-string",
+    "backup.serverName=inc-2-1",
+    "--set-string",
+    "database.serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn=arn:x",
+]
+
+
+def test_restore_from_renders_recovery_archives_under_its_own_name_and_no_load() -> None:
+    docs = _render(
+        TICKETSCOPE, *_IMAGE_TAGS, *_EKS_RESTORE, "--set-string", "backup.restoreFrom=inc-1-1"
+    )
+    [cluster] = _docs(docs, "Cluster", "ticketscope-db")
+    flat = _flat(cluster)
+    assert "bootstrap: recovery: source: previous-incarnation database: app owner: app" in flat
+    assert "initdb" not in cluster and "postInitApplicationSQL" not in cluster
+    assert (
+        "externalClusters: - name: previous-incarnation plugin:"
+        " name: barman-cloud.cloudnative-pg.io"
+        ' parameters: barmanObjectName: ticketscope-backup serverName: "inc-1-1"'
+    ) in flat
+    # It reads inc-1-1 and archives under inc-2-1: never the folder it restores from.
+    assert (
+        'isWALArchiver: true parameters: barmanObjectName: ticketscope-backup serverName: "inc-2-1"'
+        in flat
+    )
+    assert "skipEmptyWalArchiveCheck" not in "\n".join(docs)
+    assert "role-arn: arn:x" in flat and "ticketscope_ro" in cluster
+    assert not _docs(docs, "Job", "ticketscope-load")
+    assert _docs(docs, "Job", "ticketscope-migrate")
+
+
+def test_without_restore_from_the_render_is_the_initdb_and_load_it_was() -> None:
+    docs = _render(TICKETSCOPE, *_IMAGE_TAGS, *_EKS_RESTORE)
+    [cluster] = _docs(docs, "Cluster", "ticketscope-db")
+    assert "initdb:" in cluster and "recovery" not in cluster
+    assert "externalClusters" not in cluster
+    assert _docs(docs, "Job", "ticketscope-load")
+
+
+def test_restore_from_the_servers_own_name_or_without_one_fails_to_render() -> None:
+    same = _template(
+        TICKETSCOPE, *_IMAGE_TAGS, *_EKS_RESTORE, "--set-string", "backup.restoreFrom=inc-2-1"
+    )
+    assert same.returncode != 0 and "must differ" in same.stderr
+    unnamed = _template(
+        TICKETSCOPE,
+        *_IMAGE_TAGS,
+        "-f",
+        str(TICKETSCOPE / "values-eks.yaml"),
+        "--set-string",
+        "backup.destinationPath=s3://b/backups/",
+        "--set-string",
+        "backup.restoreFrom=inc-1-1",
+        "--set-string",
+        "database.serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn=arn:x",
+    )
+    assert unnamed.returncode != 0 and "own backup.serverName" in unnamed.stderr
+
+
+def test_kind_render_is_unchanged_by_the_new_value() -> None:
+    docs = _render(TICKETSCOPE, *_IMAGE_TAGS, "-f", str(TICKETSCOPE / "values-kind.yaml"))
+    [cluster] = _docs(docs, "Cluster", "ticketscope-db")
+    assert "initdb:" in cluster and "externalClusters" not in cluster
+    assert _docs(docs, "Job", "ticketscope-load")

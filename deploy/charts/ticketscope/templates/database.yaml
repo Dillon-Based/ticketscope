@@ -1,3 +1,8 @@
+{{- if .Values.backup.restoreFrom -}}
+{{- if not .Values.backup.enabled -}}{{- fail "backup.restoreFrom needs backup.enabled" -}}{{- end -}}
+{{- if not .Values.backup.serverName -}}{{- fail "backup.restoreFrom needs its own backup.serverName" -}}{{- end -}}
+{{- if eq .Values.backup.restoreFrom .Values.backup.serverName -}}{{- fail "backup.restoreFrom must differ from backup.serverName (an incarnation never archives into the folder it restores from)" -}}{{- end -}}
+{{- end -}}
 {{- /*
 The ticketscope_ro password: generated once, then kept across upgrades (AD-7).
 */ -}}
@@ -36,6 +41,23 @@ spec:
   postgresql:
     shared_preload_libraries:
       - pg_textsearch
+  {{- if .Values.backup.restoreFrom }}
+  # R11: a recreated environment recovers from the previous incarnation's folder under the
+  # same ObjectStore, then archives under its own serverName (never the one it reads). The
+  # database already holds the corpus, so the load Job is not rendered (jobs.yaml).
+  bootstrap:
+    recovery:
+      source: previous-incarnation
+      database: app
+      owner: app
+  externalClusters:
+    - name: previous-incarnation
+      plugin:
+        name: barman-cloud.cloudnative-pg.io
+        parameters:
+          barmanObjectName: {{ .Values.backup.objectStoreName }}
+          serverName: {{ .Values.backup.restoreFrom | quote }}
+  {{- else }}
   bootstrap:
     initdb:
       database: app
@@ -46,6 +68,7 @@ spec:
       postInitApplicationSQL:
         - CREATE EXTENSION IF NOT EXISTS vector
         - CREATE EXTENSION IF NOT EXISTS pg_textsearch
+  {{- end }}
   managed:
     roles:
       - name: ticketscope_ro

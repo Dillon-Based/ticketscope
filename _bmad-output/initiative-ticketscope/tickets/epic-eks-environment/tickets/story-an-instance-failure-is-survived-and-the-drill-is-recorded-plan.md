@@ -3,7 +3,7 @@ title: 'An instance failure is survived and the drill is recorded'
 type: 'feature'
 ticket: '8'
 created: '2026-11-24'
-status: 'built'
+status: done
 baseline_revision: 'd43b982dfa4fe0faf3429485de1023c9761dd796'
 route: 'full'
 route_source: 'auto'
@@ -79,6 +79,7 @@ context:
 - `scripts/failure_drill.py` holds `analyze`, `placement_ok`, `archive_problems`, `mask` (adds node names and instance ids to `restore_drill.mask`) and `render_record`; `scripts/failure-drill.sh` is driven end to end in `tests/unit/test_failure_drill_script.py` against stub `kubectl`, `aws`, `curl`, `uv`.
 - Archive check: ContinuousArchiving must be True, `lastArchivedWAL` must advance after a forced `pg_switch_wal()` on the new primary, no `lastFailedWAL` newer than the last archived, and `serverName` unchanged. A WAL name compares as a string; a timeline change after promotion raises the prefix, so it reads as advance.
 - Not exercised yet: the live run (promotion, probe, archive status on EKS) and whether plugin bug #828 bites. Both are settled by a person's run, which then replaces the skeleton `docs/drills/failure-drill.md`.
+- Accepted as built (user, 2026-11-24), with the live drill not yet run: a person runs `scripts/failure-drill.sh` in the December window and replaces the skeleton `docs/drills/failure-drill.md` with the record. R10 and whether plugin bug #828 bites stay unproven until then (deferred-work entry).
 
 ## Plan Change Log
 

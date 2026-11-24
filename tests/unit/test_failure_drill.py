@@ -85,6 +85,15 @@ def test_an_archive_error_is_a_problem_and_a_clean_status_is_not() -> None:
     assert analyze(_probe(range(0)), bad)["verdict"] == "FAILED"
 
 
+def test_history_names_do_not_pass_for_an_archived_segment() -> None:
+    history = archive_problems(_archive(last_archived_after="00000002.history"))
+    assert any("did not advance" in p for p in history)
+    stale = archive_problems(_archive(last_failed="00000002.partial"))
+    assert stale == []
+    no_switch = archive_problems(_archive(last_archived_after=""), switched=False)
+    assert no_switch == []
+
+
 @pytest.mark.parametrize("bad", [[], ["x"], ["1000 200 extra"], ["abc 200"]])
 def test_an_unreadable_probe_log_raises(bad: list[str]) -> None:
     with pytest.raises(ValueError):

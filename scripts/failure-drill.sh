@@ -95,8 +95,14 @@ NODE="$(kubectl -n "$NS" get pod "$OLD_PRIMARY" -o 'jsonpath={.spec.nodeName}')"
 PROVIDER_ID="$(kubectl get node "$NODE" -o 'jsonpath={.spec.providerID}')"
 INSTANCE_ID="${PROVIDER_ID##*/}"
 [[ "$INSTANCE_ID" == i-* ]] || { echo "failure-drill: no EC2 instance id for node $NODE" >&2; exit 2; }
-SERVER_BEFORE="$(cluster_json | jq -r '.spec.plugins[0].parameters.serverName // empty')"
-ARCHIVED_BEFORE="$(cluster_json | jq -r '.status.lastArchivedWAL // empty')"
+BEFORE_JSON="$(cluster_json)"
+SERVER_BEFORE="$(jq -r '[.spec.plugins[]? | select(.name == "barman-cloud.cloudnative-pg.io") | .parameters.serverName // empty][0] // empty' <<<"$BEFORE_JSON")"
+[[ -n "$SERVER_BEFORE" ]] || { echo "failure-drill: the Cluster has no barman plugin serverName; nothing terminated" >&2; exit 2; }
+if [[ "$(jq -r '[.status.conditions[]? | select(.type == "ContinuousArchiving") | .status][0] // "missing"' <<<"$BEFORE_JSON")" != True ]]; then
+  echo "failure-drill: the Cluster is not archiving before the failure; nothing terminated" >&2
+  exit 1
+fi
+ARCHIVED_BEFORE=""
 echo "the primary is $OLD_PRIMARY on $NODE ($INSTANCE_ID); serverName $SERVER_BEFORE"
 
 probe() {
@@ -154,15 +160,17 @@ done
 sleep "$SETTLE_SECONDS"
 
 echo "stage: archive"
-ARCHIVED_AFTER="$ARCHIVED_BEFORE"
+ARCHIVED_AFTER=""
 if [[ "$PROMOTED_AT" != null ]]; then
   NEW_PRIMARY="$(primary_pod)"
   kubectl -n "$NS" wait --for=condition=Ready "pod/$NEW_PRIMARY" --timeout="${ARCHIVE_TIMEOUT}s" || true
+  # Read after promotion, so the new timeline's .history file is not mistaken for the switch.
+  ARCHIVED_BEFORE="$(cluster_json 2>/dev/null | jq -r '.status.lastArchivedWAL // empty' || true)"
   x kubectl -n "$NS" exec "$NEW_PRIMARY" -c postgres -- psql -d app -tAc 'select pg_switch_wal()' || true
   deadline=$(($(date +%s) + ARCHIVE_TIMEOUT))
   while (($(date +%s) <= deadline)); do
     ARCHIVED_AFTER="$(cluster_json 2>/dev/null | jq -r '.status.lastArchivedWAL // empty' || true)"
-    [[ -n "$ARCHIVED_AFTER" && "$ARCHIVED_AFTER" != "$ARCHIVED_BEFORE" ]] && break
+    [[ "$ARCHIVED_AFTER" =~ ^[0-9A-F]{24}$ && "$ARCHIVED_AFTER" != "$ARCHIVED_BEFORE" ]] && break
     sleep 5
   done
 fi

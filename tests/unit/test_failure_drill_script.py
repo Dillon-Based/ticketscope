@@ -32,10 +32,12 @@ case "$args" in
   *"get pod ticketscope-db-1 -o"*) printf 'ip-10-0-1-1.ec2.internal' ;;
   *"get node "*) printf 'aws:///us-east-1a/i-0abc1234def56789' ;;
   *"get cluster.postgresql.cnpg.io ticketscope-db -o json"*)
-    if [[ -f "$STUB/terminated" ]]; then f=after; else f=before; fi
+    if [[ -f "$STUB/switched" ]]; then f=after
+    elif [[ -f "$STUB/terminated" ]]; then f=mid
+    else f=before; fi
     cat "$STUB/cluster-$f.json" ;;
   *" wait "*) ;;
-  *"exec ticketscope-db-2 "*) echo "pg_switch_wal" ;;
+  *"exec ticketscope-db-2 "*) touch "$STUB/switched"; echo "pg_switch_wal" ;;
   *) echo "stub kubectl: unexpected $args" >&2; exit 9 ;;
 esac
 """
@@ -60,7 +62,11 @@ exec python3 "$@"
 
 def _cluster(archived: str, **status: Any) -> dict[str, Any]:
     return {
-        "spec": {"plugins": [{"parameters": {"serverName": "inc-1-1"}}]},
+        "spec": {
+            "plugins": [
+                {"name": "barman-cloud.cloudnative-pg.io", "parameters": {"serverName": "inc-1-1"}}
+            ]
+        },
         "status": {
             "lastArchivedWAL": archived,
             "conditions": [{"type": "ContinuousArchiving", "status": "True"}],
@@ -83,6 +89,9 @@ def _drill(tmp: Path, nodes: list[str], **env: str) -> subprocess.CompletedProce
     (stub / "cluster-before.json").write_text(json.dumps(_cluster("000000010000000000000004")))
     after = _cluster("000000020000000000000005", **json.loads(env.pop("STATUS", "{}")))
     (stub / "cluster-after.json").write_text(json.dumps(after))
+    # After promotion the new timeline's .history file is the last archived name, as in life.
+    mid = _cluster("00000002.history")
+    (stub / "cluster-mid.json").write_text(json.dumps(mid))
     for name, body in (("kubectl", KUBECTL), ("aws", AWS), ("curl", CURL), ("uv", UV)):
         (bin_dir / name).write_text(body)
         (bin_dir / name).chmod(0o755)

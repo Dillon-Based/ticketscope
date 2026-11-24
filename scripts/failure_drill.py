@@ -42,8 +42,15 @@ def placement_ok(nodes: list[str]) -> bool:
     return len(nodes) >= 2 and len(set(nodes)) == len(nodes)
 
 
-def archive_problems(archive: dict[str, Any]) -> list[str]:
-    """Ways the Cluster's archive status is not clean after promotion; empty is clean."""
+def _segment(name: str) -> str | None:
+    """The name when it is a 24-hex WAL segment (timeline then position); `.history`, `.backup`
+    and `.partial` names do not order against segments, so they are None."""
+    return name if re.fullmatch(r"[0-9A-Fa-f]{24}", name) else None
+
+
+def archive_problems(archive: dict[str, Any], switched: bool = True) -> list[str]:
+    """Ways the Cluster's archive status is not clean after promotion; empty is clean.
+    `switched` is False when no standby was promoted, so no WAL switch was forced."""
     found: list[str] = []
     if archive["continuous_archiving"] != "True":
         found.append(
@@ -54,9 +61,11 @@ def archive_problems(archive: dict[str, Any]) -> list[str]:
     before = str(archive["last_archived_before"])
     after = str(archive["last_archived_after"])
     failed = str(archive["last_failed"])
-    if not after or after <= before:
+    new, old = _segment(after), _segment(before)
+    if switched and (new is None or (old is not None and new <= old)):
         found.append(f"archiving did not advance after a WAL switch: {before!r} then {after!r}")
-    if failed and failed > after:
+    failed_segment = _segment(failed)
+    if failed_segment and (new is None or failed_segment > new):
         found.append(f"a WAL failed to archive and was not retried: lastFailedWAL {failed}")
     if archive["server_before"] != archive["server_after"]:
         found.append(
@@ -84,7 +93,7 @@ def analyze(probe_lines: list[str], events: dict[str, Any]) -> dict[str, Any]:
         terminated = int(events["terminated_at"])
         promoted = events["promoted_at"]
         archive = events["archive"]
-        archive_found = archive_problems(archive)
+        archive_found = archive_problems(archive, switched=promoted is not None)
     except (KeyError, TypeError, ValueError) as error:
         raise ValueError(f"events: missing or malformed {error}") from error
     problems: list[str] = []

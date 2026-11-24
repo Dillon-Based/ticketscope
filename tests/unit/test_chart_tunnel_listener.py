@@ -1,6 +1,7 @@
 """The platform Gateway's tunnel listener (story 4.2, R-006).
 
-Renders only `gateway.yaml` in a scratch chart, so it needs no built dependencies.
+Renders only `gateway.yaml` and the `_helpers.tpl` it includes in a scratch chart, so it needs
+no built dependencies.
 """
 
 import shutil
@@ -20,7 +21,8 @@ def chart(tmp_path: Path) -> Path:
     root = tmp_path / "platform"
     (root / "templates").mkdir(parents=True)
     (root / "Chart.yaml").write_text("apiVersion: v2\nname: platform\nversion: 0.1.0\n")
-    shutil.copy(PLATFORM / "templates" / "gateway.yaml", root / "templates" / "gateway.yaml")
+    for name in ("gateway.yaml", "_helpers.tpl"):
+        shutil.copy(PLATFORM / "templates" / name, root / "templates" / name)
     return root
 
 

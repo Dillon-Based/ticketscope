@@ -95,27 +95,10 @@ GATEWAY=ticketscope
 TGC=targetgroupconfiguration.gateway.k8s.aws
 LBC=loadbalancerconfiguration.gateway.k8s.aws
 
-START_EPOCH=$(date +%s)
-STAGE_EPOCH=$START_EPOCH
-SUMMARY=()
-CURRENT=""
-log() { printf '[%s +%4ss] %s\n' "$(date -u +%H:%M:%S)" "$(($(date +%s) - START_EPOCH))" "$*"; }
-# stage <name>: closes the previous stage's timer and opens this one.
-stage() {
-  local now
-  now=$(date +%s)
-  if [[ -n "$CURRENT" ]]; then SUMMARY+=("$(printf '%-28s %5ss' "$CURRENT" "$((now - STAGE_EPOCH))")"); fi
-  CURRENT="${1:-}"
-  STAGE_EPOCH=$now
-  if [[ -n "$CURRENT" ]]; then log "stage: $CURRENT"; fi
-}
-# The summary is printed even on failure, between a header and `total`, like eks-deploy.sh.
-summary() {
-  stage ""
-  echo "--- eks-teardown stage times ---"
-  if ((${#SUMMARY[@]})); then printf '%s\n' "${SUMMARY[@]}"; fi
-  printf '%-28s %5ss\n' total "$(($(date +%s) - START_EPOCH))"
-}
+# shellcheck disable=SC2034  # read by summary() in lib/stages.sh
+STAGES_TITLE=eks-teardown
+# shellcheck source=/dev/null
+source "$ROOT/scripts/lib/stages.sh"
 trap summary EXIT
 
 # alb_gone: true only when the tagging API answers and lists no load balancer of this cluster.

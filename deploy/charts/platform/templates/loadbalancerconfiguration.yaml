@@ -10,8 +10,7 @@ metadata:
   name: {{ .Values.gateway.name }}
   namespace: {{ .Release.Namespace }}
   labels:
-    app.kubernetes.io/part-of: ticketscope
-    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    {{- include "platform.labels" . | nindent 4 }}
 spec:
   scheme: {{ .Values.gateway.aws.scheme }}
   {{- if .Values.gateway.tls.enabled }}

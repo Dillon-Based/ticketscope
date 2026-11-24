@@ -133,6 +133,8 @@ jobs:
           shellcheck scripts/eks-corpus-facts.sh
           shellcheck scripts/restore-drill.sh
           shellcheck scripts/failure-drill.sh
+          shellcheck scripts/lib/stages.sh
+          shellcheck scripts/lib/x.sh
           shellcheck scripts/denied-actions.sh
           shellcheck scripts/eks-teardown.sh
           shellcheck scripts/leftover-check.sh

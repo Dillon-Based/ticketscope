@@ -55,8 +55,8 @@ OBJECTSTORE=ticketscope-backup
 RESTORE_TIMEOUT="${RESTORE_TIMEOUT:-1500}"
 PY="scripts/restore_drill.py"
 
-# x <command...>: echoes the command (the record keeps the commands) and runs it.
-x() { printf '+ %s\n' "$*" >&2; "$@"; }
+# shellcheck source=/dev/null
+source "$ROOT/scripts/lib/x.sh"
 
 STAGES=()
 STAGE_START=$(date +%s)

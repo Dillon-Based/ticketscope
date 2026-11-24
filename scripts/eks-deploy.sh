@@ -94,26 +94,10 @@ DNS_ROLE_ARN="$(out external_dns_role_arn)"
 BACKUP_ROLE_ARN="$(out cnpg_backup_role_arn)"
 BACKUP_BUCKET="$(out backup_bucket)"
 
-START_EPOCH=$(date +%s)
-STAGE_EPOCH=$START_EPOCH
-SUMMARY=()
-log() { printf '[%s +%4ss] %s\n' "$(date -u +%H:%M:%S)" "$(($(date +%s) - START_EPOCH))" "$*"; }
-# stage <name>: closes the previous stage's timer and opens this one.
-CURRENT=""
-stage() {
-  local now
-  now=$(date +%s)
-  if [[ -n "$CURRENT" ]]; then SUMMARY+=("$(printf '%-28s %5ss' "$CURRENT" "$((now - STAGE_EPOCH))")"); fi
-  CURRENT="${1:-}"
-  STAGE_EPOCH=$now
-  if [[ -n "$CURRENT" ]]; then log "stage: $CURRENT"; fi
-}
-summary() {
-  stage ""
-  echo "--- eks-deploy stage times ---"
-  if ((${#SUMMARY[@]})); then printf '%s\n' "${SUMMARY[@]}"; fi
-  printf '%-28s %5ss\n' total "$(($(date +%s) - START_EPOCH))"
-}
+# shellcheck disable=SC2034  # read by summary() in lib/stages.sh
+STAGES_TITLE=eks-deploy
+# shellcheck source=/dev/null
+source "$ROOT/scripts/lib/stages.sh"
 
 
 WORK="$(mktemp -d)"

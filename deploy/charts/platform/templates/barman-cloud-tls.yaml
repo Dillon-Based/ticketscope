@@ -29,8 +29,7 @@ metadata:
   name: {{ .name }}
   namespace: {{ $.Release.Namespace }}
   labels:
-    app.kubernetes.io/part-of: ticketscope
-    app.kubernetes.io/managed-by: {{ $.Release.Service }}
+    {{- include "platform.labels" $ | nindent 4 }}
 type: kubernetes.io/tls
 data:
   tls.crt: {{ $crt | b64enc }}

@@ -10,8 +10,7 @@ metadata:
   name: {{ . }}
   namespace: {{ $.Values.gateway.aws.targetGroups.namespace }}
   labels:
-    app.kubernetes.io/part-of: ticketscope
-    app.kubernetes.io/managed-by: {{ $.Release.Service }}
+    {{- include "platform.labels" $ | nindent 4 }}
 spec:
   targetReference:
     name: {{ . }}

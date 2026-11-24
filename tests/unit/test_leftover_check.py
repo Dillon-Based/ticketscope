@@ -26,6 +26,10 @@ ARNS = {
     "target group": f"arn:aws:elasticloadbalancing:us-east-1:{ACCOUNT}:targetgroup/k8s-x/abc",
     "volume": f"arn:aws:ec2:us-east-1:{ACCOUNT}:volume/vol-0123",
     "security group": f"arn:aws:ec2:us-east-1:{ACCOUNT}:security-group/sg-0123",
+    "subnet": f"arn:aws:ec2:us-east-1:{ACCOUNT}:subnet/subnet-0123",
+    "vpc": f"arn:aws:ec2:us-east-1:{ACCOUNT}:vpc/vpc-0123",
+    "route table": f"arn:aws:ec2:us-east-1:{ACCOUNT}:route-table/rtb-0123",
+    "internet gateway": f"arn:aws:ec2:us-east-1:{ACCOUNT}:internet-gateway/igw-0123",
     "kms key": f"arn:aws:kms:us-east-1:{ACCOUNT}:key/11111111-2222-3333-4444-555555555555",
     "log group": f"arn:aws:logs:us-east-1:{ACCOUNT}:log-group:/aws/eks/ticketscope-env/cluster",
 }
@@ -451,3 +455,36 @@ def test_the_wrapper_lists_interfaces_by_the_cnis_own_tags_and_fails_on_a_leaked
     assert "eni-0leak" in result.stdout
     calls = log.read_text()
     assert "Name=tag:cluster.k8s.amazonaws.com/name,Values=ticketscope-env" in calls
+
+
+@pytestmark_bash
+def test_the_env_stacks_network_is_confirmed_through_ec2_not_left_unconfirmed(
+    tmp_path: Path,
+) -> None:
+    # Runs 45266017998 and 45272176321: a removed subnet stayed tagged-and-listed for over 40
+    # minutes and failed env-down as `unconfirmed`. A definite not-found now drops it, and an
+    # answer that finds it, or an error, still keeps it a leftover.
+    rows = [ARNS[k] for k in ("subnet", "vpc", "route table", "internet gateway")]
+    answers = {
+        "subnet-0123": "notfound:InvalidSubnetID.NotFound",
+        "vpc-0123": "notfound:InvalidVpcID.NotFound",
+        "rtb-0123": "notfound:InvalidRouteTableID.NotFound",
+        "igw-0123": "notfound:InvalidInternetGatewayID.NotFound",
+    }
+    result, calls = _confirmed_run(tmp_path, rows, answers)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert result.stdout.count("GONE ") == 4
+    for call in (
+        "ec2 describe-subnets --subnet-ids subnet-0123",
+        "ec2 describe-vpcs --vpc-ids vpc-0123",
+        "ec2 describe-route-tables --route-table-ids rtb-0123",
+        "ec2 describe-internet-gateways --internet-gateway-ids igw-0123",
+    ):
+        assert call in calls, call
+    for state, expected in (("found", "found"), ("error", "error")):
+        (tmp_path / state).mkdir()
+        result, _ = _confirmed_run(tmp_path / state, [ARNS["subnet"]], {"subnet-0123": state})
+        assert result.returncode == 1, state
+        assert f"LEFTOVER ec2:subnet {ARNS['subnet']}" in result.stdout
+        if expected == "error":
+            assert "(error)" in result.stdout

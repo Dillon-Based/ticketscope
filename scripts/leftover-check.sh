@@ -114,6 +114,21 @@ confirm() {
     ec2:network-interface)
       describe InvalidNetworkInterfaceID.NotFound ec2 describe-network-interfaces \
         --network-interface-ids "$id" --query 'NetworkInterfaces[].NetworkInterfaceId' ;;
+    # The env stack's network (bootstrap-tagged ones are never selected): runs 45266017998 and
+    # 45272176321 listed a removed subnet as `unconfirmed` for over 40 minutes, which failed
+    # env-down although nothing remained.
+    ec2:subnet)
+      describe InvalidSubnetID.NotFound ec2 describe-subnets --subnet-ids "$id" \
+        --query 'Subnets[].SubnetId' ;;
+    ec2:vpc)
+      describe InvalidVpcID.NotFound ec2 describe-vpcs --vpc-ids "$id" \
+        --query 'Vpcs[].VpcId' ;;
+    ec2:route-table)
+      describe InvalidRouteTableID.NotFound ec2 describe-route-tables --route-table-ids "$id" \
+        --query 'RouteTables[].RouteTableId' ;;
+    ec2:internet-gateway)
+      describe InvalidInternetGatewayID.NotFound ec2 describe-internet-gateways \
+        --internet-gateway-ids "$id" --query 'InternetGateways[].InternetGatewayId' ;;
     ec2:security-group)
       describe InvalidGroup.NotFound ec2 describe-security-groups --group-ids "$id" \
         --query 'SecurityGroups[].GroupId' ;;

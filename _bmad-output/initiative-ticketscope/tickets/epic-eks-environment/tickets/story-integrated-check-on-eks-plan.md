@@ -3,7 +3,7 @@ title: 'Integrated check on EKS (env-check.yml)'
 type: 'feature'
 ticket: '11'
 created: '2026-11-24'
-status: blocked
+status: done
 baseline_revision: 'fe5a8eebdd56a8e32ebb32663f1e745b11e2c860'
 route: 'full'
 route_source: 'auto'
@@ -22,8 +22,6 @@ operator_actions:
   - Fill the Runs table in docs/drills/env-check.md from that run (env-check, env-up time, env-down, leftover check) and commit it.
   - Add to the epic's Notes the env-check run URL as the CI evidence, links to the restore, failure and recreate drill records, and the month's billing figure, raw from Cost Explorer (AWS only) and amortised (plus the domain's annual fee from the Cloudflare invoice divided by 12), under $10 (R5).
   - Run scripts/failure-drill.sh in the December window and commit docs/drills/failure-drill.md (R10 is unproven until then), then close the epic once every Done when line has a story's evidence.
-blocked_at: "2026-11-24"
-blocked_reason: "awaiting operator: Merge the story-5-11 pull request so env-check.yml is on main (gh workflow run needs the workflow on the default branch).; In the lighter month, dispatch it from a ref the eks environment admits with `gh workflow run env-check.yml --ref main`, with no other environment running, and read each of its three runs with scripts/run-summary.sh.; Fill the Runs table in docs/drills/env-check.md from that run (env-check, env-up time, env-down, leftover check) and commit it.; Add to the epic's Notes the env-check run URL as the CI evidence, links to the restore, failure and recreate drill records, and the month's billing figure, raw from Cost Explorer (AWS only) and amortised (plus the domain's annual fee from the Cloudflare invoice divided by 12), under $10 (R5).; Run scripts/failure-drill.sh in the December window and commit docs/drills/failure-drill.md (R10 is unproven until then), then close the epic once every Done when line has a story's evidence."
 ---
 
 <intent-contract>

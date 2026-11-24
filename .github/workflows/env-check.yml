@@ -1,0 +1,199 @@
+# Story 5.11 (R1, R3, R4): the epic's integrated check. One dispatch runs env-up (apply, deploy,
+# smoke check), env-down (ordered teardown and its tag-scoped leftover check) and a final
+# leftover check in sequence on one SHA, and is green only when all of them are. The cheap PR
+# gate is ci.yml's; this costs about an hour and a half of EKS environment time, so it is only
+# dispatched, never triggered by a push, a pull request or a schedule.
+#
+# It dispatches env-up.yml and env-down.yml with the repo's GITHUB_TOKEN and waits for each, so
+# those two workflows, their OIDC role assumption and their `eks` environment are used as they
+# are; this workflow holds no AWS credential itself, and only the last job assumes the role
+# (read-only checks). Dispatch it on a ref the `eks` environment admits.
+#
+#   up        env-up on the SHA with a short expiry (the safety net if teardown never runs); waits for
+#             its `env` job, not the `expire` job that sleeps until the expiry. Fails
+#             unless the run succeeded, its smoke check passed and its recorded total, apply start
+#             to smoke pass, is under 30 minutes (R1).
+#   down      env-down, always once env-up was dispatched, so a failed up still tears down. Its own
+#             leftover check fails the run on any tagged resource (R3). It then cancels env-up's
+#             `expire` job, which would otherwise sleep until the expiry.
+#   leftover  scripts/leftover-check.sh on its own, after down, as the last word on the account.
+#   verdict   one line in the job summary and a failure unless all three passed.
+name: env-check
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: >-
+          Git SHA (40 hex characters) env-up deploys. Empty means the dispatched ref's head. Its
+          images are built by env-up when ECR does not hold them, outside the 30-minute clock.
+        required: false
+        default: ""
+        type: string
+      expiry_minutes:
+        description: >-
+          Minutes until the environment's expiry tag (5 to 240): the backstop if env-down never
+          runs. The check tears the environment down itself, long before this.
+        required: false
+        default: "120"
+        type: string
+
+permissions:
+  contents: read
+
+# One check at a time. env-up and env-down serialise on their own `eks-environment` group.
+concurrency:
+  group: env-check
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-1
+  GH_REPO: ${{ github.repository }}
+  CHECK_REF: ${{ github.ref_name }}
+
+# Every `run` step is `bash -eo pipefail` (tests/unit/test_workflow_shell.py).
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  up:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    permissions:
+      actions: write
+      contents: read
+    outputs:
+      run_id: ${{ steps.dispatch.outputs.run_id }}
+      sha: ${{ steps.inputs.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate the inputs and pick the SHA
+        id: inputs
+        env:
+          INPUT_SHA: ${{ inputs.sha }}
+          INPUT_MINUTES: ${{ inputs.expiry_minutes }}
+        run: |
+          sha="${INPUT_SHA:-$GITHUB_SHA}"
+          if [[ ! "$sha" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::input sha must be empty or 40 lowercase hex characters"
+            exit 1
+          fi
+          if [[ ! "$INPUT_MINUTES" =~ ^[0-9]+$ ]] || ((10#$INPUT_MINUTES < 5 || 10#$INPUT_MINUTES > 240)); then
+            echo "::error::input expiry_minutes must be a whole number from 5 to 240"
+            exit 1
+          fi
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+      - name: Dispatch env-up and wait for it
+        id: dispatch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ steps.inputs.outputs.sha }}
+          EXPIRY_MINUTES: ${{ inputs.expiry_minutes }}
+        run: |
+          # Wait for the `env` job (apply, deploy, smoke), not the whole run: the run's `expire` job
+          # sleeps until the expiry.
+          WATCH_JOB="env" scripts/dispatch-and-watch.sh env-up.yml "$CHECK_REF" \
+            -f "sha=$SHA" -f "expiry_minutes=$EXPIRY_MINUTES"
+      - name: env-up finished under 30 minutes (R1)
+        if: ${{ !cancelled() && steps.dispatch.outputs.run_id != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ steps.dispatch.outputs.run_id }}
+        run: |
+          gh run download "$RUN_ID" --name env-up-stages --dir "$RUNNER_TEMP/stages"
+          verdict="$(jq -r '.verdict' "$RUNNER_TEMP/stages/stages.json")"
+          total="$(jq -r '.total_seconds' "$RUNNER_TEMP/stages/stages.json")"
+          {
+            echo "## env-check: env-up"
+            echo
+            echo "Run: https://github.com/$GITHUB_REPOSITORY/actions/runs/$RUN_ID"
+            echo
+            echo "Verdict: $verdict. Apply start to smoke pass: ${total}s (target: under 1800s)."
+          } >> "$GITHUB_STEP_SUMMARY"
+          [[ "$verdict" == "success" ]] || { echo "::error::env-up's verdict was $verdict"; exit 1; }
+          [[ "$total" =~ ^[0-9]+$ ]] || { echo "::error::env-up recorded no total time ($total)"; exit 1; }
+          if ((total >= 1800)); then
+            echo "::error::env-up took ${total}s, not under 1800s"
+            exit 1
+          fi
+
+  down:
+    # Runs whenever env-up was dispatched, whether or not it passed, so nothing is left up.
+    needs: up
+    if: ${{ !cancelled() && needs.up.outputs.run_id != '' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    outputs:
+      run_id: ${{ steps.dispatch.outputs.run_id }}
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - name: Dispatch env-down and wait for it (its leftover check fails the run)
+        id: dispatch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: scripts/dispatch-and-watch.sh env-down.yml "$CHECK_REF"
+      - name: Record the run
+        if: ${{ !cancelled() && steps.dispatch.outputs.run_id != '' }}
+        env:
+          RUN_ID: ${{ steps.dispatch.outputs.run_id }}
+          RESULT: ${{ steps.dispatch.outcome }}
+        run: |
+          {
+            echo "## env-check: env-down"
+            echo
+            echo "Run: https://github.com/$GITHUB_REPOSITORY/actions/runs/$RUN_ID"
+            echo
+            echo "Result: $RESULT (the run includes its own tag-scoped leftover check)."
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Stop env-up's expire job (it would sleep until the expiry for nothing)
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          UP_RUN_ID: ${{ needs.up.outputs.run_id }}
+        run: gh run cancel "$UP_RUN_ID" || echo "env-up run $UP_RUN_ID was already finished."
+
+  leftover:
+    needs: [up, down]
+    if: ${{ !cancelled() && needs.down.outputs.run_id != '' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: eks
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          mask-aws-account-id: true
+      - name: Leftover check (read-only, fails on any tagged resource) (R3)
+        run: |
+          set -o pipefail
+          scripts/leftover-check.sh 2>&1 | tee "$RUNNER_TEMP/leftover.log"
+          {
+            echo "## env-check: leftover check"
+            echo
+            tail -n 1 "$RUNNER_TEMP/leftover.log"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  verdict:
+    needs: [up, down, leftover]
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Green only when env-up, env-down and the leftover check all passed
+        env:
+          UP: ${{ needs.up.result }}
+          DOWN: ${{ needs.down.result }}
+          LEFTOVER: ${{ needs.leftover.result }}
+          SHA: ${{ needs.up.outputs.sha }}
+        run: |
+          echo "env-check on ${SHA:-no sha}: env-up $UP, env-down $DOWN, leftover check $LEFTOVER." >> "$GITHUB_STEP_SUMMARY"
+          [[ "$UP" == success && "$DOWN" == success && "$LEFTOVER" == success ]]

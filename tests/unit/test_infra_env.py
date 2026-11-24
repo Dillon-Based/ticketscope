@@ -207,7 +207,9 @@ def test_deploy_script_installs_in_the_required_order_and_times_each_stage() -> 
     assert text.index("helm upgrade --install platform") < text.index(
         "helm upgrade --install ticketscope"
     )
-    assert "stage times" in text
+    # The stage timer is the shared scripts/lib/stages.sh, sourced and titled by the script.
+    assert 'source "$ROOT/scripts/lib/stages.sh"' in text
+    assert "stage times" in (SCRIPT.parent / "lib" / "stages.sh").read_text(encoding="utf-8")
     assert "terraform apply" not in text and "helm_release" not in text
 
 

@@ -63,8 +63,8 @@ ARCHIVE_TIMEOUT="${ARCHIVE_TIMEOUT:-180}"
 SETTLE_SECONDS="${SETTLE_SECONDS:-15}"
 PY="scripts/failure_drill.py"
 
-# x <command...>: echoes the command (the record keeps the commands) and runs it.
-x() { printf '+ %s\n' "$*" >&2; "$@"; }
+# shellcheck source=/dev/null
+source "$ROOT/scripts/lib/x.sh"
 
 PROBE_PID=""
 # shellcheck disable=SC2317,SC2329  # called by the EXIT trap (SC2317 on shellcheck < 0.11)

@@ -4,8 +4,7 @@ kind: GatewayClass
 metadata:
   name: {{ .Values.gateway.className }}
   labels:
-    app.kubernetes.io/part-of: ticketscope
-    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    {{- include "platform.labels" . | nindent 4 }}
 spec:
   controllerName: {{ .Values.gateway.controllerName }}
 ---
@@ -16,8 +15,7 @@ metadata:
   name: {{ .Values.gateway.name }}
   namespace: {{ .Release.Namespace }}
   labels:
-    app.kubernetes.io/part-of: ticketscope
-    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    {{- include "platform.labels" . | nindent 4 }}
   {{- with .Values.gateway.externalDnsTarget }}
   annotations:
     external-dns.kubernetes.io/target: {{ . | quote }}

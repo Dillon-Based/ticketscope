@@ -28,3 +28,4 @@ deploy/charts/*/charts/*.tgz
 .terraform/
 *.tfvars
 infra/bootstrap/backend.tf
+.env

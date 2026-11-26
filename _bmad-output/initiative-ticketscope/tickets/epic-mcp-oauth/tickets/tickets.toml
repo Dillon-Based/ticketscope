@@ -1,0 +1,91 @@
+# epic-mcp-oauth stories, in build order. `id` is permanent, never reused.
+# Lane: 2 → 3 → 4 → 5 is one lane, because 2 and 3 edit ticketscope.mcp, 4 edits the chart that deploys it, and 5 tests both.
+# 1 is a spike, run by a person, and gates the lane: its note names the AuthKit settings and the token claims the stub issuer must imitate.
+# 2 is the tracer: the thinnest path from a tokenless call to a refused 401 and from a stub-signed token to a tool answer.
+# 6 is the refactor sweep and waits on 1–5. 7 closes the epic: the live check, parked awaiting the operator (decision 2026-11-26).
+# Tests: each story writes its own, in tests/mcp/; the closing integrated check (5) runs on kind against the stub issuer only.
+# CI never calls WorkOS and holds no credential for it (epic Constraints).
+# Sizing (epic-search-baseline retro): each story fits one agent session; one likely to add more than about 800 lines is flagged in its notes for the independent review.
+
+[[entry]]
+id = 1
+type = "spike"
+title = "Spike: WorkOS AuthKit and Claude Desktop complete the OAuth flow against a throwaway resource"
+description = "Settles, before any build, whether the chosen authorisation server works with Claude Desktop's remote-connector flow. Step 1 fetches the AuthKit domain's /.well-known/oauth-authorization-server and records whether it sets client_id_metadata_document_supported, lists token endpoint auth method none, supports PKCE, and what its issuer, scopes and signing-key URL are. Step 2 runs a throwaway resource server kept outside the repo, behind the epic 4 tunnel hostname, that serves /.well-known/oauth-protected-resource, answers /mcp with 401 and a WWW-Authenticate header, verifies a token's signature, issuer, audience and expiry, and answers one trivial tool call; a person adds it to Claude Desktop as a custom connector and completes the sign-in. The plan records the callback URL Claude used, the token's issuer and audience claims, how long the token and its signing keys live, and anything AuthKit needed turned on. If AuthKit fails step 1 or 2, the spike runs the same two steps against Stytch and records the choice for the epic's Notes. A person creates and claims the WorkOS environment and runs the tunnel and the Claude Desktop session."
+verify = "The plan records the AuthKit metadata fields read in step 1 and, from a person's Claude Desktop session, whether the flow completed and the trivial tool answered; it names the issuer URL, the audience value, the signing-key URL, the scope name and the callback URL that stories 2 to 7 use. No secret, token or API key is committed, and nothing from the throwaway server is committed. If the flow fails on both servers, the plan says so and the epic's Notes gain a Decision to cut this epic, as the initiative allows."
+covers = ["R5"]
+after = ["4.2"]
+hitl = true # a person creates and claims the WorkOS environment, runs the tunnel and the Claude Desktop sign-in
+risk = "high"
+plan_checkpoint = true
+notes = ["The WorkOS environment already exists and is claimed through its dashboard link; its credentials sit in the git-ignored .env and never go in a commit or a plan.", "Run step 1 first: if client_id_metadata_document_supported is missing, switch to Stytch before building the throwaway server."]
+
+[[entry]]
+id = 2
+type = "story"
+title = "Tracer: mcp refuses a tokenless call and answers a call with a stub-signed token"
+description = "Lays the thinnest path through the server. Adds ticketscope.mcp auth: a verifier that checks a bearer token's JWT signature, issuer, audience and expiry against signing keys fetched from the issuer URL and cached, with the issuer, audience and auth-enabled flag read from TICKETSCOPE_* settings; a request to /mcp without a valid token gets 401 with a WWW-Authenticate header naming the protected-resource metadata URL; and /.well-known/oauth-protected-resource is served without a token, naming the /mcp URL as the resource and the issuer as its authorisation server, and is the only path open. One scope covers both tools. Adds a stub issuer in tests/mcp/ that serves signing keys and mints tokens, imitating the claims the spike recorded. Auth off leaves today's behaviour unchanged. import-linter keeps mcp free of core, adapters, http, jobs, psycopg and fastembed, so the token library is the only new dependency. The auth settings are read in ticketscope.mcp.main and nowhere else."
+verify = "Unit tests run the server in-process against the stub issuer and a fake /v1: no token gets 401 with WWW-Authenticate naming the metadata URL (R1); a stub-signed token with the right issuer, audience and expiry reaches search_similar_issues and get_issue and returns the same bodies as with auth off (R3); /.well-known/oauth-protected-resource is served with no token, names the /mcp URL as its resource and the issuer as its authorisation server, and every other path refuses a tokenless request (R2); with auth off every existing mcp test passes unchanged (R3); import-linter keeps every contract and ci.yml passes (R3)."
+covers = ["R1", "R2", "R3"]
+after = [1]
+hitl = false
+risk = "high"
+plan_checkpoint = true
+
+[[entry]]
+id = 3
+type = "story"
+title = "Bad tokens and unreachable keys are refused, never admitted"
+description = "Hardens the verifier from story 2 so nothing invalid passes and no failure leaks. Refused with 401 and a WWW-Authenticate header: a malformed token, a token signed by a key the issuer does not publish, an expired token, a token with the wrong issuer, a token with the wrong audience, a token with an unsigned or none algorithm, and a token with no expiry. Signing keys are cached for a bounded time and refetched once when a token names an unknown key id, so a key rotation does not need a restart; if the keys cannot be fetched, the call is refused and never admitted, and mcp stays Ready because the probes never call the issuer. A token, an Authorization header or a signing key never appears in a log line or a span attribute. The error body for a refused call is generic and does not say which check failed."
+verify = "Unit tests against the stub issuer show each refusal case above returns 401 with WWW-Authenticate and never reaches a tool (R1); a stub key rotation is picked up with one refetch and no restart, and a token naming an unknown key id triggers at most one refetch per interval (R1); with the stub issuer stopped, a tokenless and a token-bearing call are both refused and the mcp readiness probe still passes (R1); captured logs and spans from a refused call and an admitted call contain neither the token, the Authorization header nor key material (R1); mcp-e2e.yml and ci.yml still pass (R3)."
+covers = ["R1", "R3"]
+after = [2]
+hitl = false
+risk = "high"
+
+[[entry]]
+id = 4
+type = "story"
+title = "The chart turns auth on by values, per environment"
+description = "Adds the auth keys to the ticketscope chart: values.yaml holds auth defaults with auth off; values-kind.yaml and values-eks.yaml hold the environment facts only, the auth-enabled flag, the issuer URL and the audience, using the values the spike recorded. The mcp Deployment receives them as TICKETSCOPE_* environment variables. A render check refuses auth enabled with an empty issuer or audience, and refuses an environment file that overrides a product default. The kind release can deploy the stub issuer from tests/mcp/ as a test-only workload so the integrated check has something to validate against, and nothing about it renders in any other release. No secret is added to the chart: verification needs only public signing keys. The route table does not change. The EKS release renders with auth on and the real issuer."
+verify = "Chart render tests show auth off by default, auth on with issuer and audience reaching the mcp container as environment variables, a refusal for auth on with a missing issuer or audience, a refusal for an environment file that overrides a product default, no Secret added for auth, and no stub-issuer workload in the EKS or default render (R4); the render check for both environments passes in ci.yml's charts job (R4); the unchanged route table still sends /mcp and /.well-known/oauth-protected-resource to mcp and everything else as before (R2); mcp-e2e.yml and ci.yml still pass (R3)."
+covers = ["R4"]
+after = [3]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 5
+type = "story"
+title = "Integrated check on kind: an auth-on server through the Gateway"
+description = "Runs the full path on kind through the Gateway against the stub issuer, replacing nothing in the existing mcp-e2e job except what auth changes. An MCP client test calls /mcp with no token, with each bad-token case from story 3, and with a stub-signed token, and fetches /.well-known/oauth-protected-resource through the Gateway on the public-host route. The captured Claude Desktop requests from epic 4 are replayed with a stub token added, so the replay still proves the wire format, and their pin test is untouched. The job deploys with auth on from values and runs on the same path filter as the other kind jobs. It also checks that the metadata route is the only tokenless path through the Gateway and that /v1 and the page are unchanged."
+verify = "On a PR, mcp-e2e.yml deploys to kind with auth on and its client test shows: a tokenless call to /mcp is refused with 401 and WWW-Authenticate through the Gateway (R1); each bad-token case is refused (R1); /.well-known/oauth-protected-resource answers without a token and names the /mcp URL as its resource (R2); a stub-signed token calls search_similar_issues and get_issue and gets the same bodies as a direct /v1 call (R3); the Claude Desktop replay passes with a stub token and its pin test is unchanged (R3); with auth off through values, the earlier checks still pass (R4); /v1 and / are unchanged (R3); ci.yml passes and every import-linter contract holds (R3)."
+covers = ["R1", "R2", "R3", "R4"]
+after = [4]
+hitl = false
+risk = "medium"
+
+[[entry]]
+id = 6
+type = "story"
+title = "Refactor sweep"
+description = "Cleanup only, scoped at its start from this epic's plans, review findings, and relevant entries in _bmad-output/initiative-ticketscope/deferred-work.md. Candidate areas are duplication in the mcp server module after the auth additions, chart template repetition for the auth values, and test structure in tests/mcp/ now that it holds a stub issuer. The plan links each considered finding to an include, defer, or reject decision with a reason; behaviour-changing work stays in linked follow-ups. Behaviour, the /v1 contract, the span tree and the captured Claude Desktop requests do not change."
+verify = "On a PR, mcp-e2e.yml (with the Claude Desktop replay) and ci.yml pass, and import-linter keeps every contract (R1, R2, R3, R4). The eval job passes when the PR matches the eval filter in .github/kind-paths.yml; otherwise its filtered skip is acceptable and the plan records why. In either case, eval/baseline.json is byte-identical to the PR base revision. If chart templates are refactored, before/after rendered output agrees for default, kind and EKS values."
+covers = []
+after = [1, 2, 3, 4, 5]
+hitl = false
+risk = "low"
+notes = ["Preserve the captured Claude Desktop request bytes and their independent pin test."]
+
+[[entry]]
+id = 7
+type = "story"
+title = "Claude Desktop authenticates to the live server and the unauthenticated call is refused"
+description = "Closes the epic on epic 5's live environment. Applies the AuthKit configuration the spike recorded: the redirect and callback settings, the Client ID Metadata Documents setting, and the audience equal to the live /mcp URL; it is configured in the WorkOS dashboard by a person, and the values-eks.yaml issuer and audience come from the spike's note. env-up deploys the server with auth on from values alone, with no manual step on the cluster. A person runs env-up in a live window, adds the live hostname's /mcp to Claude Desktop as a custom connector, completes the sign-in, asks a triage question, and Claude calls search_similar_issues and answers from its results; the same session also shows the live endpoint refusing a call with no token. The agent only reads: it does not dispatch the workflows or write to AWS. Epic 8 records this session."
+verify = "A person runs env-up in a live window and, over the live HTTPS hostname, a call to /mcp with no token is refused with 401 and WWW-Authenticate, and /.well-known/oauth-protected-resource names the live /mcp URL and the AuthKit issuer (R1, R2); Claude Desktop completes the remote-connector sign-in against that hostname, calls search_similar_issues and answers citing returned issues (R5); a screenshot or recording of the session is committed and linked from the plan, with no token or key visible (R5); env-up's own smoke check passes with auth on and shows no manual cluster step (R4); the environment is torn down by env-down and its check finds nothing left (R4)."
+covers = ["R1", "R2", "R4", "R5"]
+after = [5, "epic-eks-environment"]
+hitl = true # a person configures AuthKit's dashboard, runs env-up in a live window and the Claude Desktop sign-in
+risk = "high"
+done_checkpoint = true
+notes = ["Parks awaiting the operator once the code and values are reviewed (decision 2026-11-26); the person confirms it after the live session with `bmad-loop confirm`.", "Follow docs/runbooks/eks-tracer.md for the live window: a person runs eval \"$(scripts/eks-env.sh)\" in each terminal, and the agent only reads."]

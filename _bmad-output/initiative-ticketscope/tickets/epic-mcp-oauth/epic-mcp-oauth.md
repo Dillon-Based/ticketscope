@@ -65,6 +65,7 @@ The live MCP server is authenticated as the current spec requires, and Claude De
 - Decision: only the protected-resource metadata is open; opening the handshake declined (user, 2026-11-26).
 - Decision: the kind integrated check uses a local stub issuer; calling the real AuthKit from CI declined (user, 2026-11-26).
 - Decision: the live Claude Desktop check is part of the epic's last story, which parks awaiting the operator; a separate hitl story declined (user, 2026-11-26).
+- Decision: sliced into seven entries, spike first. Story 2 is the tracer: the thinnest path from a tokenless call to a refused 401 and from a stub-signed token to a tool answer, through server code only; the chart and cluster come in stories 4 and 5. Story 7, the live check, closes the epic after the refactor sweep so the sweep never waits on a parked story. Plan checkpoints on stories 1 and 2, a done checkpoint on story 7 (user, 2026-11-26).
 - Waits on epic-mcp-server because: it needs the MCP server.
 - Waits on epic-eks-environment because: it needs a fixed public HTTPS hostname for the OAuth redirect and Claude Desktop's connector.
 - Decision: Adopted the architecture spine. The authorisation server is external and hosted, and the MCP server is only a resource server (user, 2026-11-05).

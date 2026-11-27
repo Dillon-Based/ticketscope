@@ -24,7 +24,7 @@ The live MCP server is authenticated as the current spec requires, and Claude De
 
 - R1 (parent R4): An unauthenticated call to the live MCP endpoint is refused. It is met when a request to `/mcp` with no token, a malformed token, an expired token, a token with the wrong issuer and a token with the wrong audience each get a 401 with a `WWW-Authenticate` header naming the protected-resource metadata, on the live hostname and in the kind integrated check.
 - R2 (parent R4): The server publishes where its authorisation server is. It is met when `/.well-known/oauth-protected-resource` is served without a token over the public hostname, names the live `/mcp` URL as the resource and the external authorisation server as its issuer, and is the only path open without a token.
-- R3 (parent R4): A valid token for this resource reaches both tools. It is met when a token that passes signature, issuer, audience and expiry checks can call `search_similar_issues` and `get_issue` and gets the same bodies as before auth, and one scope covers both.
+- R3 (parent R4): A valid token for this resource reaches both tools. It is met when a token that passes signature, issuer, audience and expiry checks can call `search_similar_issues` and `get_issue` and gets the same bodies as before auth; no scope is checked, and the audience is the gate (decision 2026-11-27).
 - R4 (parent R4): The OAuth configuration is applied as environment values by the same deploy as epic 5, with no manual steps. It is met when `env-up` brings the live server up with auth on, from `values-eks.yaml` alone, and a kind release with auth off or on is selected by values only.
 - R5 (parent R4): Claude Desktop authenticates against the live URL and calls the tool. It is met when a recorded session shows Claude Desktop's remote-connector flow completing against epic 5's live hostname, calling `search_similar_issues` and answering from its results, and the same server refusing the unauthenticated call.
 
@@ -33,7 +33,7 @@ The live MCP server is authenticated as the current spec requires, and Claude De
 - **Resource server only:** `mcp` validates tokens and serves the metadata. The authorisation server is an external hosted service, never deployed on the cluster or behind the public host, and `api` stays unauthenticated and in-cluster (spine AD-5).
 - **Authorisation server:** WorkOS AuthKit, configured with `client_id_metadata_document_supported`, token endpoint auth method `none`, and the callback `claude.ai/api/mcp/auth_callback` (spine open items; decision 2026-11-26).
 - **Validation:** tokens are verified locally as JWTs for signature, issuer, audience and expiry against cached signing keys. There is no introspection and no client secret in the cluster (decision 2026-11-26).
-- **Scope:** one scope covers both tools (decision 2026-11-26).
+- **Scope:** no scope check; the audience equal to the `/mcp` URL is the gate, because AuthKit issues no custom scope (decision 2026-11-27, replacing the one-scope decision of 2026-11-26).
 - **Routes:** the route table is fixed: `/mcp` and `/.well-known/oauth-protected-resource` go to `mcp`, and the rest of the table is unchanged (AD-14).
 - **Values:** auth on or off and the issuer are environment facts in `values-kind.yaml` and `values-eks.yaml`; `values.yaml` holds the defaults, and `mcp` has no auth default that bypasses a check (AD-25).
 - **CI:** the kind integrated check mints tokens from a local stub issuer. CI never calls the hosted authorisation server and holds no credential for it (decision 2026-11-26; initiative no-stored-keys constraint).
@@ -64,6 +64,8 @@ The live MCP server is authenticated as the current spec requires, and Claude De
 - Decision: one scope covers both tools; per-tool scopes declined (user, 2026-11-26).
 - Decision: only the protected-resource metadata is open; opening the handshake declined (user, 2026-11-26).
 - Decision: the kind integrated check uses a local stub issuer; calling the real AuthKit from CI declined (user, 2026-11-26).
+- Decision: no scope check; the audience equal to the `/mcp` URL is the gate. This replaces "one scope covers both tools": the spike found AuthKit issues no custom scope and every token carries only `email offline_access openid profile`. Requiring `openid` was declined because every token has it (user, 2026-11-27).
+- Decision: the callback URL, not observed in the spike, is read and recorded in story 7; it does not block stories 2 to 6 (user, 2026-11-27).
 - Decision: the live Claude Desktop check is part of the epic's last story, which parks awaiting the operator; a separate hitl story declined (user, 2026-11-26).
 - Decision: sliced into seven entries, spike first. Story 2 is the tracer: the thinnest path from a tokenless call to a refused 401 and from a stub-signed token to a tool answer, through server code only; the chart and cluster come in stories 4 and 5. Story 7, the live check, closes the epic after the refactor sweep so the sweep never waits on a parked story. Plan checkpoints on stories 1 and 2, a done checkpoint on story 7 (user, 2026-11-26).
 - Waits on epic-mcp-server because: it needs the MCP server.

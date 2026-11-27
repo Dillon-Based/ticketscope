@@ -3,14 +3,14 @@ title: 'Tracer: mcp refuses a tokenless call and answers a call with a stub-sign
 type: 'feature'
 ticket: '2'
 created: '2026-11-27'
-status: ready-for-dev
+status: built
 baseline_revision: '9268912509a665e1a2d8e47dc956794f82baa2e3'
 route: 'full'
 route_source: 'auto'
 risk: 'high'
-review: ''
-review_source: ''
-lenses_ran: []
+review: 'thorough'
+review_source: 'pinned'
+lenses_ran: [blind-hunter, edge-case-hunter, verification-gap, intent-alignment]
 review_loop_iteration: 0
 followup_review_recommended: false
 context: []
@@ -92,6 +92,32 @@ deferred: []
 
 ## Review Triage Log
 
+### 2026-11-27 — Review pass
+- verdicts: 33 findings — high 0, medium 2, low 16, false 3, maybe-false 0 (rows grouped by lens)
+- findings:
+  - `[medium]` `[patch]` Blind/Edge: KeyCache lock held across network I/O, cache hits queue behind a slow fetch — fresh-hit fast path moved before the lock.
+  - `[low]` `[reject]` Blind/Edge: stale keys served while the issuer is unreachable, unbounded — the plan matrix says "cache of earlier good keys still serves"; this is the specified behaviour.
+  - `[low]` `[reject]` Blind/Edge: a failed fetch consumes the 30 s refetch window, giving up to 30 s of 503 — bounded, and the rate limit is the specified protection; a separate back-off adds complexity.
+  - `[low]` `[reject]` Blind/Edge: discovery `issuer` / `jwks_uri` origin and https not checked — both documents come from the operator-configured issuer, already the trust root.
+  - `[low]` `[reject]` Edge: JWKS entries with `use=enc` or a malformed entry — only RS256 is accepted at verify and the issuer is trusted; a guard adds branches for no reachable case.
+  - `[low]` `[patch]` Blind/Edge: issuer not validated as an absolute URL at startup — `_auth_config` now exits on it, with test cases.
+  - `[low]` `[reject]` Edge: stream outliving token `exp`; validation happens at request start — accepted, standard for bearer auth.
+  - `[low]` `[reject]` Edge: no Retry-After on 503 — cosmetic.
+  - `[low]` `[reject]` Blind/Edge: trailing-slash / `root_path` variants of the open paths, 405 on tokenless POST to open paths — exact paths are what probes and RFC 9728 discovery use; a 405 leaks nothing.
+  - `[low]` `[reject]` Blind: `Bearer  tok` with two spaces, no token length cap, nbf/iat, leeway 0 — leeway 0 is in the plan; the rest is not reachable harm.
+  - `[false]` `[reject]` Blind/Edge: test patches `configure_logging` not `telemetry.setup` — `main` calls `setup`, which the existing mcp main tests also exercise; passes in the suite.
+  - `[low]` `[reject]` Edge: refetch test only holds after 30 s — a separate test asserts the in-window refusal.
+  - `[low]` `[reject]` Edge: 503 vs 401 reveals issuer health — no token-failure reason leaks.
+  - `[low]` `[reject]` Blind/Intent: httpx client in `build_app` never closed — process-lifetime object.
+  - `[low]` `[reject]` Blind/Intent: no chart values, ADR or deferred-work entry — the plan forbids chart changes; later stories own them.
+  - `[low]` `[reject]` Verification-gap/Intent: key-cache, 503 and main tests carry no `criterion` tag — the plan asked for tags on the five ACs only.
+  - `[medium]` `[patch]` Verification-gap: lifespan and websocket pass-through untested — added an ASGI-level test.
+  - `[medium]` `[patch]` Verification-gap: stale-fallback test never reached the fallback — now advances the clock past the lifetime with the issuer down.
+  - `[low]` `[patch]` Verification-gap: duplicate Authorization header, lowercase scheme and the no_token log untested — cases added.
+  - `[false]` `[reject]` Intent: no `ci.yml` or import-linter change in the diff — the plan expects none; `lint-imports` keeps all 10 contracts.
+  - `[low]` `[reject]` Intent: `/healthz` open beyond "the only path open" — a recorded plan decision (Design Notes).
+  - `[low]` `[reject]` Intent: key fetch is two-hop discovery, stub is in-process — as planned; the real issuer is exercised in later stories.
+
 ## Design Notes
 
 `/healthz` is the one exception to "only path open": the kubelet probes it with no token (`deploy/charts/ticketscope/templates/mcp.yaml:44,49`), and the Gateway routes only `/mcp` and the metadata path to `mcp`, so it is never public. The epic says the metadata is "the only path open without a token over the public hostname"; this holds. Story 4/5's integrated check should assert `/healthz` is not routed. Append this to `deferred-work.md` only if review finds the probe needs a different treatment.
@@ -117,5 +143,22 @@ async def __call__(self, scope, receive, send):
 
 ## Auto Run Result
 
-Status: ready-for-dev
-Halted after planning as instructed. No code written; the plan meets the Ready for Development standard. One open call for the reviewer: `/healthz` stays open because the kubelet probes it and the Gateway never routes it (see Design Notes).
+Status: built
+
+**Summary:** `mcp` can now run as an OAuth 2.1 resource server. With `TICKETSCOPE_MCP_AUTH_ENABLED`, a pure-ASGI middleware refuses a tokenless request with 401 and a `WWW-Authenticate` header naming the metadata URL. It accepts an RS256 token whose issuer, audience and expiry check out against cached signing keys. `/.well-known/oauth-protected-resource` and `/healthz` are served without a token. Auth off is unchanged.
+
+**Files changed**
+- `pyproject.toml`, `uv.lock`: declare `pyjwt[crypto]~=2.15`.
+- `src/ticketscope/settings.py`: three `mcp_auth_*` fields.
+- `src/ticketscope/mcp/auth.py` (new): config, key cache, verifier, middleware.
+- `src/ticketscope/mcp/server.py`: optional `auth` and `key_client`; metadata route and middleware.
+- `src/ticketscope/mcp/main.py`: the only reader of the auth settings; exits on a bad issuer or audience.
+- `tests/mcp/stub_issuer.py` (new): stub issuer. `tests/mcp/test_auth.py` (new): 37 tests.
+
+**Review:** 4 lenses. Patches applied: 5 entries (2 medium for the lock and the lifespan test, 1 medium for the stale-fallback test, 2 low). Deferred: none. Rejected: the stale-key policy, failed-fetch back-off, discovery trust checks, JWKS entry filtering, stream outliving `exp`, Retry-After, path variants, token-format nits, the telemetry patch claim, httpx client closing, chart/ADR/deferred-work additions, the missing `criterion` tags on extra tests, the `/healthz` exception and the two-hop discovery. Reasons are in the Review Triage Log.
+
+**Follow-up review recommended:** false. No high was patched and fewer than two mediums were patched without a named risk.
+
+**Verification:** `uv run pytest tests/mcp/test_auth.py tests/unit/test_mcp_server.py tests/unit/test_mcp_expanded.py tests/unit/test_mcp_trace.py -q` gives 101 passed. `lint-imports` keeps 10 contracts. Ruff and pyright are clean. `scripts/check.sh` prints "check: all passed" after the patches.
+
+**Residual risks:** stale keys serve while the issuer is down (as specified). A first fetch failure gives up to 30 s of 503. `-m kind` tests were not run. Helm/env wiring and the live issuer are later stories. A stray untracked file from an earlier tea run (`bmad-build-auto-result-6.2-tea.automate-1.md`) is left uncommitted.

@@ -49,6 +49,11 @@ class Settings(BaseSettings):
     api_base_url: str = ""
     api_timeout_seconds: float = 10
     mcp_allowed_hosts: Annotated[list[str], NoDecode] = Field(default_factory=list)
+    # mcp auth (epic-mcp-oauth): read only by `ticketscope.mcp.main`. Off by default; on with
+    # an empty issuer or audience, the process refuses to start.
+    mcp_auth_enabled: bool = False
+    mcp_auth_issuer: str = ""
+    mcp_auth_audience: str = ""
 
     # migrate
     migrations_dir: Path = Path("migrations")

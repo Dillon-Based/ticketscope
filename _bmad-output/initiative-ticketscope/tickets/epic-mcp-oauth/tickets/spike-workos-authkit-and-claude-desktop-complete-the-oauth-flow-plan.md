@@ -1,9 +1,9 @@
 ---
 title: 'Spike: WorkOS AuthKit and Claude Desktop complete the OAuth flow against a throwaway resource'
-type: 'spike'
+type: 'chore'
 ticket: '1'
 created: '2026-11-26'
-status: 'in-progress'
+status: done
 baseline_revision: '6aff82df692de67f318424b51bbe1a462ad402ee'
 route: 'full'
 risk: 'high'
@@ -57,15 +57,15 @@ Observed sequence in its log: a tokenless `/mcp` call got 401, Claude fetched th
 | `client_id` claim | `https://claude.ai/oauth/mcp-oauth-client-metadata` (the CIMD URL) |
 | Access-token lifetime | 300 s (`exp` − `iat`) |
 | Signing-key lifetime | not stated: the JWKS response has no cache headers and no rotation was observed. Story 3 picks its own bounded cache time and one refetch on an unknown key id |
-| Callback URL | **not observed** (see Open) |
-| Scope name | **no custom scope exists** (see Open) |
+| Callback URL | not observed; recorded in story 7 (Decision 2026-11-27) |
+| Scope name | none: no scope check; the audience is the gate (Decision 2026-11-27) |
 
 The stub issuer in story 2 imitates the claim names, the `client_id` form, the 300 s lifetime and RS256 above. No `sub` or other identifier from the session is recorded here.
 
 ## Open
 
-- **Scope name.** AuthKit advertises no custom scope, and the token carries only the OIDC scopes. The epic decided one scope covers both tools, but there is no value to name. Options for the user: (a) the server requires `openid`, which every token has, and the audience is the real gate; (b) the server checks audience only and the epic's "one scope" wording is reworded. This needs a Decision in the epic's Notes before story 2.
-- **Callback URL.** AuthKit's redirect happens between Claude and AuthKit and never reaches the resource server, so the server log cannot show it. The `client_id` is the `claude.ai` metadata document, consistent with `claude.ai/api/mcp/auth_callback`, but that is not observed. A person reads the redirect URI from the AuthKit sign-in request (browser address bar during sign-in) and records it here.
+- **Scope name.** Settled 2026-11-27: AuthKit advertises no custom scope and every token carries only the OIDC scopes, so the server checks no scope and the audience (`<public host>/mcp`) is the gate. Requiring `openid` was declined because every token has it. Recorded in the epic's Notes.
+- **Callback URL.** Settled 2026-11-27: not needed before story 7. With Client ID Metadata Documents the redirect URIs come from Claude's metadata document, not from the resource server. Story 7 reads the redirect URI from the AuthKit sign-in request and records it in its plan. The `client_id` (the claude.ai metadata document) is consistent with `claude.ai/api/mcp/auth_callback`, but that is unconfirmed.
 - **Signing-key lifetime and rotation** unobserved; see above.
 - **ngrok free-plan bandwidth** is irrelevant to the live check (it uses the EKS hostname).
 

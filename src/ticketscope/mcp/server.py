@@ -8,6 +8,7 @@ import logging
 import time
 from typing import Annotated
 
+import httpx2
 from mcp.server.mcpserver import MCPServer
 from mcp.server.transport_security import TransportSecuritySettings
 from mcp.types import CallToolResult, TextContent
@@ -15,10 +16,11 @@ from opentelemetry import trace
 from pydantic import BaseModel, Field
 from starlette.applications import Starlette
 from starlette.requests import Request
-from starlette.responses import PlainTextResponse, Response
+from starlette.responses import JSONResponse, PlainTextResponse, Response
 
 from ticketscope.apiclient import ApiClient, ApiClientError, ApiError
 from ticketscope.contract.search import K_MAX, K_MIN, IssueResponse, SearchResponse
+from ticketscope.mcp import auth as mcp_auth
 from ticketscope.mcp.spans import QUERY_TEXT
 from ticketscope.settings import Settings
 
@@ -57,7 +59,12 @@ def _failure(error: ApiClientError) -> tuple[str, CallToolResult]:
     return status, _tool_error(error.message)
 
 
-def build_server(client: ApiClient, *, trace_query_text: bool = False) -> MCPServer:
+def build_server(
+    client: ApiClient,
+    *,
+    trace_query_text: bool = False,
+    auth: mcp_auth.AuthConfig | None = None,
+) -> MCPServer:
     server = MCPServer("ticketscope")
 
     @server.tool(
@@ -139,13 +146,39 @@ def build_server(client: ApiClient, *, trace_query_text: bool = False) -> MCPSer
         # The process only: it never calls api (R-009).
         return PlainTextResponse("ok")
 
+    if auth is not None:
+        body = mcp_auth.metadata_body(auth)
+
+        @server.custom_route(mcp_auth.METADATA_PATH, methods=["GET"])
+        async def protected_resource(request: Request) -> Response:  # pyright: ignore[reportUnusedFunction]
+            return JSONResponse(body)
+
     return server
 
 
-def build_app(settings: Settings, client: ApiClient) -> Starlette:
+def build_app(
+    settings: Settings,
+    client: ApiClient,
+    auth: mcp_auth.AuthConfig | None = None,
+    *,
+    key_client: httpx2.AsyncClient | None = None,
+) -> Starlette:
+    """The ASGI app. With `auth`, every path but `/healthz` and the metadata needs a token.
+
+    `key_client` fetches the issuer's signing keys and is required with `auth`; it is built in
+    `ticketscope.mcp.main`, the composition root, and tests pass one on a mock transport.
+    """
+    if auth is not None and key_client is None:
+        raise ValueError("build_app needs a key_client when auth is on")
     hosts = check_allowed_hosts(settings.mcp_allowed_hosts)
-    return build_server(client, trace_query_text=settings.trace_query_text).streamable_http_app(
+    app = build_server(
+        client, trace_query_text=settings.trace_query_text, auth=auth
+    ).streamable_http_app(
         stateless_http=True,
         transport_security=TransportSecuritySettings(allowed_hosts=hosts),
         host=settings.http_host,
     )
+    if auth is not None and key_client is not None:
+        verifier = mcp_auth.TokenVerifier(auth, mcp_auth.KeyCache(auth.issuer, key_client))
+        app.add_middleware(mcp_auth.AuthMiddleware, config=auth, verifier=verifier)
+    return app

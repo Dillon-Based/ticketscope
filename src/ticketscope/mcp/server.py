@@ -165,8 +165,11 @@ def build_app(
 ) -> Starlette:
     """The ASGI app. With `auth`, every path but `/healthz` and the metadata needs a token.
 
-    `key_client` fetches the issuer's signing keys; tests pass one on a mock transport.
+    `key_client` fetches the issuer's signing keys and is required with `auth`; it is built in
+    `ticketscope.mcp.main`, the composition root, and tests pass one on a mock transport.
     """
+    if auth is not None and key_client is None:
+        raise ValueError("build_app needs a key_client when auth is on")
     hosts = check_allowed_hosts(settings.mcp_allowed_hosts)
     app = build_server(
         client, trace_query_text=settings.trace_query_text, auth=auth
@@ -175,8 +178,7 @@ def build_app(
         transport_security=TransportSecuritySettings(allowed_hosts=hosts),
         host=settings.http_host,
     )
-    if auth is not None:
-        http = key_client or httpx2.AsyncClient(timeout=mcp_auth.FETCH_TIMEOUT_SECONDS)
-        verifier = mcp_auth.TokenVerifier(auth, mcp_auth.KeyCache(auth.issuer, http))
+    if auth is not None and key_client is not None:
+        verifier = mcp_auth.TokenVerifier(auth, mcp_auth.KeyCache(auth.issuer, key_client))
         app.add_middleware(mcp_auth.AuthMiddleware, config=auth, verifier=verifier)
     return app

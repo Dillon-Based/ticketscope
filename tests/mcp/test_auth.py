@@ -6,6 +6,7 @@ In process: the app on `ASGITransport`, the issuer and `/v1` on mock transports.
 import asyncio
 import base64
 import json
+import time
 from collections.abc import Callable, MutableMapping
 from typing import Any
 
@@ -432,7 +433,7 @@ def _main_env(monkeypatch: pytest.MonkeyPatch, **env: str) -> list[Any]:
         monkeypatch.delenv(f"TICKETSCOPE_MCP_AUTH_{name}", raising=False)
     for name, value in env.items():
         monkeypatch.setenv(f"TICKETSCOPE_MCP_AUTH_{name}", value)
-    monkeypatch.setattr(mcp_main.telemetry, "configure_logging", lambda: None)
+    monkeypatch.setattr(mcp_main.telemetry, "setup", lambda *a, **k: None)
     served: list[Any] = []
     monkeypatch.setattr(mcp_main.uvicorn, "run", lambda app, **kw: served.append(app))
     return served
@@ -448,6 +449,9 @@ def _main_env(monkeypatch: pytest.MonkeyPatch, **env: str) -> list[Any]:
         {"ENABLED": "true", "ISSUER": ISSUER, "AUDIENCE": "not-a-url"},
         {"ENABLED": "true", "ISSUER": "foo", "AUDIENCE": AUDIENCE},
         {"ENABLED": "true", "ISSUER": "//auth.stub.test", "AUDIENCE": AUDIENCE},
+        {"ENABLED": "true", "ISSUER": "ftp://auth.stub.test", "AUDIENCE": AUDIENCE},
+        {"ENABLED": "true", "ISSUER": ISSUER + "/", "AUDIENCE": AUDIENCE},
+        {"ENABLED": "true", "ISSUER": ISSUER, "AUDIENCE": "//mcp.stub.test/mcp"},
     ],
 )
 def test_main_refuses_auth_on_with_a_missing_issuer_or_audience(
@@ -468,3 +472,70 @@ def test_main_serves_with_auth_off_by_default_and_on_when_configured(
     served = _main_env(monkeypatch, ENABLED="true", ISSUER=ISSUER, AUDIENCE=AUDIENCE)
     mcp_main.main()
     assert any(m.cls is mcp_auth.AuthMiddleware for m in served[0].user_middleware)
+
+
+def test_a_token_whose_iat_is_ahead_of_the_pod_clock_is_accepted() -> None:
+    # The issuer's clock runs ahead of the pod's; `exp` alone bounds the token.
+    issuer = StubIssuer()
+    token = issuer.mint(iat=int(time.time()) + 5)
+
+    async def scenario(http: httpx2.AsyncClient) -> int:
+        return (await http.post("/mcp", headers=_bearer(token), json=SEARCH_CALL)).status_code
+
+    assert _run(scenario, issuer) == 200
+
+
+def test_a_cached_kid_does_not_wait_behind_a_stalled_refetch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    issuer = StubIssuer()
+    clock = [0.0]
+    monkeypatch.setattr(mcp_auth, "_now", lambda: clock[0])
+    stall = asyncio.Event()
+
+    async def handle(request: httpx2.Request) -> httpx2.Response:
+        if stall.is_set():
+            await asyncio.sleep(3600)
+        return issuer.handle(request)
+
+    async def main() -> tuple[Any, bool]:
+        cache = mcp_auth.KeyCache(
+            ISSUER, httpx2.AsyncClient(transport=httpx2.MockTransport(handle))
+        )
+        await cache.get(issuer.current_kid)
+        clock[0] += mcp_auth.KEY_LIFETIME_SECONDS + 1
+        stall.set()
+        refetch = asyncio.create_task(cache.get(issuer.current_kid))
+        await asyncio.sleep(0)  # the refetch takes the lock and stalls on the issuer
+        key = await asyncio.wait_for(cache.get(issuer.current_kid), timeout=1)
+        pending = not refetch.done()
+        refetch.cancel()
+        return key, pending
+
+    key, pending = asyncio.run(main())
+    assert key is not None
+    assert pending
+
+
+def test_a_hung_issuer_is_bounded_by_one_timeout_for_the_whole_fetch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(mcp_auth, "FETCH_TIMEOUT_SECONDS", 0.05)
+
+    async def hang(request: httpx2.Request) -> httpx2.Response:
+        await asyncio.sleep(3600)
+        return httpx2.Response(500)
+
+    async def main() -> None:
+        cache = mcp_auth.KeyCache(ISSUER, httpx2.AsyncClient(transport=httpx2.MockTransport(hang)))
+        await asyncio.wait_for(cache.get("any"), timeout=2)
+
+    with pytest.raises(mcp_auth.KeysUnavailableError):
+        asyncio.run(main())
+
+
+def test_build_app_with_auth_needs_a_key_client() -> None:
+    client = ApiClient("http://api", 5, transport=httpx2.MockTransport(_fake_api))
+    settings = Settings(mcp_allowed_hosts=HOST, api_base_url="http://api")  # pyright: ignore[reportArgumentType]
+    with pytest.raises(ValueError, match="key_client"):
+        build_app(settings, client, CONFIG)

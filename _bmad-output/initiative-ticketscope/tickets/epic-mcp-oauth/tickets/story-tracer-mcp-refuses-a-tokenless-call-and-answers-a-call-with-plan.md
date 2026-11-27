@@ -3,7 +3,7 @@ title: 'Tracer: mcp refuses a tokenless call and answers a call with a stub-sign
 type: 'feature'
 ticket: '2'
 created: '2026-11-27'
-status: built
+status: done
 baseline_revision: '9268912509a665e1a2d8e47dc956794f82baa2e3'
 route: 'full'
 route_source: 'auto'
@@ -117,6 +117,16 @@ deferred: []
   - `[false]` `[reject]` Intent: no `ci.yml` or import-linter change in the diff — the plan expects none; `lint-imports` keeps all 10 contracts.
   - `[low]` `[reject]` Intent: `/healthz` open beyond "the only path open" — a recorded plan decision (Design Notes).
   - `[low]` `[reject]` Intent: key fetch is two-hop discovery, stub is in-process — as planned; the real issuer is exercised in later stories.
+
+### 2026-11-27 — Fresh review by hand (PR #104)
+
+The loop deferred this story on a baseline mismatch before its Codex review ran, so a fresh correctness review ran on the PR instead: 10 findings, 2 important.
+- `[important]` `[patch]` `leeway=0` also applied to `iat`, so a pod clock a fraction of a second behind the issuer refused freshly minted tokens — `verify_iat` off, `exp` stays strict; test added.
+- `[important]` `[patch]` a known `kid` queued on the key-cache lock behind a stalled refetch, up to about 20 s per attempt — a cached key answers while a fetch is in flight, and one `asyncio.timeout` bounds both hops; tests added.
+- `[nit]` `[patch]` the key-fetch client was built in `mcp.server`, outside the composition root — built in `mcp.main`; `build_app` refuses auth without one.
+- `[nit]` `[patch]` startup let a scheme-less audience, a non-http(s) issuer and a trailing-slash issuer through — all refused; http stays allowed for the kind stub issuer.
+- `[nit]` `[patch]` the `main` tests ran the real `telemetry.setup` — patched as the unit tests do.
+- `[nit]` `[defer]` JWKS bad-entry handling, the discovery `issuer` check, the 30 s rotation window and RFC 6750 error codes — story 6.3's scope; in `deferred-work.md`.
 
 ## Design Notes
 

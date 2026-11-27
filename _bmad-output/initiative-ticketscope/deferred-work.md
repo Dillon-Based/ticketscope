@@ -134,3 +134,19 @@ carried_to: epic-eks-environment (5), where corpus reloads first run under live 
 - source_plan: `_bmad-output/initiative-ticketscope/tickets/epic-eks-environment/tickets/story-an-instance-failure-is-survived-and-the-drill-is-recorded-plan.md`
   summary: The failure drill (`scripts/failure-drill.sh`) has never run live, so R10 (a node loss survived, a standby promoted, search answering) and the plugin #828 question are unproven.
   evidence: Story 5.8 was accepted as built on 2026-11-24 with only the stubbed script tests and the offline render of the placement rule; `docs/drills/failure-drill.md` is the "not yet run" skeleton. A person runs the drill last in the December window with the admin AWS profile and kubeconfig and commits the rendered record; a failed archive check there is the #828 finding to resolve, not a reason to drop the second instance.
+
+- source_plan: `_bmad-output/initiative-ticketscope/tickets/epic-mcp-oauth/tickets/story-tracer-mcp-refuses-a-tokenless-call-and-answers-a-call-with-plan.md`
+  summary: A malformed JWKS entry makes `RSAAlgorithm.from_jwk` raise and the whole key fetch fail, so every token gets 503 once the cache expires; entries with `use: "enc"` are also accepted as signing keys.
+  evidence: Fresh review of PR #104 (2026-11-27), `src/ticketscope/mcp/auth.py` `KeyCache._fetch`. Story 6.3 owns unreachable keys and key handling: skip entries that fail to parse or are not `use: sig`, and keep the rest.
+
+- source_plan: `_bmad-output/initiative-ticketscope/tickets/epic-mcp-oauth/tickets/story-tracer-mcp-refuses-a-tokenless-call-and-answers-a-call-with-plan.md`
+  summary: The discovery document's `issuer` is not compared with the configured issuer (RFC 8414 section 3.3) and `jwks_uri` is used whatever its scheme or host.
+  evidence: Fresh review of PR #104 (2026-11-27); the story's own review rejected it because the configured issuer is the trust root. Story 6.3 decides: check `issuer` equality and require an https `jwks_uri` on EKS.
+
+- source_plan: `_bmad-output/initiative-ticketscope/tickets/epic-mcp-oauth/tickets/story-tracer-mcp-refuses-a-tokenless-call-and-answers-a-call-with-plan.md`
+  summary: A token signed by a key rotated in shortly after a cache fill is refused with 401 invalid_token for up to `MIN_REFETCH_SECONDS` (30 s), which can push a client to refresh or sign in again.
+  evidence: Fresh review of PR #104 (2026-11-27); pinned today by `test_a_new_key_inside_the_refetch_interval_is_refused_not_refetched`. Story 6.3's rotation criterion decides: exempt the first unknown-kid refetch after a fill, or answer 503 while the window blocks it.
+
+- source_plan: `_bmad-output/initiative-ticketscope/tickets/epic-mcp-oauth/tickets/story-tracer-mcp-refuses-a-tokenless-call-and-answers-a-call-with-plan.md`
+  summary: Refusals do not follow RFC 6750 section 3.1: a non-Bearer scheme gets `error="invalid_token"` (it should get a bare challenge), and two Authorization headers get 401 (it should be 400 `invalid_request`).
+  evidence: Fresh review of PR #104 (2026-11-27); pinned today by `test_a_malformed_or_non_bearer_header_is_401_invalid_token` and `test_two_authorization_headers_are_401_invalid_token`. Story 6.3 owns the refusal cases.

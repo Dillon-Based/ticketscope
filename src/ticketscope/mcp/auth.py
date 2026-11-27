@@ -91,8 +91,12 @@ class KeyCache:
         self._lock = asyncio.Lock()
 
     async def get(self, kid: str) -> Any | None:
-        """The key for `kid`, or None when the issuer does not publish it."""
-        if self._is_fresh(self._clock()) and kid in self._keys:
+        """The key for `kid`, or None when the issuer does not publish it.
+
+        A cached `kid` never waits behind another request's fetch: while one is in flight, the
+        cached key answers even when it is past its lifetime.
+        """
+        if kid in self._keys and (self._is_fresh(self._clock()) or self._lock.locked()):
             return self._keys[kid]
         async with self._lock:
             now = self._clock()
@@ -122,15 +126,17 @@ class KeyCache:
         return None
 
     async def _fetch(self) -> dict[str, Any]:
+        """Both hops, bounded together by `FETCH_TIMEOUT_SECONDS`, the longest the lock is held."""
         try:
-            discovery = await self._http.get(self._issuer + DISCOVERY_PATH)
-            discovery.raise_for_status()
-            jwks_uri = discovery.json()["jwks_uri"]
-            if not isinstance(jwks_uri, str):
-                raise KeysUnavailableError("bad jwks_uri")
-            response = await self._http.get(jwks_uri)
-            response.raise_for_status()
-            entries = response.json()["keys"]
+            async with asyncio.timeout(FETCH_TIMEOUT_SECONDS):
+                discovery = await self._http.get(self._issuer + DISCOVERY_PATH)
+                discovery.raise_for_status()
+                jwks_uri = discovery.json()["jwks_uri"]
+                if not isinstance(jwks_uri, str):
+                    raise KeysUnavailableError("bad jwks_uri")
+                response = await self._http.get(jwks_uri)
+                response.raise_for_status()
+                entries = response.json()["keys"]
             keys: dict[str, Any] = {}
             for entry in entries:
                 if entry.get("kty") == "RSA" and isinstance(entry.get("kid"), str):
@@ -168,7 +174,10 @@ class TokenVerifier:
                 algorithms=[ALGORITHM],
                 audience=self._config.audience,
                 issuer=self._config.issuer,
-                options={"require": ["iss", "aud", "exp"]},
+                # `exp` is strict (leeway 0). `iat` is not checked: a pod clock a fraction of a
+                # second behind the issuer's would refuse a token used straight after minting,
+                # and `exp` alone bounds a token's life.
+                options={"require": ["iss", "aud", "exp"], "verify_iat": False},
                 leeway=0,
             )
         except jwt.ExpiredSignatureError as error:
